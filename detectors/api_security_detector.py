@@ -74,81 +74,28 @@ async def api_security_detector(session, url: str, context: dict) -> List[Dict[s
     """
     findings = []
     
-    # Test 1: Mass Assignment vulnerability
-    findings.extend(await test_mass_assignment(session, url, context))
-    
-    # Test 2: Excessive Data Exposure
-    findings.extend(await test_excessive_data_exposure(session, url, context))
-    
-    # Test 3: IDOR (Insecure Direct Object Reference)
-    findings.extend(await test_idor(session, url, context))
-    
-    # Test 4: Verbose Error Messages
-    findings.extend(await test_verbose_errors(session, url, context))
-    
-    # Test 5: Missing Rate Limiting
-    findings.extend(await test_rate_limiting(session, url, context))
-    
-    return findings
-
-
-async def test_mass_assignment(session, url: str, context: dict) -> List[Dict[str, Any]]:
-    """Test for Mass Assignment vulnerabilities."""
-    findings = []
-    
-    # Skip non-API endpoints
+    # Only run on API endpoints to save time
     if not is_api_endpoint(url):
         return findings
     
-    # Test with POST/PUT/PATCH
-    for method in ['POST', 'PUT', 'PATCH']:
-        for field in MASS_ASSIGNMENT_FIELDS[:5]:  # Test first 5 to avoid rate limits
-            payload = {
-                "name": "test_user",
-                "email": "test@example.com",
-                field: True  # Try to elevate privileges
-            }
-            
-            try:
-                headers = {
-                    'Content-Type': 'application/json',
-                    'User-Agent': context.get('user_agent', 'BugBountyScanner/1.0')
-                }
-                
-                resp = await session.request(
-                    method,
-                    url,
-                    json=payload,
-                    headers=headers,
-                    timeout=context.get('timeout', 15),
-                    allow_redirects=False
-                )
-                
-                body = await resp.text()
-                
-                # Check if our field was accepted
-                if field in body and resp.status in [200, 201]:
-                    findings.append({
-                        'type': 'Mass Assignment',
-                        'severity': 'high',
-                        'confidence': 'medium',
-                        'url': url,
-                        'method': method,
-                        'evidence': f'Field "{field}" was accepted in {method} request. Server responded with status {resp.status} and the field appears in response.',
-                        'payload': json.dumps(payload),
-                        'impact': f'Attacker may be able to modify sensitive fields like "{field}" to escalate privileges or bypass restrictions.',
-                        'recommendation': 'Implement allowlist-based parameter binding. Only accept explicitly defined fields in API requests.',
-                        'cvss': 7.5,
-                        'detector': 'api_security_detector'
-                    })
-                    break  # Found vulnerability for this field
-                    
-            except asyncio.TimeoutError:
-                continue
-            except Exception:
-                continue
+    # Run tests in parallel for speed (except rate limiting which needs sequential)
+    tasks = [
+        test_excessive_data_exposure(session, url, context),
+        test_idor(session, url, context),
+        test_verbose_errors(session, url, context),
+    ]
+    
+    # Run parallel tests
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    for result in results:
+        if not isinstance(result, Exception) and result:
+            findings.extend(result)
     
     return findings
+
+
+# Mass assignment test removed - too many requests and potential for false positives
 
 
 async def test_excessive_data_exposure(session, url: str, context: dict) -> List[Dict[str, Any]]:
@@ -230,19 +177,23 @@ async def test_idor(session, url: str, context: dict) -> List[Dict[str, Any]]:
     if not extracted_ids:
         return findings
     
-    original_id = extracted_ids[0]
+    try:
+        original_id = extracted_ids[0]
+        # Only test numeric IDs
+        if not original_id.isdigit():
+            return findings
+            
+    except (ValueError, IndexError):
+        return findings
     
-    # Test with incremented/decremented IDs
+    # Test only 2 IDs for speed (most likely to find IDOR)
     test_ids = [
-        str(int(original_id) + 1),
-        str(int(original_id) - 1),
-        str(int(original_id) + 100),
-        '1',
-        '999999'
+        str(int(original_id) + 1),  # Next ID
+        '1',  # First ID (often accessible)
     ]
     
     try:
-        # Get baseline response
+        # Get baseline response with shorter timeout
         headers = {
             'User-Agent': context.get('user_agent', 'BugBountyScanner/1.0')
         }
@@ -250,7 +201,7 @@ async def test_idor(session, url: str, context: dict) -> List[Dict[str, Any]]:
         baseline_resp = await session.get(
             url,
             headers=headers,
-            timeout=context.get('timeout', 15),
+            timeout=5,  # Shorter timeout for speed
             allow_redirects=False
         )
         baseline_body = await baseline_resp.text()
@@ -259,28 +210,42 @@ async def test_idor(session, url: str, context: dict) -> List[Dict[str, Any]]:
         if baseline_resp.status not in [200, 201]:
             return findings  # Original ID doesn't work, skip
         
-        # Test other IDs
-        successful_tests = []
+        # Test other IDs in parallel
+        test_tasks = []
+        test_urls = []
+        
         for test_id in test_ids:
             test_url = url
             for pattern in IDOR_ID_PATTERNS:
-                test_url = re.sub(pattern, f'/{test_id}' if '/' in pattern else f'id={test_id}', test_url)
+                test_url = re.sub(pattern, f'/{test_id}' if '/' in pattern else f'id={test_id}', test_url, count=1)
+            test_urls.append(test_url)
             
-            try:
-                test_resp = await session.get(
+            test_tasks.append(
+                session.get(
                     test_url,
                     headers=headers,
-                    timeout=context.get('timeout', 15),
+                    timeout=5,
                     allow_redirects=False
                 )
-                test_body = await test_resp.text()
+            )
+        
+        # Run tests in parallel
+        responses = await asyncio.gather(*test_tasks, return_exceptions=True)
+        
+        successful_tests = []
+        for test_id, test_url, resp in zip(test_ids, test_urls, responses):
+            if isinstance(resp, Exception):
+                continue
+                
+            try:
+                test_body = await resp.text()
                 test_len = len(test_body)
                 
                 # If we get a valid response with different data
-                if test_resp.status in [200, 201] and abs(test_len - baseline_len) > 100:
+                if resp.status in [200, 201] and abs(test_len - baseline_len) > 100:
                     successful_tests.append({
                         'id': test_id,
-                        'status': test_resp.status,
+                        'status': resp.status,
                         'length': test_len,
                         'url': test_url
                     })
@@ -314,111 +279,58 @@ async def test_verbose_errors(session, url: str, context: dict) -> List[Dict[str
     """Test for verbose error messages that reveal implementation details."""
     findings = []
     
-    # Malformed requests to trigger errors
-    test_cases = [
-        {'method': 'POST', 'json': {'invalid': 'json"'}},  # Malformed JSON
-        {'method': 'GET', 'params': {'id': "'; DROP TABLE users--"}},  # SQL injection attempt
-        {'method': 'GET', 'params': {'id': '../../../etc/passwd'}},  # Path traversal
-        {'method': 'GET', 'params': {'id': 'null'}},  # Null value
-    ]
-    
-    for test in test_cases:
-        try:
-            headers = {
-                'User-Agent': context.get('user_agent', 'BugBountyScanner/1.0')
-            }
-            
-            resp = await session.request(
-                test['method'],
-                url,
-                headers=headers,
-                timeout=context.get('timeout', 10),
-                allow_redirects=False,
-                **{k: v for k, v in test.items() if k != 'method'}
-            )
-            
-            body = await resp.text()
-            
-            # Check for verbose error patterns
-            found_patterns = []
-            for pattern in VERBOSE_ERROR_PATTERNS:
-                if re.search(pattern, body, re.IGNORECASE):
-                    found_patterns.append(pattern)
-            
-            if found_patterns:
-                findings.append({
-                    'type': 'Verbose Error Messages',
-                    'severity': 'low',
-                    'confidence': 'high',
-                    'url': url,
-                    'method': test['method'],
-                    'evidence': f'Server revealed implementation details in error message. Patterns found: {found_patterns[:3]}',
-                    'impact': 'Error messages reveal technology stack, file paths, or internal structure, aiding attackers in reconnaissance.',
-                    'recommendation': 'Implement generic error messages for users. Log detailed errors server-side only.',
-                    'cvss': 3.7,
-                    'detector': 'api_security_detector'
-                })
-                break  # One finding per endpoint
-                
-        except Exception:
-            continue
-    
-    return findings
-
-
-async def test_rate_limiting(session, url: str, context: dict) -> List[Dict[str, Any]]:
-    """Test for missing rate limiting on API endpoints."""
-    findings = []
-    
-    if not is_api_endpoint(url):
-        return findings
-    
-    # Send 20 rapid requests
-    requests_count = 20
-    successful_requests = 0
-    
+    # Only test one quick error case for speed
     try:
         headers = {
             'User-Agent': context.get('user_agent', 'BugBountyScanner/1.0')
         }
         
-        tasks = []
-        for _ in range(requests_count):
-            tasks.append(
-                session.get(
-                    url,
-                    headers=headers,
-                    timeout=5,
-                    allow_redirects=False
-                )
-            )
+        # Test with invalid parameter
+        resp = await session.get(
+            url,
+            params={'id': "'; DROP TABLE users--"},
+            headers=headers,
+            timeout=5,
+            allow_redirects=False
+        )
         
-        responses = await asyncio.gather(*tasks, return_exceptions=True)
+        body = await resp.text()
         
-        # Count successful responses (no rate limiting)
-        for resp in responses:
-            if not isinstance(resp, Exception) and resp.status == 200:
-                successful_requests += 1
+        # Check for verbose error patterns (only most common ones)
+        critical_patterns = [
+            r'Exception in thread',
+            r'Traceback \(most recent call last\)',
+            r'File ".*\.py"',
+            r'SQLException',
+            r'at line \d+',
+        ]
         
-        # If more than 80% of requests succeeded, likely no rate limiting
-        if successful_requests > requests_count * 0.8:
+        found_patterns = []
+        for pattern in critical_patterns:
+            if re.search(pattern, body, re.IGNORECASE):
+                found_patterns.append(pattern)
+        
+        if found_patterns:
             findings.append({
-                'type': 'Missing Rate Limiting',
+                'type': 'Verbose Error Messages',
                 'severity': 'low',
-                'confidence': 'medium',
+                'confidence': 'high',
                 'url': url,
                 'method': 'GET',
-                'evidence': f'{successful_requests}/{requests_count} rapid requests succeeded without rate limiting.',
-                'impact': 'API endpoint lacks rate limiting, allowing potential DoS attacks or brute force attempts.',
-                'recommendation': 'Implement rate limiting per IP/user. Use algorithms like token bucket or sliding window.',
-                'cvss': 4.3,
+                'evidence': f'Server revealed implementation details in error message. Patterns found: {found_patterns[:3]}',
+                'impact': 'Error messages reveal technology stack, file paths, or internal structure, aiding attackers in reconnaissance.',
+                'recommendation': 'Implement generic error messages for users. Log detailed errors server-side only.',
+                'cvss': 3.7,
                 'detector': 'api_security_detector'
             })
-    
+                
     except Exception:
         pass
     
     return findings
+
+
+# Rate limiting test removed - too aggressive for responsible scanning
 
 
 def is_api_endpoint(url: str) -> bool:
