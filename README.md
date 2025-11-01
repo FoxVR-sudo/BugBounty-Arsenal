@@ -11,19 +11,19 @@
 
 **Advanced Security Reconnaissance & Vulnerability Discovery Platform**
 
-A comprehensive, automated security vulnerability scanner designed for professional bug bounty hunters and security researchers. Powered by 19+ active detectors and intelligent async scanning engine.
+A comprehensive, automated security vulnerability scanner designed for professional bug bounty hunters and security researchers. Powered by 22+ active detectors and intelligent async scanning engine.
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Async](https://img.shields.io/badge/async-aiohttp-green.svg)](https://docs.aiohttp.org/)
 [![Status](https://img.shields.io/badge/status-active-success.svg)]()
 
-[![Detectors](https://img.shields.io/badge/detectors-19+-green.svg)]()
+[![Detectors](https://img.shields.io/badge/detectors-22+-green.svg)]()
 [![IDOR](https://img.shields.io/badge/IDOR-✓-red.svg)]()
 [![SSRF](https://img.shields.io/badge/SSRF-✓-critical.svg)]()
 [![XSS](https://img.shields.io/badge/XSS-✓-orange.svg)]()
-[![SQL](https://img.shields.io/badge/SQL-✓-red.svg)]()
-[![SSTI](https://img.shields.io/badge/SSTI-✓-critical.svg)]()
+[![GraphQL](https://img.shields.io/badge/GraphQL-✓-blue.svg)]()
+[![Prototype](https://img.shields.io/badge/Prototype_Pollution-✓-critical.svg)]()
 
 [![HackerOne](https://img.shields.io/badge/reports-HackerOne-success.svg)](https://hackerone.com)
 [![Bugcrowd](https://img.shields.io/badge/compatible-Bugcrowd-blue.svg)](https://bugcrowd.com)
@@ -54,9 +54,12 @@ A comprehensive, automated security vulnerability scanner designed for professio
 
 ### Key Features
 
-- ✅ **19+ Active Security Detectors**
-  - **SSTI (Server-Side Template Injection)** 🔥🔥 NEW! ($2000-8000+)
-  - **XXE (XML External Entity)** 🔥🔥 NEW! ($1000-5000+)
+- ✅ **22+ Active Security Detectors**
+  - **Prototype Pollution** 🔥🔥🔥 NEW! ($1000-8000+)
+  - **GraphQL Injection** 🔥🔥🔥 NEW! ($1000-5000+)
+  - **Race Conditions** 🔥🔥🔥 NEW! ($500-5000+)
+  - **SSTI (Server-Side Template Injection)** 🔥🔥 ($2000-8000+)
+  - **XXE (XML External Entity)** 🔥🔥 ($1000-5000+)
   - **Command Injection** 🔥 ($2000-10000+)
   - **JWT Vulnerabilities** 🔥 ($1000-8000+)
   - **NoSQL Injection** 🔥 ($1000-5000+)
@@ -165,6 +168,9 @@ python main.py -s targets.csv --consent --proxy http://127.0.0.1:8080
 
 | Detector | Description | Severity | Reward |
 |----------|-------------|----------|--------|
+| **Prototype Pollution** 🔥🔥🔥 | JavaScript/Node.js __proto__ pollution, RCE gadget chains | CRITICAL | $1000-8000+ |
+| **GraphQL Injection** 🔥🔥🔥 | Schema introspection, depth bypass, batch attacks | HIGH/CRITICAL | $1000-5000+ |
+| **Race Conditions** 🔥🔥🔥 | Concurrent request testing, transaction ID duplication | HIGH/CRITICAL | $500-5000+ |
 | **SSTI** 🔥🔥 | Server-side template injection (Jinja2, Twig, etc.) | CRITICAL | $2000-8000+ |
 | **XXE** 🔥🔥 | XML External Entity injection, file disclosure | CRITICAL | $1000-5000+ |
 | **Command Injection** 🔥 | OS command execution via shell metacharacters | CRITICAL | $2000-10000+ |
