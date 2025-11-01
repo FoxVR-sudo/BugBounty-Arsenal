@@ -1,0 +1,12 @@
+identifier,asset_type,instruction,eligible_for_bounty,eligible_for_submission,availability_requirement,confidentiality_requirement,integrity_requirement,max_severity,system_tags,created_at,updated_at
+api-uat-bugbounty.nonprod.syfe.com,URL,API domain for the test environment.,true,true,low,high,high,critical,,2024-10-01 12:15:57 UTC,2024-10-08 07:28:15 UTC
+www.syfe.com,URL,"Main domain for Syfe. 
+Please self sign-up for the accounts only using your ==@wearehackerone.com== address at [https://www.syfe.com/create-account?utm_source=bug_bounty&medium=bug_bounty](https://www.syfe.com/create-account?utm_source=bug_bounty&medium=bug_bounty) to perform any testing on production. 
+Refer to non-qualifying bugs and disqualifiers in program guidelines.",true,true,high,high,high,critical,,2024-10-01 12:22:15 UTC,2025-03-25 10:59:32 UTC
+uat-bugbounty.nonprod.syfe.com,URL,"The primary test environment for the research is provided. The credentials are only valid for this environment.
+Note: Findings on this environment should be applicable on production.",true,true,low,high,high,critical,,2024-10-01 12:14:41 UTC,2025-04-23 10:59:42 UTC
+api.syfe.com,URL,API domain for the user services.,true,true,high,high,high,critical,,2024-10-01 12:23:04 UTC,2024-10-08 07:30:51 UTC
+com.syfe,GOOGLE_PLAY_APP_ID,Syfe android application.,true,true,medium,high,high,critical,,2024-10-03 05:05:07 UTC,2024-10-09 07:38:19 UTC
+https://apps.apple.com/sg/app/syfe-stay-invested/id1497156434,APPLE_STORE_APP_ID,Syfe IOS application.,true,true,,,,critical,,2024-10-03 05:06:15 UTC,2024-10-09 07:37:53 UTC
+alfred.syfe.com,URL,Trading service APIs.,true,true,high,high,high,critical,,2024-10-01 12:23:21 UTC,2024-10-08 07:29:47 UTC
+mark8.syfe.com,URL,Market data API service.,true,true,high,low,high,critical,,2024-10-01 12:23:48 UTC,2024-10-08 07:30:29 UTC
