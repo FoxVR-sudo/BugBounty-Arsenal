@@ -44,7 +44,7 @@ import payloads
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-SCANNER_VERSION = "1.0"
+SCANNER_VERSION = "2.0"  # Phase 2: External tool integrations (Subfinder, HTTPX, Nuclei)
 
 
 def _get_host(url: str) -> str:

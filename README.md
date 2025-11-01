@@ -7,14 +7,15 @@
              |___/                             |___/                                       
 ```
 
-# 🎯 BugBounty Arsenal
+# 🎯 BugBounty Arsenal v2.0
 
 **Advanced Security Reconnaissance & Vulnerability Discovery Platform**
 
-A comprehensive, automated security vulnerability scanner designed for professional bug bounty hunters and security researchers. Powered by 22+ active detectors and intelligent async scanning engine.
+A comprehensive, automated security vulnerability scanner designed for professional bug bounty hunters and security researchers. Powered by **22+ active detectors** and intelligent async scanning engine with **full reconnaissance pipeline** integration.
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Version](https://img.shields.io/badge/version-2.0-blue.svg)]()
 [![Async](https://img.shields.io/badge/async-aiohttp-green.svg)](https://docs.aiohttp.org/)
 [![Status](https://img.shields.io/badge/status-active-success.svg)]()
 
@@ -28,10 +29,21 @@ A comprehensive, automated security vulnerability scanner designed for professio
 [![HackerOne](https://img.shields.io/badge/reports-HackerOne-success.svg)](https://hackerone.com)
 [![Bugcrowd](https://img.shields.io/badge/compatible-Bugcrowd-blue.svg)](https://bugcrowd.com)
 [![Responsible](https://img.shields.io/badge/testing-responsible-yellow.svg)]()
+[![Phase2](https://img.shields.io/badge/Phase_2-Tool_Integrations-success.svg)]()
 
 ## 🎯 Overview
 
-**BugBounty Arsenal** is a professional-grade, async security testing framework that automatically detects common web vulnerabilities while respecting rate limits and following responsible disclosure practices. Built for serious bug bounty hunters who demand speed, accuracy, and comprehensive evidence gathering.
+**BugBounty Arsenal v2.0** is a professional-grade, async security testing framework that automatically detects common web vulnerabilities while respecting rate limits and following responsible disclosure practices. Built for serious bug bounty hunters who demand speed, accuracy, and comprehensive evidence gathering.
+
+### 🚀 What's New in v2.0
+
+**Phase 2: External Tool Integration Pipeline**
+
+- 🔍 **Subfinder** integration for subdomain enumeration
+- 🌐 **HTTPX** integration for live host probing  
+- ⚡ **Nuclei** integration for template-based vulnerability scanning
+- 🎯 **Full Recon Mode**: Automated pipeline from domain → findings
+- 📊 Unified reporting across all tools
 
 ---
 
@@ -39,12 +51,16 @@ A comprehensive, automated security vulnerability scanner designed for professio
 
 | Feature | Description | Status |
 |---------|-------------|--------|
-| 🔍 **Multi-Detector Engine** | 14+ active vulnerability detectors | ✅ Active |
+| 🔍 **Multi-Detector Engine** | 22+ active vulnerability detectors | ✅ Active |
 | ⚡ **Async Scanning** | High-performance concurrent scanning | ✅ Active |
+| 🚀 **Full Recon Pipeline** | Subfinder → HTTPX → Scanner → Nuclei | ⭐ v2.0 NEW |
 | 📊 **Smart Reporting** | HTML, JSON, HackerOne markdown | ✅ Active |
-| 🎯 **IDOR Detection** | Automatic ID manipulation testing | ⭐ NEW |
+| 🎯 **IDOR Detection** | Automatic ID manipulation testing | ✅ Active |
 | 🔥 **SSRF Detection** | Internal network probing | ✅ Active |
-| 💉 **Injection Testing** | SQL, XSS, LFI pattern detection | ✅ Active |
+| 💉 **Injection Testing** | SQL, XSS, LFI, SSTI, XXE detection | ✅ Active |
+| 🔐 **Advanced Tests** | JWT, NoSQL, Command Injection, GraphQL | ✅ Active |
+| ⚔️ **Race Conditions** | Concurrent request race detection | ✅ Active |
+| 🧬 **Prototype Pollution** | JavaScript pollution detection | ✅ Active |
 | 🛡️ **Rate Limiting** | Intelligent per-host throttling | ✅ Active |
 | 📸 **Evidence Capture** | Full HTTP request/response logging | ✅ Active |
 | 🔧 **Proxy Support** | Burp Suite integration ready | ✅ Active |
@@ -119,7 +135,42 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### Basic Usage
+### 🆕 v2.0: Full Recon Mode (Recommended!)
+
+```bash
+# Check if external tools are installed
+python check_tools.py
+
+# If tools are missing, install them (requires Go)
+# See: https://go.dev/doc/install
+
+# Install Subfinder
+go install -v github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest
+
+# Install HTTPX
+go install -v github.com/projectdiscovery/httpx/cmd/httpx@latest
+
+# Install Nuclei
+go install -v github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest
+
+# Update Nuclei templates
+nuclei -update-templates
+
+# Run full recon pipeline (domain → subdomains → live hosts → scan → nuclei)
+python main.py --recon example.com --consent
+
+# Advanced recon options
+python main.py --recon example.com --consent \
+  --recursive-subs \
+  --nuclei-severity high,critical \
+  --concurrency 20
+
+# Skip specific phases
+python main.py --recon example.com --consent --skip-nuclei
+python main.py --recon example.com --consent --skip-scanner
+```
+
+### Standard Scanning Mode (Targeted URLs)
 
 ```bash
 # Prepare your targets CSV file
@@ -160,6 +211,62 @@ python main.py \
 ### With Proxy
 ```bash
 python main.py -s targets.csv --consent --proxy http://127.0.0.1:8080
+```
+
+## 🎯 v2.0 Usage Modes
+
+### Mode 1: Full Recon Pipeline (🆕 Recommended)
+
+Automated reconnaissance from a single domain to complete vulnerability findings:
+
+```bash
+# Basic full recon
+python main.py --recon spotify.com --consent
+
+# Advanced recon with all options
+python main.py --recon spotify.com --consent \
+  --recursive-subs \
+  --nuclei-severity high,critical \
+  --concurrency 20 \
+  --recon-output my_recon_results
+
+# Skip phases you don't want
+python main.py --recon spotify.com --consent --skip-nuclei
+```
+
+**Pipeline stages:**
+1. 🔍 **Subfinder**: Enumerate all subdomains
+2. 🌐 **HTTPX**: Probe for live web servers
+3. 🎯 **Scanner**: Run 22+ custom detectors
+4. ⚡ **Nuclei**: Template-based scanning
+
+**Output structure:**
+```
+recon_output/
+└── spotify.com/
+    └── 20251101_143022/
+        ├── 00_recon_summary.json      # Full results summary
+        ├── 01_subdomains.txt           # All discovered subdomains
+        ├── 02_live_hosts.json          # HTTPX probe results
+        ├── 03_scanner_findings.json    # Custom scanner results
+        ├── 04_nuclei_findings.json     # Nuclei template matches
+        └── scanner_responses/          # Raw HTTP evidence
+```
+
+### Mode 2: Targeted Scanning (Classic)
+
+Scan specific URLs from a CSV file:
+
+```bash
+# Create targets file
+cat > targets.csv << EOF
+URL,Status
+https://api.spotify.com/v1/users,in
+https://api.spotify.com/v1/playlists,in
+EOF
+
+# Run scan
+python main.py -s targets.csv --consent
 ```
 
 ## 🔍 Detectors

@@ -39,8 +39,13 @@ def _run_tool(script_name, args=None):
         return False
 
 def main():
-    parser = argparse.ArgumentParser(description="Safe Bug Bounty Scanner")
-    parser.add_argument("--scope", "-s", required=True, help="CSV file with URL,Status")
+    parser = argparse.ArgumentParser(description="Safe Bug Bounty Scanner v2.0")
+    
+    # Mode selection
+    parser.add_argument("--recon", metavar="DOMAIN", help="🚀 [V2.0] Full recon mode: Subfinder → HTTPX → Scanner → Nuclei")
+    
+    # Standard scanning mode
+    parser.add_argument("--scope", "-s", help="CSV file with URL,Status (required for standard mode)")
     parser.add_argument("--concurrency", "-c", type=int, default=10)
     parser.add_argument("--per-host-rate", "-r", type=float, default=1.0, help="requests per second per host")
     parser.add_argument("--timeout", "-t", type=int, default=15)
@@ -53,9 +58,59 @@ def main():
     parser.add_argument("--scan-both", action="store_true", help="Try both https:// and http:// for each target (will double requests)")
     parser.add_argument("--secret-whitelist", help="Comma-separated whitelist substrings to ignore in secret detector (e.g. example,internal)")
     parser.add_argument("--secret-blacklist", help="Comma-separated blacklist substrings to require-match in secret detector")
-    # new: auto-generate all auxiliary reports by default; add flag to disable
     parser.add_argument("--no-auto-reports", action="store_true", help="Do not automatically generate masked/correlated/combined reports after scan")
+    
+    # Recon mode options
+    parser.add_argument("--recon-output", default="recon_output", help="Output directory for recon mode")
+    parser.add_argument("--skip-scanner", action="store_true", help="Skip custom scanner in recon mode")
+    parser.add_argument("--skip-nuclei", action="store_true", help="Skip Nuclei in recon mode")
+    parser.add_argument("--nuclei-severity", help="Nuclei severity filter (comma-separated: info,low,medium,high,critical)")
+    parser.add_argument("--recursive-subs", action="store_true", help="Use recursive subdomain enumeration")
+    
     args = parser.parse_args()
+
+    # V2.0: Recon mode (Subfinder → HTTPX → Scanner → Nuclei)
+    if args.recon:
+        if not args.consent:
+            print("You must provide --consent to confirm you have permission to scan the target.")
+            sys.exit(1)
+        
+        print(f"\n{'='*70}")
+        print(f"🚀 BUG BOUNTY ARSENAL v2.0 - FULL RECON MODE")
+        print(f"{'='*70}\n")
+        print(f"Target domain: {args.recon}")
+        print(f"Pipeline: Subfinder → HTTPX → Scanner (22+ detectors) → Nuclei")
+        print(f"Output directory: {args.recon_output}\n")
+        
+        # Import and run recon orchestrator
+        from tools.recon_orchestrator import run_recon_pipeline
+        
+        nuclei_sev = _split_list_arg(args.nuclei_severity) if args.nuclei_severity else None
+        
+        results = run_recon_pipeline(
+            domain=args.recon,
+            output_dir=args.recon_output,
+            skip_scanner=args.skip_scanner,
+            skip_nuclei=args.skip_nuclei,
+            nuclei_severity=nuclei_sev,
+            scanner_concurrency=args.concurrency,
+            recursive_subs=args.recursive_subs
+        )
+        
+        if "error" in results:
+            print(f"\n[!] Recon failed: {results['error']}")
+            sys.exit(1)
+        
+        print(f"\n✓ Full recon completed successfully!")
+        print(f"✓ Check output: {results.get('output_directory')}")
+        sys.exit(0)
+
+    # Standard scanning mode (requires --scope)
+    if not args.scope:
+        print("[!] Either --recon DOMAIN or --scope FILE is required")
+        print("    Use --recon for full reconnaissance pipeline")
+        print("    Use --scope for targeted scanning")
+        sys.exit(1)
 
     if not args.consent:
         print("You must provide --consent to confirm you have permission to scan the targets.")
