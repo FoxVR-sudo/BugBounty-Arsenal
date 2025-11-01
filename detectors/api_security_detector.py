@@ -78,19 +78,30 @@ async def api_security_detector(session, url: str, context: dict) -> List[Dict[s
     if not is_api_endpoint(url):
         return findings
     
-    # Run tests in parallel for speed (except rate limiting which needs sequential)
-    tasks = [
-        test_excessive_data_exposure(session, url, context),
-        test_idor(session, url, context),
-        test_verbose_errors(session, url, context),
-    ]
-    
-    # Run parallel tests
-    results = await asyncio.gather(*tasks, return_exceptions=True)
-    
-    for result in results:
-        if not isinstance(result, Exception) and result:
-            findings.extend(result)
+    try:
+        # Run tests in parallel with timeout wrapper
+        tasks = [
+            test_excessive_data_exposure(session, url, context),
+            test_idor(session, url, context),
+            test_verbose_errors(session, url, context),
+        ]
+        
+        # Run parallel tests with 10 second timeout (shorter for safety)
+        results = await asyncio.wait_for(
+            asyncio.gather(*tasks, return_exceptions=True),
+            timeout=10.0
+        )
+        
+        for result in results:
+            if isinstance(result, list) and result:
+                findings.extend(result)
+                
+    except asyncio.TimeoutError:
+        # Timeout after 10 seconds - skip this URL silently
+        pass
+    except Exception:
+        # Catch any other errors and continue silently
+        pass
     
     return findings
 
@@ -114,7 +125,7 @@ async def test_excessive_data_exposure(session, url: str, context: dict) -> List
         resp = await session.get(
             url,
             headers=headers,
-            timeout=context.get('timeout', 15),
+            timeout=5,  # Short timeout for API detector
             allow_redirects=True
         )
         
@@ -201,7 +212,7 @@ async def test_idor(session, url: str, context: dict) -> List[Dict[str, Any]]:
         baseline_resp = await session.get(
             url,
             headers=headers,
-            timeout=5,  # Shorter timeout for speed
+            timeout=3,  # Very short timeout for IDOR test
             allow_redirects=False
         )
         baseline_body = await baseline_resp.text()
@@ -224,17 +235,28 @@ async def test_idor(session, url: str, context: dict) -> List[Dict[str, Any]]:
                 session.get(
                     test_url,
                     headers=headers,
-                    timeout=5,
+                    timeout=3,
                     allow_redirects=False
                 )
             )
         
-        # Run tests in parallel
-        responses = await asyncio.gather(*test_tasks, return_exceptions=True)
+        # Run tests in parallel with timeout
+        try:
+            responses = await asyncio.wait_for(
+                asyncio.gather(*test_tasks, return_exceptions=True),
+                timeout=7.0  # Max 7 seconds for IDOR parallel tests
+            )
+        except asyncio.TimeoutError:
+            return findings
         
         successful_tests = []
         for test_id, test_url, resp in zip(test_ids, test_urls, responses):
+            # Skip if response is an exception
             if isinstance(resp, Exception):
+                continue
+            
+            # Skip if response doesn't have expected attributes
+            if not hasattr(resp, 'status') or not hasattr(resp, 'text'):
                 continue
                 
             try:
@@ -290,7 +312,7 @@ async def test_verbose_errors(session, url: str, context: dict) -> List[Dict[str
             url,
             params={'id': "'; DROP TABLE users--"},
             headers=headers,
-            timeout=5,
+            timeout=3,
             allow_redirects=False
         )
         

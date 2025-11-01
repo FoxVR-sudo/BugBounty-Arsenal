@@ -35,7 +35,7 @@ import detectors.ssti_detector
 import detectors.race_condition_detector
 import detectors.graphql_injection_detector
 import detectors.prototype_pollution_detector
-# import detectors.api_security_detector  # Temporarily disabled - needs more testing
+# import detectors.api_security_detector  # DISABLED - causes scanner hang, needs more investigation
 
 from detectors.registry import ACTIVE_DETECTORS, PASSIVE_DETECTORS
 import crawler
