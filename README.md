@@ -1,14 +1,27 @@
-# 🔐 Safe Bug Bounty Scanner# safe_bugbounty_scanner
+```
+ ____              ____                   _            _                               _ 
+| __ ) _   _  __ _| __ )  ___  _   _ _ __ | |_ _   _   / \   _ __ ___  ___ _ __   __ _| |
+|  _ \| | | |/ _` |  _ \ / _ \| | | | '_ \| __| | | | / _ \ | '__/ __|/ _ \ '_ \ / _` | |
+| |_) | |_| | (_| | |_) | (_) | |_| | | | | |_| |_| |/ ___ \| |  \__ \  __/ | | | (_| | |
+|____/ \__,_|\__, |____/ \___/ \__,_|_| |_|\__|\__, /_/   \_\_|  |___/\___|_| |_|\__,_|_|
+             |___/                             |___/                                       
+```
 
-A comprehensive, automated security vulnerability scanner designed for safe and responsible bug bounty hunting.
+# 🎯 BugBounty Arsenal
+
+**Advanced Security Reconnaissance & Vulnerability Discovery Platform**
+
+A comprehensive, automated security vulnerability scanner designed for professional bug bounty hunters and security researchers. Powered by 14+ active detectors and intelligent async scanning engine.
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![Status](https://img.shields.io/badge/status-active-success.svg)]()
+[![Detectors](https://img.shields.io/badge/detectors-14+-green.svg)]()
+[![IDOR](https://img.shields.io/badge/IDOR-supported-red.svg)]()
 
 ## 🎯 Overview
 
-Safe Bug Bounty Scanner is a powerful, async security testing framework that automatically detects common web vulnerabilities while respecting rate limits and following responsible disclosure practices.
+**BugBounty Arsenal** is a professional-grade, async security testing framework that automatically detects common web vulnerabilities while respecting rate limits and following responsible disclosure practices. Built for serious bug bounty hunters who demand speed, accuracy, and comprehensive evidence gathering.
 
 ### Key Features
 
@@ -58,8 +71,8 @@ Safe Bug Bounty Scanner is a powerful, async security testing framework that aut
 
 ```bash
 # Clone the repository
-git clone https://github.com/FoxVR-sudo/safe_bugbounty_scanner.git
-cd safe_bugbounty_scanner
+git clone https://github.com/FoxVR-sudo/BugBounty-Arsenal.git
+cd BugBounty-Arsenal
 
 # Create virtual environment
 python3 -m venv venv
@@ -256,10 +269,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📞 Contact
 
 - GitHub: [@FoxVR-sudo](https://github.com/FoxVR-sudo)
-- Project: [safe_bugbounty_scanner](https://github.com/FoxVR-sudo/safe_bugbounty_scanner)
+- Project: [BugBounty Arsenal](https://github.com/FoxVR-sudo/BugBounty-Arsenal)
 
 ---
 
 **Made with ❤️ for the bug bounty community**
+
+🎯 **BugBounty Arsenal** - Your complete security testing toolkit
 
 ⭐ Star this repo if you find it useful!
