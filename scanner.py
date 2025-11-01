@@ -376,13 +376,18 @@ async def _bounded_scan_with_retries(
         try:
             async with sem:
                 await _wait_for_token(host_state_tokens, host, per_host_rate)
-                return await scan_single_url(  # type: ignore
+                # Build context dict for scan_single_url
+                context = {
+                    'timeout': 15,
+                    'allow_destructive': allow_destructive,
+                    'output_dir': output_dir,
+                    'per_host_rate': per_host_rate,
+                    'scope_matcher': scope_matcher
+                }
+                return await scan_single_url(
                     session,
                     target,
-                    output_dir,
-                    allow_destructive=allow_destructive,  # type: ignore
-                    per_host_rate=per_host_rate,  # type: ignore
-                    scope_matcher=scope_matcher,  # type: ignore
+                    context,
                     proxy=proxy,
                     secret_whitelist=secret_whitelist,
                     secret_blacklist=secret_blacklist,
