@@ -15,13 +15,42 @@ A comprehensive, automated security vulnerability scanner designed for professio
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Async](https://img.shields.io/badge/async-aiohttp-green.svg)](https://docs.aiohttp.org/)
 [![Status](https://img.shields.io/badge/status-active-success.svg)]()
+
 [![Detectors](https://img.shields.io/badge/detectors-14+-green.svg)]()
-[![IDOR](https://img.shields.io/badge/IDOR-supported-red.svg)]()
+[![IDOR](https://img.shields.io/badge/IDOR-✓-red.svg)]()
+[![SSRF](https://img.shields.io/badge/SSRF-✓-critical.svg)]()
+[![XSS](https://img.shields.io/badge/XSS-✓-orange.svg)]()
+[![SQL](https://img.shields.io/badge/SQL-✓-red.svg)]()
+[![LFI](https://img.shields.io/badge/LFI-✓-orange.svg)]()
+
+[![HackerOne](https://img.shields.io/badge/reports-HackerOne-success.svg)](https://hackerone.com)
+[![Bugcrowd](https://img.shields.io/badge/compatible-Bugcrowd-blue.svg)](https://bugcrowd.com)
+[![Responsible](https://img.shields.io/badge/testing-responsible-yellow.svg)]()
 
 ## 🎯 Overview
 
 **BugBounty Arsenal** is a professional-grade, async security testing framework that automatically detects common web vulnerabilities while respecting rate limits and following responsible disclosure practices. Built for serious bug bounty hunters who demand speed, accuracy, and comprehensive evidence gathering.
+
+---
+
+## ⚡ Features at a Glance
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| 🔍 **Multi-Detector Engine** | 14+ active vulnerability detectors | ✅ Active |
+| ⚡ **Async Scanning** | High-performance concurrent scanning | ✅ Active |
+| 📊 **Smart Reporting** | HTML, JSON, HackerOne markdown | ✅ Active |
+| 🎯 **IDOR Detection** | Automatic ID manipulation testing | ⭐ NEW |
+| 🔥 **SSRF Detection** | Internal network probing | ✅ Active |
+| 💉 **Injection Testing** | SQL, XSS, LFI pattern detection | ✅ Active |
+| 🛡️ **Rate Limiting** | Intelligent per-host throttling | ✅ Active |
+| 📸 **Evidence Capture** | Full HTTP request/response logging | ✅ Active |
+| 🔧 **Proxy Support** | Burp Suite integration ready | ✅ Active |
+| 🌍 **i18n Support** | English & Bulgarian reports | ✅ Active |
+
+---
 
 ### Key Features
 
