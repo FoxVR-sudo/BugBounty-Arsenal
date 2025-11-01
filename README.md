@@ -18,7 +18,7 @@ A comprehensive, automated security vulnerability scanner designed for professio
 [![Async](https://img.shields.io/badge/async-aiohttp-green.svg)](https://docs.aiohttp.org/)
 [![Status](https://img.shields.io/badge/status-active-success.svg)]()
 
-[![Detectors](https://img.shields.io/badge/detectors-14+-green.svg)]()
+[![Detectors](https://img.shields.io/badge/detectors-17+-green.svg)]()
 [![IDOR](https://img.shields.io/badge/IDOR-✓-red.svg)]()
 [![SSRF](https://img.shields.io/badge/SSRF-✓-critical.svg)]()
 [![XSS](https://img.shields.io/badge/XSS-✓-orange.svg)]()
@@ -54,12 +54,15 @@ A comprehensive, automated security vulnerability scanner designed for professio
 
 ### Key Features
 
-- ✅ **14 Active Security Detectors**
+- ✅ **17+ Active Security Detectors**
+  - **Command Injection** 🔥 NEW! ($2000-10000+)
+  - **JWT Vulnerabilities** 🔥 NEW! ($1000-8000+)
+  - **NoSQL Injection** 🔥 NEW! ($1000-5000+)
   - SSRF (Server-Side Request Forgery)
   - XSS (Cross-Site Scripting)
   - SQL Injection patterns
   - LFI (Local File Inclusion)
-  - **IDOR (Insecure Direct Object Reference)** ⭐ NEW!
+  - **IDOR (Insecure Direct Object Reference)** ⭐
   - Open Redirect
   - CSRF vulnerabilities
   - Header Injection
@@ -158,16 +161,19 @@ python main.py -s targets.csv --consent --proxy http://127.0.0.1:8080
 
 ### Active Detectors
 
-| Detector | Description | Severity |
-|----------|-------------|----------|
-| **IDOR** | Tests for insecure direct object references | HIGH/MEDIUM |
-| **SSRF** | Server-side request forgery detection | CRITICAL |
-| **XSS** | Cross-site scripting patterns | MEDIUM/HIGH |
-| **SQL Injection** | SQL injection vulnerability patterns | HIGH |
-| **LFI** | Local file inclusion attempts | HIGH |
-| **Open Redirect** | URL redirection vulnerabilities | MEDIUM |
-| **CSRF** | Cross-site request forgery | MEDIUM |
-| **Header Injection** | HTTP header manipulation | MEDIUM |
+| Detector | Description | Severity | Reward |
+|----------|-------------|----------|--------|
+| **Command Injection** 🔥 | OS command execution via shell metacharacters | CRITICAL | $2000-10000+ |
+| **JWT Vulnerabilities** 🔥 | Algorithm confusion, none attack, weak secrets | CRITICAL/HIGH | $1000-8000+ |
+| **NoSQL Injection** 🔥 | MongoDB operator injection, auth bypass | CRITICAL | $1000-5000+ |
+| **IDOR** | Tests for insecure direct object references | HIGH/MEDIUM | $500-2000 |
+| **SSRF** | Server-side request forgery detection | CRITICAL | $1000-5000 |
+| **XSS** | Cross-site scripting patterns | MEDIUM/HIGH | $500-3000 |
+| **SQL Injection** | SQL injection vulnerability patterns | HIGH | $1000-8000 |
+| **LFI** | Local file inclusion attempts | HIGH | $500-3000 |
+| **Open Redirect** | URL redirection vulnerabilities | MEDIUM | $100-1000 |
+| **CSRF** | Cross-site request forgery | MEDIUM | $500-2000 |
+| **Header Injection** | HTTP header manipulation | MEDIUM | $300-1500 |
 
 ### Passive Detectors
 

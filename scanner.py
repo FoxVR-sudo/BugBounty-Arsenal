@@ -27,6 +27,9 @@ import detectors.lfi_detector
 import detectors.header_injection_detector
 import detectors.secret_detector
 import detectors.idor_detector
+import detectors.command_injection_detector
+import detectors.jwt_vulnerability_scanner
+import detectors.nosql_injection_detector
 
 from detectors.registry import ACTIVE_DETECTORS, PASSIVE_DETECTORS
 import crawler
