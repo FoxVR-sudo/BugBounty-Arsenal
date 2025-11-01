@@ -12,7 +12,7 @@ import json
 
 
 @register_active
-async def nosql_injection_detector(url, session, config):
+async def nosql_injection_detector(session, url, context):
     """
     Detect NoSQL injection vulnerabilities.
     
@@ -22,7 +22,7 @@ async def nosql_injection_detector(url, session, config):
     Args:
         url: Target URL to test
         session: aiohttp ClientSession
-        config: Scanner configuration
+        context: Scanner configuration
         
     Returns:
         List of findings
@@ -70,7 +70,7 @@ async def nosql_injection_detector(url, session, config):
             try:
                 async with session.get(
                     test_url,
-                    timeout=config.get('timeout', 15)
+                    timeout=context.get('timeout', 15)
                 ) as resp:
                     response_text = await resp.text()
                     status_code = resp.status
@@ -121,23 +121,23 @@ async def nosql_injection_detector(url, session, config):
         # Test 2: JSON body injection (for POST/PUT requests)
         if parsed.path.endswith(('/login', '/api', '/auth', '/signin')):
             await test_json_nosql_injection(
-                url, session, config, param_name, findings
+                url, session, context, param_name, findings
             )
         
         # Test 3: MongoDB $where operator (JavaScript injection)
         await test_where_operator(
-            url, session, config, parsed, params, param_name, findings
+            url, session, context, parsed, params, param_name, findings
         )
         
         # Test 4: Regex injection
         await test_regex_injection(
-            url, session, config, parsed, params, param_name, findings
+            url, session, context, parsed, params, param_name, findings
         )
     
     return findings
 
 
-async def test_json_nosql_injection(url, session, config, param_name, findings):
+async def test_json_nosql_injection(url, session, context, param_name, findings):
     """Test NoSQL injection in JSON body"""
     try:
         # Common JSON payloads for NoSQL injection
@@ -153,7 +153,7 @@ async def test_json_nosql_injection(url, session, config, param_name, findings):
                     url,
                     json=payload,
                     headers={'Content-Type': 'application/json'},
-                    timeout=config.get('timeout', 15)
+                    timeout=context.get('timeout', 15)
                 ) as resp:
                     if resp.status == 200:
                         response_text = await resp.text()
@@ -187,7 +187,7 @@ async def test_json_nosql_injection(url, session, config, param_name, findings):
         pass
 
 
-async def test_where_operator(url, session, config, parsed, params, param_name, findings):
+async def test_where_operator(url, session, context, parsed, params, param_name, findings):
     """Test MongoDB $where operator (JavaScript injection)"""
     try:
         # $where operator allows JavaScript execution
@@ -213,7 +213,7 @@ async def test_where_operator(url, session, config, parsed, params, param_name, 
             try:
                 async with session.get(
                     test_url,
-                    timeout=config.get('timeout', 15)
+                    timeout=context.get('timeout', 15)
                 ) as resp:
                     response_text = await resp.text()
                     
@@ -247,7 +247,7 @@ async def test_where_operator(url, session, config, parsed, params, param_name, 
         pass
 
 
-async def test_regex_injection(url, session, config, parsed, params, param_name, findings):
+async def test_regex_injection(url, session, context, parsed, params, param_name, findings):
     """Test NoSQL regex injection for timing attacks"""
     try:
         # Regex that causes ReDoS (Regular Expression Denial of Service)
@@ -271,7 +271,7 @@ async def test_regex_injection(url, session, config, parsed, params, param_name,
         try:
             async with session.get(
                 test_url,
-                timeout=config.get('timeout', 15)
+                timeout=context.get('timeout', 15)
             ) as resp:
                 elapsed = time.time() - start_time
                 

@@ -175,7 +175,7 @@ def extract_sensitive_data(response_text):
 
 
 @register_active
-async def graphql_injection_detector(url, session, **kwargs):
+async def graphql_injection_detector(session, url, context):
     """
     Detect GraphQL injection vulnerabilities and misconfigurations
     

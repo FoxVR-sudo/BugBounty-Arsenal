@@ -161,7 +161,7 @@ async def send_concurrent_requests(url, session, method='GET', data=None, count=
 
 
 @register_active
-async def race_condition_detector(url, session, **kwargs):
+async def race_condition_detector(session, url, context):
     """
     Detect race condition vulnerabilities
     

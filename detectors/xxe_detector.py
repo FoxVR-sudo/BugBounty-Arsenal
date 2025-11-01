@@ -144,7 +144,7 @@ def detect_xxe_error(response_text):
 
 
 @register_active
-async def xxe_detector(url, session, **kwargs):
+async def xxe_detector(session, url, context):
     """
     Detect XXE (XML External Entity) vulnerabilities
     

@@ -13,7 +13,7 @@ import hashlib
 
 
 @register_active
-async def command_injection_detector(url, session, config):
+async def command_injection_detector(session, url, context):
     """
     Detect OS command injection vulnerabilities.
     
@@ -21,9 +21,9 @@ async def command_injection_detector(url, session, config):
     Tests various command injection contexts (shell, pipes, backticks, etc.)
     
     Args:
-        url: Target URL to test
         session: aiohttp ClientSession
-        config: Scanner configuration
+        url: Target URL to test
+        context: Scanner context/configuration
         
     Returns:
         List of findings
@@ -81,7 +81,7 @@ async def command_injection_detector(url, session, config):
                 start_time = time.time()
                 async with session.get(
                     test_url,
-                    timeout=config.get('timeout', 15),
+                    timeout=context.get('timeout', 15) if context else 15,
                     allow_redirects=False
                 ) as resp:
                     response_text = await resp.text()
@@ -117,7 +117,7 @@ async def command_injection_detector(url, session, config):
             except asyncio.TimeoutError:
                 # Timeout might also indicate command execution
                 elapsed = time.time() - start_time
-                if elapsed >= config.get('timeout', 15) - 1:
+                if elapsed >= (context.get('timeout', 15) if context else 15) - 1:
                     evidence_id = hashlib.md5(test_url.encode()).hexdigest()[:12]
                     
                     findings.append({
@@ -162,7 +162,7 @@ async def command_injection_detector(url, session, config):
             try:
                 async with session.get(
                     test_url,
-                    timeout=config.get('timeout', 15),
+                    timeout=context.get('timeout', 15) if context else 15,
                     allow_redirects=False
                 ) as resp:
                     response_text = await resp.text()

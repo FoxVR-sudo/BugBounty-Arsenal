@@ -146,7 +146,7 @@ def extract_context(response_text, search_string, context_length=50):
 
 
 @register_active
-async def ssti_detector(url, session, **kwargs):
+async def ssti_detector(session, url, context):
     """
     Detect SSTI (Server-Side Template Injection) vulnerabilities
     

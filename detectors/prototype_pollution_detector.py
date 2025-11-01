@@ -114,7 +114,7 @@ def detect_pollution_errors(response_text):
 
 
 @register_active
-async def prototype_pollution_detector(url, session, **kwargs):
+async def prototype_pollution_detector(session, url, context):
     """
     Detect prototype pollution vulnerabilities
     
