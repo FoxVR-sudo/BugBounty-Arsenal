@@ -192,7 +192,7 @@ def build_test_url(parsed_url, id_info: Dict, new_id: str) -> str:
     return id_info['original_url']
 
 
-async def test_idor(session, original_url: str, id_info: Dict, per_host_rate: float = None) -> List[Dict]:
+async def test_idor(session, original_url: str, id_info: Dict, per_host_rate: float = None) -> List[Dict]:  # type: ignore
     """
     Test for IDOR vulnerability by trying different IDs.
     Returns list of findings.

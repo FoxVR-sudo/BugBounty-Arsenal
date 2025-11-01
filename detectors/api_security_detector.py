@@ -260,14 +260,14 @@ async def test_idor(session, url: str, context: dict) -> List[Dict[str, Any]]:
                 continue
                 
             try:
-                test_body = await resp.text()
+                test_body = await resp.text()  # type: ignore
                 test_len = len(test_body)
                 
                 # If we get a valid response with different data
-                if resp.status in [200, 201] and abs(test_len - baseline_len) > 100:
+                if resp.status in [200, 201] and abs(test_len - baseline_len) > 100:  # type: ignore
                     successful_tests.append({
                         'id': test_id,
-                        'status': resp.status,
+                        'status': resp.status,  # type: ignore
                         'length': test_len,
                         'url': test_url
                     })

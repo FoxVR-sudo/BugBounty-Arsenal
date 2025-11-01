@@ -77,8 +77,8 @@ async def command_injection_detector(session, url, context):
                 parsed.fragment
             ))
             
+            start_time = time.time()
             try:
-                start_time = time.time()
                 async with session.get(
                     test_url,
                     timeout=context.get('timeout', 15) if context else 15,
