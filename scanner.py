@@ -30,6 +30,8 @@ import detectors.idor_detector
 import detectors.command_injection_detector
 import detectors.jwt_vulnerability_scanner
 import detectors.nosql_injection_detector
+import detectors.xxe_detector
+import detectors.ssti_detector
 
 from detectors.registry import ACTIVE_DETECTORS, PASSIVE_DETECTORS
 import crawler
