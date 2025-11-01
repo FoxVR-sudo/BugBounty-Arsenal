@@ -13,9 +13,31 @@ if sys.platform.startswith("win"):
 import os
 import argparse
 import subprocess
+from datetime import datetime
 from scope_parser import parse_scope, build_scope_matcher
 from scanner import run_scan
 from report_generator import generate_html_report
+
+def _create_scan_directory(base_dir: str = "reports", scan_name: str = None) -> tuple:
+    """
+    Create a timestamped directory for scan results.
+    Returns: (scan_dir, output_html_path, raw_responses_dir)
+    """
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    if scan_name:
+        # Clean scan_name for filesystem
+        safe_name = "".join(c if c.isalnum() or c in ('-', '_', '.') else '_' for c in scan_name)
+        scan_dir = os.path.join(base_dir, f"{timestamp}_{safe_name}")
+    else:
+        scan_dir = os.path.join(base_dir, f"scan_{timestamp}")
+    
+    raw_responses_dir = os.path.join(scan_dir, "raw_responses")
+    os.makedirs(raw_responses_dir, exist_ok=True)
+    
+    output_html = os.path.join(scan_dir, "report.html")
+    
+    return scan_dir, output_html, raw_responses_dir
 
 def _split_list_arg(s: str):
     if not s:
@@ -75,12 +97,17 @@ def main():
             print("You must provide --consent to confirm you have permission to scan the target.")
             sys.exit(1)
         
+        # Create timestamped recon directory
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        domain_safe = "".join(c if c.isalnum() or c in ('-', '_', '.') else '_' for c in args.recon)
+        recon_dir = os.path.join(args.recon_output, f"{timestamp}_{domain_safe}")
+        
         print(f"\n{'='*70}")
         print(f"🚀 BUG BOUNTY ARSENAL v2.0 - FULL RECON MODE")
         print(f"{'='*70}\n")
         print(f"Target domain: {args.recon}")
         print(f"Pipeline: Subfinder → HTTPX → Scanner (22+ detectors) → Nuclei")
-        print(f"Output directory: {args.recon_output}\n")
+        print(f"Output directory: {recon_dir}\n")
         
         # Import and run recon orchestrator
         from tools.recon_orchestrator import run_recon_pipeline
@@ -89,7 +116,7 @@ def main():
         
         results = run_recon_pipeline(
             domain=args.recon,
-            output_dir=args.recon_output,
+            output_dir=recon_dir,  # Use timestamped directory
             skip_scanner=args.skip_scanner,
             skip_nuclei=args.skip_nuclei,
             nuclei_severity=nuclei_sev,
@@ -101,8 +128,11 @@ def main():
             print(f"\n[!] Recon failed: {results['error']}")
             sys.exit(1)
         
-        print(f"\n✓ Full recon completed successfully!")
-        print(f"✓ Check output: {results.get('output_directory')}")
+        print(f"\n{'='*70}")
+        print(f"✅ Full recon completed successfully!")
+        print(f"{'='*70}")
+        print(f"📁 Output directory: {results.get('output_directory')}")
+        print(f"{'='*70}\n")
         sys.exit(0)
 
     # Standard scanning mode (requires --scope)
@@ -129,6 +159,17 @@ def main():
     secret_whitelist = _split_list_arg(args.secret_whitelist)
     secret_blacklist = _split_list_arg(args.secret_blacklist)
 
+    # Create timestamped scan directory
+    # Extract scan name from scope file (e.g., "vulnweb" from "test_vulnweb.csv")
+    scope_basename = os.path.splitext(os.path.basename(args.scope))[0]
+    scan_dir, output_html, raw_responses_dir = _create_scan_directory(
+        base_dir="reports",
+        scan_name=scope_basename
+    )
+    
+    print(f"[+] Scan directory: {scan_dir}")
+    print(f"[+] Raw responses: {raw_responses_dir}")
+
     results, metadata = run_scan(
         in_scope,
         concurrency=args.concurrency,
@@ -136,7 +177,7 @@ def main():
         retries=args.retries,
         per_host_rate=args.per_host_rate,
         allow_destructive=args.allow_destructive,
-        output_dir=os.path.dirname(args.output),
+        output_dir=raw_responses_dir,  # Use timestamped directory
         auto_confirm=args.auto_confirm,
         scope_matcher=scope_matcher,
         proxy=args.proxy,
@@ -145,9 +186,22 @@ def main():
         secret_blacklist=secret_blacklist,
     )
 
-    os.makedirs(os.path.dirname(args.output), exist_ok=True)
-    generate_html_report(results, args.output, duration_seconds=0.0, metadata=metadata)
-    print(f"Report written to {args.output}")
+    generate_html_report(results, output_html, duration_seconds=metadata.get("duration", 0.0), metadata=metadata)
+    
+    # Also save JSON report
+    import json
+    json_path = os.path.join(scan_dir, "report.json")
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump({"results": results, "metadata": metadata}, f, indent=2, ensure_ascii=False)
+    
+    print(f"\n{'='*70}")
+    print(f"✅ Scan completed!")
+    print(f"{'='*70}")
+    print(f"📁 Scan directory: {scan_dir}")
+    print(f"📄 HTML report:    {output_html}")
+    print(f"📄 JSON report:    {json_path}")
+    print(f"📂 Raw responses:  {raw_responses_dir}")
+    print(f"{'='*70}\n")
 
     # Auto-generate auxiliary reports (masked evidence, correlation, combined) unless disabled
     if not args.no_auto_reports:
