@@ -361,3 +361,27 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+# Python environment
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Reports and sensitive data
+reports/*
+!reports/.gitkeep
+screenshots/
+*.csv
+!targets.csv
+!targets_idor_test.csv
+
+# Temporary files
+resp.html
+*.log
+*.tmp
+
+# IDE
+.vscode/
+.idea/
+

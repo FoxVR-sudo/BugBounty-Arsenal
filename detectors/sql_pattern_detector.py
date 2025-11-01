@@ -1,30 +1,35 @@
-﻿# -*- coding: utf-8 -*-
+﻿# detectors/sql_pattern_detector.py
+# Passive detector: анализира response text.
+import re
+from detectors.registry import register_passive
 
-import aiohttp
-
-async def detect_sql_patterns(url):
+@register_passive
+def detect_sql_from_text(text, context):
     """
-    Безопасно проверява за SQL грешки в отговора.
-    Не изпраща SQL заявки, само гледа текстови индикатори.
-    """
-    def detect_sql_issues(content):
-    """
-    Открива базови SQL injection индикатори в HTML или response текст.
-    Връща списък с откритите уязвимости (ако има такива).
+    Пассивен детектор за SQL-индикатори.
+    Връща list[dict].
     """
     patterns = [
-        r"you have an error in your sql syntax",
-        r"warning: mysql",
-        r"unclosed quotation mark after the character string",
-        r"quoted string not properly terminated",
-        r"pg_query\(",
-        r"SQLSTATE\[HY000\]",
-        r"sqlite error",
+        (r"you have an error in your sql syntax", "MySQL syntax error"),
+        (r"warning: mysql", "MySQL warning"),
+        (r"unclosed quotation mark after the character string", "MSSQL unclosed quote"),
+        (r"quoted string not properly terminated", "Oracle quoted string not terminated"),
+        (r"pg_query\(", "Postgres pg_query"),
+        (r"SQLSTATE\[HY000\]", "PDO SQLSTATE"),
+        (r"sqlite error", "SQLite error"),
     ]
 
-    found = []
-    for p in patterns:
-        if re.search(p, content, re.IGNORECASE):
-            found.append(f"Възможен SQL injection индикатор: '{p}'")
+    findings = []
+    if not text:
+        return findings
 
-    return found
+    for pat, name in patterns:
+        if re.search(pat, text, re.IGNORECASE):
+            findings.append({
+                "type": "SQL Injection Indicator",
+                "evidence": name,
+                "how_found": f"Matched pattern {pat}",
+                "severity": "high",
+                "payload": None
+            })
+    return findings

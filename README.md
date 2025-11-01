@@ -1,1 +1,265 @@
-# safe_bugbounty_scanner
+# 🔐 Safe Bug Bounty Scanner# safe_bugbounty_scanner
+
+A comprehensive, automated security vulnerability scanner designed for safe and responsible bug bounty hunting.
+
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Status](https://img.shields.io/badge/status-active-success.svg)]()
+
+## 🎯 Overview
+
+Safe Bug Bounty Scanner is a powerful, async security testing framework that automatically detects common web vulnerabilities while respecting rate limits and following responsible disclosure practices.
+
+### Key Features
+
+- ✅ **14 Active Security Detectors**
+  - SSRF (Server-Side Request Forgery)
+  - XSS (Cross-Site Scripting)
+  - SQL Injection patterns
+  - LFI (Local File Inclusion)
+  - **IDOR (Insecure Direct Object Reference)** ⭐ NEW!
+  - Open Redirect
+  - CSRF vulnerabilities
+  - Header Injection
+  - Security Headers analysis
+  - Secret exposure detection
+  - Directory listing
+  - And more...
+
+- 📊 **Comprehensive Reporting**
+  - Detailed HTML reports with evidence
+  - HackerOne-ready markdown reports
+  - JSON export for automation
+  - Evidence files with full HTTP responses
+  - Bulgarian language support
+
+- 🛡️ **Safe & Responsible**
+  - Rate limiting per host
+  - Concurrency control
+  - Non-destructive testing by default
+  - Explicit consent required
+  - Respects robots.txt
+
+- ⚡ **High Performance**
+  - Async/await architecture
+  - Concurrent scanning
+  - Smart caching
+  - Efficient payload generation
+
+## 📋 Requirements
+
+- Python 3.8+
+- Virtual environment (recommended)
+- Linux/MacOS/Windows
+
+## 🚀 Quick Start
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/FoxVR-sudo/safe_bugbounty_scanner.git
+cd safe_bugbounty_scanner
+
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### Basic Usage
+
+```bash
+# Prepare your targets CSV file
+cat > targets.csv << EOF
+URL,Status
+https://example.com/api/users?id=1,in
+https://example.com/profile,in
+EOF
+
+# Run the scanner (requires explicit consent)
+python main.py -s targets.csv --consent
+
+# Generate detailed report
+python generate_detailed_report.py
+
+# Open the report
+xdg-open reports/detailed_comprehensive_report.html
+```
+
+## 📖 Usage Examples
+
+### Basic Scan
+```bash
+python main.py --scope targets.csv --consent
+```
+
+### Advanced Scan with Options
+```bash
+python main.py \
+  --scope targets.csv \
+  --consent \
+  --concurrency 10 \
+  --per-host-rate 2 \
+  --timeout 20 \
+  --auto-confirm
+```
+
+### With Proxy
+```bash
+python main.py -s targets.csv --consent --proxy http://127.0.0.1:8080
+```
+
+## 🔍 Detectors
+
+### Active Detectors
+
+| Detector | Description | Severity |
+|----------|-------------|----------|
+| **IDOR** | Tests for insecure direct object references | HIGH/MEDIUM |
+| **SSRF** | Server-side request forgery detection | CRITICAL |
+| **XSS** | Cross-site scripting patterns | MEDIUM/HIGH |
+| **SQL Injection** | SQL injection vulnerability patterns | HIGH |
+| **LFI** | Local file inclusion attempts | HIGH |
+| **Open Redirect** | URL redirection vulnerabilities | MEDIUM |
+| **CSRF** | Cross-site request forgery | MEDIUM |
+| **Header Injection** | HTTP header manipulation | MEDIUM |
+
+### Passive Detectors
+
+| Detector | Description |
+|----------|-------------|
+| **Security Headers** | Missing security headers analysis |
+| **Secret Detection** | Exposed API keys, tokens, credentials |
+| **Directory Listing** | Exposed directory indexes |
+
+## 📊 Report Generation
+
+The scanner generates multiple report formats:
+
+1. **Comprehensive HTML Report** - Full details with evidence
+   ```bash
+   python generate_detailed_report.py
+   ```
+
+2. **Critical Findings Report** - High-priority issues only
+   ```bash
+   python generate_critical_report.py
+   ```
+
+3. **HackerOne Format** - Ready for submission
+   - Located in `reports/hackerone/`
+   - Individual markdown files per finding
+   - Includes reproduction steps and impact
+
+## 🎯 IDOR Detection
+
+The IDOR detector automatically identifies and tests for insecure direct object references:
+
+- **Numeric IDs**: `/users/123`, `?id=456`
+- **UUIDs**: `/docs/550e8400-e29b-41d4-a716-446655440000`
+- **ObjectIds**: `/items/507f1f77bcf86cd799439011`
+- **Common parameters**: `user_id`, `doc_id`, `order_id`, etc.
+
+See [docs/IDOR_DETECTOR.md](docs/IDOR_DETECTOR.md) for detailed documentation.
+
+## 🛡️ Safety Features
+
+### Explicit Consent
+```bash
+# REQUIRED: --consent flag acknowledges permission to scan
+python main.py -s targets.csv --consent
+```
+
+### Rate Limiting
+```bash
+# Limit to 2 requests per second per host
+python main.py -s targets.csv --consent -r 2
+```
+
+### Non-Destructive by Default
+- All payloads are designed to be safe
+- No data modification or deletion
+- Use `--allow-destructive` only when authorized
+
+## 📁 Project Structure
+
+```
+safe_bugbounty_scanner/
+├── main.py                          # Entry point
+├── scanner.py                       # Core scanning engine
+├── crawler.py                       # Web crawler
+├── payloads.py                      # Safe payload definitions
+├── requirements.txt                 # Python dependencies
+├── detectors/                       # Security detectors
+│   ├── idor_detector.py            # IDOR detection
+│   ├── ssrf_detector.py            # SSRF detection
+│   ├── xss_pattern_detector.py     # XSS detection
+│   └── ...                         # Other detectors
+├── docs/                           # Documentation
+│   ├── IDOR_DETECTOR.md           # IDOR documentation
+│   └── IDOR_EXAMPLES.md           # Usage examples
+├── tools/                          # Utility scripts
+│   ├── mask_and_extract_evidence.py
+│   ├── correlate_reports.py
+│   └── generate_combined_evidence.py
+└── reports/                        # Generated reports
+    ├── detailed_comprehensive_report.html
+    ├── report.json
+    └── hackerone/                 # HackerOne format reports
+```
+
+## 🔧 Configuration
+
+### Command Line Options
+
+```
+Options:
+  -s, --scope SCOPE                 CSV file with URL,Status
+  -c, --concurrency N               Concurrent connections (default: 10)
+  -r, --per-host-rate N            Requests per second per host (default: 1.0)
+  -t, --timeout N                   Request timeout in seconds (default: 15)
+  --retries N                       Number of retries (default: 3)
+  -o, --output DIR                  Output directory (default: reports/)
+  --consent                         Required: Confirm permission to scan
+  --allow-destructive               Allow destructive tests (use carefully!)
+  --auto-confirm                    Auto-confirm medium-confidence findings
+  --proxy URL                       HTTP proxy (e.g., http://proxy:8080)
+  --scan-both                       Try both HTTP and HTTPS
+  --no-auto-reports                 Disable automatic report generation
+```
+
+## ⚠️ Legal Disclaimer
+
+**IMPORTANT**: This tool is for authorized security testing only!
+
+- ✅ Only scan systems you have explicit written permission to test
+- ✅ Follow responsible disclosure practices
+- ✅ Respect rate limits and robots.txt
+- ❌ Do NOT use for malicious purposes
+- ❌ Do NOT scan without authorization
+
+The authors are not responsible for misuse of this tool. Use at your own risk.
+
+## 📜 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- OWASP for security testing guidelines
+- Bug bounty community for best practices
+- All contributors and testers
+
+## 📞 Contact
+
+- GitHub: [@FoxVR-sudo](https://github.com/FoxVR-sudo)
+- Project: [safe_bugbounty_scanner](https://github.com/FoxVR-sudo/safe_bugbounty_scanner)
+
+---
+
+**Made with ❤️ for the bug bounty community**
+
+⭐ Star this repo if you find it useful!

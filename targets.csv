@@ -1,4 +1,4 @@
-URL,Status
+﻿URL,Status
 https://httpbin.org/get?test=1,in
 https://httpbin.org/anything?url=https://example.com,in
-https://httpbin.org/response-headers?freeform=<test>,in
+https://example.com

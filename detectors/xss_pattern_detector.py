@@ -1,21 +1,28 @@
-﻿# -*- coding: utf-8 -*-
+﻿# detectors/xss_pattern_detector.py
+# Passive detector: търси потенциални XSS индикатори в текста.
+from detectors.registry import register_passive
 
-import aiohttp
+@register_passive
+def detect_xss_from_text(text, context):
+    findings = []
+    if not text:
+        return findings
 
-async def detect_xss_patterns(url):
-    """
-    Проверява дали HTML съдържа отразени тагове или опасни атрибути.
-    Безопасно, без изпълнение на JS.
-    """
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, timeout=10) as resp:
-                text = await resp.text()
-                indicators = []
-                if "<script" in text.lower():
-                    indicators.append({"tag": "<script>"})
-                if "onerror=" in text.lower():
-                    indicators.append({"attr": "onerror"})
-                return indicators
-    except Exception:
-        return []
+    low_text = text.lower()
+    if "<script" in low_text or "javascript:" in low_text:
+        findings.append({
+            "type": "XSS Indicator",
+            "evidence": "<script> or javascript: found",
+            "how_found": "Passive scan found script tag or javascript: in response",
+            "severity": "medium",
+            "payload": None
+        })
+    if "onerror=" in low_text or "onload=" in low_text:
+        findings.append({
+            "type": "XSS Attribute",
+            "evidence": "onerror/onload attribute",
+            "how_found": "Passive scan found potentially dangerous attributes",
+            "severity": "low",
+            "payload": None
+        })
+    return findings

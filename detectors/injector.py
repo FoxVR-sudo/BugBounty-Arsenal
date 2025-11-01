@@ -1,0 +1,136 @@
+﻿# detectors/injector.py
+# Active injector: generates safe injections using payloads and performs confirmation checks.
+import uuid
+import asyncio
+from urllib.parse import urlparse, parse_qs, urlencode
+import logging
+
+from detectors.registry import register_active, await_host_token
+import payloads
+
+logger = logging.getLogger(__name__)
+
+
+@register_active
+async def injector(session, url, context):
+    """
+    Active injector detector.
+    - Uses candidate params (query params + discovered form names) to inject safe payloads.
+    - Performs a confirmation check with a different marker before returning a finding.
+    Context keys:
+      - allow_destructive: bool
+      - per_host_rate: float (optional)
+    Returns: list[dict] findings.
+    """
+    findings = []
+    if not url:
+        return findings
+
+    allow_destructive = bool(context.get("allow_destructive", False))
+    per_host_rate = context.get("per_host_rate", None)
+
+    try:
+        parsed = urlparse(url)
+        host = parsed.netloc.lower()
+        existing_qs = parse_qs(parsed.query, keep_blank_values=True)
+
+        # Build candidate params from query keys + discovered form inputs.
+        candidate_params = list(existing_qs.keys() or [])
+
+        forms = context.get("forms", []) or []
+        # forms may be list of dicts (new crawler) or list of strings (legacy)
+        for form in forms:
+            if isinstance(form, dict):
+                inputs = form.get("inputs", []) or []
+                for name in inputs:
+                    if isinstance(name, str):
+                        candidate_params.append(name)
+            elif isinstance(form, str):
+                candidate_params.append(form)
+
+        # dedupe preserving order
+        seen = set()
+        deduped_params = []
+        for p in candidate_params:
+            if not isinstance(p, str):
+                continue
+            if p in seen:
+                continue
+            seen.add(p)
+            deduped_params.append(p)
+        candidate_params = deduped_params
+
+        if not candidate_params:
+            candidate_params = ["input"]
+
+        for param in candidate_params:
+            for ptype, plist in payloads.PAYLOADS.items():
+                for p in plist:
+                    if p.get("destructive", False) and not allow_destructive:
+                        continue
+
+                    marker_a = f"rb-{uuid.uuid4().hex[:8]}"
+                    marker_b = f"rb-{uuid.uuid4().hex[:8]}"
+
+                    template = p.get("payload", "%s")
+                    payload_a = template % marker_a if "%s" in template else template
+                    payload_b = template % marker_b if "%s" in template else template
+
+                    # build test URL A
+                    new_qs = dict(existing_qs)
+                    new_qs[param] = [payload_a]
+                    new_query = urlencode(new_qs, doseq=True)
+                    test_url_a = parsed._replace(query=new_query).geturl()
+
+                    # throttle using shared token-bucket
+                    await await_host_token(host, per_host_rate)
+
+                    try:
+                        async with session.get(test_url_a, allow_redirects=True) as resp_a:
+                            try:
+                                body_a = await resp_a.text()
+                            except Exception:
+                                body_a = ""
+                            headers_a = dict(resp_a.headers)
+                            status_a = resp_a.status
+                    except Exception as e:
+                        logger.debug("Injector request failed for %s: %s", test_url_a, e)
+                        continue
+
+                    if marker_a in (body_a or ""):
+                        # confirmation request B
+                        new_qs[param] = [payload_b]
+                        new_query_b = urlencode(new_qs, doseq=True)
+                        test_url_b = parsed._replace(query=new_query_b).geturl()
+
+                        await await_host_token(host, per_host_rate)
+
+                        try:
+                            async with session.get(test_url_b, allow_redirects=True) as resp_b:
+                                try:
+                                    body_b = await resp_b.text()
+                                except Exception:
+                                    body_b = ""
+                                headers_b = dict(resp_b.headers)
+                                status_b = resp_b.status
+                        except Exception as e:
+                            logger.debug("Injector confirmation request failed for %s: %s", test_url_b, e)
+                            continue
+
+                        if marker_b in (body_b or ""):
+                            findings.append({
+                                "type": f"{ptype.upper()} Injection Candidate",
+                                "evidence": f"Markers {marker_a} and {marker_b} observed for param '{param}'",
+                                "how_found": f"Injected into parameter '{param}' and observed reflection (confirmed)",
+                                "severity": "medium" if ptype == "xss" else "high" if ptype == "sql" else "medium",
+                                "payload": template.replace("%s", marker_a) if "%s" in template else template,
+                                "evidence_url": test_url_b,
+                                "evidence_body": body_b,
+                                "evidence_headers": headers_b,
+                                "evidence_status": status_b,
+                                "test_param": param,
+                                "test_payload_template": template,
+                            })
+    except Exception as e:
+        logger.exception("Injector error for %s: %s", url, e)
+    return findings

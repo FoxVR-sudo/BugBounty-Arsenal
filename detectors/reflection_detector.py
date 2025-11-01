@@ -1,31 +1,48 @@
-﻿# -*- coding: utf-8 -*-
+﻿# detectors/reflection_detector.py
+# Active detector: използва подадения session + безопасен маркер.
+import uuid
+from urllib.parse import urlparse
+from detectors.registry import register_active
 
-import aiohttp
-import asyncio
-
-async def detect_reflections(targets):
+@register_active
+async def detect_reflections(session, url, context):
+    """
+    Active, non-destructive reflection test.
+    Returns list of findings dicts: {type,evidence,how_found,severity,payload}
+    """
     findings = []
+    if not url:
+        return findings
 
-    async with aiohttp.ClientSession() as session:
-        for url in targets:
+    try:
+        marker = f"rb-{uuid.uuid4().hex[:8]}"
+        parsed = urlparse(url)
+        sep = '&' if parsed.query else '?'
+        test_url = f"{url}{sep}_ref_test={marker}"
+
+        async with session.get(test_url, allow_redirects=True) as resp:
             try:
-                async with session.get(url) as resp:
-                    text = await resp.text()
+                text = await resp.text()
+            except Exception:
+                text = ""
 
-                    # примерна логика — проверка за отражение на 'test'
-                    if "test" in text:
-                        findings.append({
-                            "url": url,
-                            "type": "Potential Reflection",
-                            "severity": "Low",
-                            "description": "User-controlled parameter value appears to be reflected in the response.",
-                            "how_found": "During reflection scanning, scanner sent benign payloads and detected echoed values.",
-                            "evidence": "Found reflected keyword 'test' in response body."
-                        })
-
-            except Exception as e:
-                print(f"[!] Error scanning {url}: {e}")
-                continue
+            if marker in text:
+                findings.append({
+                    "type": "Reflected Input",
+                    "evidence": f"Marker `{marker}` found in response body.",
+                    "how_found": "Injected benign marker in query parameter and observed it reflected in response",
+                    "severity": "low",
+                    "payload": f"_ref_test={marker}",
+                    "test_url": test_url
+                })
+    except Exception as e:
+        findings.append({
+            "type": "Reflection Detector Error",
+            "evidence": str(e),
+            "how_found": "error",
+            "severity": "low",
+            "payload": None,
+            "test_url": url
+        })
 
     return findings
-
