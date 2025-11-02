@@ -9,7 +9,7 @@ import json
 import hashlib
 import getpass
 from urllib.parse import urlparse
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Optional
 from aiohttp.client_exceptions import ClientConnectorDNSError, ClientConnectorError
 
 # Ensure detectors modules register themselves
@@ -156,7 +156,7 @@ async def _wait_for_token(host_state: Dict, host: str, rate: float, capacity: fl
     hs["last"] = time.time()
 
 
-async def _fetch_with_timeout(session: aiohttp.ClientSession, url: str, timeout: int, proxy: str = None):  # type: ignore
+async def _fetch_with_timeout(session: aiohttp.ClientSession, url: str, timeout: int, proxy: Optional[str] = None):
     t = aiohttp.ClientTimeout(total=timeout)
     async with session.get(url, timeout=t, allow_redirects=True, proxy=proxy) as resp:
         try:
@@ -170,10 +170,10 @@ async def scan_single_url(
     session: aiohttp.ClientSession,
     url: str,
     context: Dict,
-    proxy: str = None,  # type: ignore
-    secret_whitelist: List[str] = None,  # type: ignore
-    secret_blacklist: List[str] = None,  # type: ignore
-    bypass: CloudflareBypass = None,  # type: ignore
+    proxy: Optional[str] = None,
+    secret_whitelist: Optional[List[str]] = None,
+    secret_blacklist: Optional[List[str]] = None,
+    bypass: Optional[CloudflareBypass] = None,
 ):
     if isinstance(url, list):
         url = url[0]
@@ -377,10 +377,10 @@ async def _bounded_scan_with_retries(
     output_dir,
     allow_destructive,
     scope_matcher,
-    proxy: str = None,  # type: ignore
-    secret_whitelist: List[str] = None,  # type: ignore
-    secret_blacklist: List[str] = None,  # type: ignore
-    bypass: CloudflareBypass = None,  # type: ignore
+    proxy: Optional[str] = None,
+    secret_whitelist: Optional[List[str]] = None,
+    secret_blacklist: Optional[List[str]] = None,
+    bypass: Optional[CloudflareBypass] = None,
 ):
     attempt = 0
     last_exc = None
@@ -439,11 +439,11 @@ async def async_run(
     output_dir: str = "raw_responses",
     auto_confirm: bool = False,
     scope_matcher=None,
-    proxy: str = None,  # type: ignore
+    proxy: Optional[str] = None,
     scan_both: bool = False,
     use_public_dns: bool = True,  # automatic fallback enabled
-    secret_whitelist: List[str] = None,  # type: ignore
-    secret_blacklist: List[str] = None,  # type: ignore
+    secret_whitelist: Optional[List[str]] = None,
+    secret_blacklist: Optional[List[str]] = None,
     bypass_cloudflare: bool = False,  # Enable Cloudflare bypass
     bypass_delay_min: float = 1.0,  # Minimum delay between requests
     bypass_delay_max: float = 3.0,  # Maximum delay between requests
@@ -740,14 +740,14 @@ def run_scan(
     output_dir: str = "raw_responses",
     auto_confirm: bool = False,
     scope_matcher=None,
-    proxy: str = None,  # type: ignore
+    proxy: Optional[str] = None,
     scan_both: bool = False,
     use_public_dns: bool = True,
-    secret_whitelist: List[str] = None,  # type: ignore
-    secret_blacklist: List[str] = None,  # type: ignore
-    bypass_cloudflare: bool = False,  # type: ignore
-    bypass_delay_min: float = 1.0,  # type: ignore
-    bypass_delay_max: float = 3.0,  # type: ignore
+    secret_whitelist: Optional[List[str]] = None,
+    secret_blacklist: Optional[List[str]] = None,
+    bypass_cloudflare: bool = False,
+    bypass_delay_min: float = 1.0,
+    bypass_delay_max: float = 3.0,
 ):
     try:
         return asyncio.run(
