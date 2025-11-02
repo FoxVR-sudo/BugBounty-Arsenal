@@ -17,6 +17,7 @@ import detectors.reflection_detector
 import detectors.sql_pattern_detector
 import detectors.ssrf_detector
 import detectors.advanced_ssrf_detector  # Real SSRF exploitation tests
+import detectors.ssrf_oob_detector  # DNS callback verification for SSRF
 import detectors.xss_pattern_detector
 import detectors.injector
 import detectors.open_redirect_detector

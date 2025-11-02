@@ -131,11 +131,22 @@ async def injector(session, url, context):
                                 logger.debug(f"Skipping false positive: URL reflection or CDN page for {test_url_b}")
                                 continue
                             
+                            # Determine severity based on type and verification method
+                            # SSRF reflection-only is LOW severity (needs OOB verification)
+                            if ptype == "ssrf":
+                                severity = "low"  # Reflection only, use ssrf_oob_detector for real verification
+                            elif ptype == "xss":
+                                severity = "medium"
+                            elif ptype == "sql":
+                                severity = "high"
+                            else:
+                                severity = "medium"
+                            
                             findings.append({
                                 "type": f"{ptype.upper()} Injection Candidate",
                                 "evidence": f"Markers {marker_a} and {marker_b} observed for param '{param}'",
                                 "how_found": f"Injected into parameter '{param}' and observed reflection (confirmed)",
-                                "severity": "medium" if ptype == "xss" else "high" if ptype == "sql" else "medium",
+                                "severity": severity,
                                 "payload": template.replace("%s", marker_a) if "%s" in template else template,
                                 "evidence_url": test_url_b,
                                 "evidence_body": body_b,
