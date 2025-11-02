@@ -41,13 +41,15 @@ class ExternalTool:
         Raises:
             ExternalToolError: If command fails or times out
         """
-        if not self.is_installed():
+        if not self.binary_path:
             raise ExternalToolError(
                 f"{self.tool_name} is not installed. "
                 f"Install with: go install -v {self._get_install_command()}"
             )
         
         cmd = [self.binary_path] + args
+        # Filter out None values and ensure all are strings
+        cmd = [str(arg) for arg in cmd if arg is not None]
         logger.info(f"Running: {' '.join(cmd)}")
         
         try:

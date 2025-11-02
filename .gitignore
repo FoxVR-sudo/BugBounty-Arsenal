@@ -371,6 +371,7 @@ __pycache__/
 # Reports and sensitive data
 reports/*
 !reports/.gitkeep
+recon_output/
 screenshots/
 *.csv
 !targets.csv

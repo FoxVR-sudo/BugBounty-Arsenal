@@ -89,7 +89,7 @@ def classify_severity(finding: dict, confidence: str) -> str:
     return "low"
 
 
-def _assess_confidence_and_repro(finding: dict) -> Tuple[str, str]:  # type: ignore
+def _assess_confidence_and_repro(finding: dict) -> Tuple[str, str]:
     score = 0
     how = (finding.get("how_found") or "").lower()
     desc = (finding.get("description") or "").lower()
@@ -113,7 +113,7 @@ def _assess_confidence_and_repro(finding: dict) -> Tuple[str, str]:  # type: ign
         confidence = "low"
 
     url = finding.get("evidence_url") or finding.get("url")
-    repro = f'curl -i "{url}"' if url else None
+    repro = f'curl -i "{url}"' if url else ""
     return confidence, repro
 
 
@@ -370,7 +370,9 @@ async def _bounded_scan_with_retries(
 ):
     attempt = 0
     last_exc = None
-    host = _get_host(target if not isinstance(target, list) else target[0])
+    # Normalize target to string
+    target_url = target if not isinstance(target, list) else target[0]
+    host = _get_host(target_url)
 
     while attempt < retries:
         try:
@@ -386,7 +388,7 @@ async def _bounded_scan_with_retries(
                 }
                 return await scan_single_url(
                     session,
-                    target,
+                    target_url,
                     context,
                     proxy=proxy,
                     secret_whitelist=secret_whitelist,
@@ -406,8 +408,8 @@ async def _bounded_scan_with_retries(
             await asyncio.sleep(wait)
             attempt += 1
 
-    logger.error("All %d attempts for %s failed. Last error: %s", retries, target, last_exc)
-    return {"url": target if not isinstance(target, list) else target[0], "issues": [], "error": str(last_exc)}
+    logger.error("All %d attempts for %s failed. Last error: %s", retries, target_url, last_exc)
+    return {"url": target_url, "issues": [], "error": str(last_exc)}
 
 
 async def async_run(

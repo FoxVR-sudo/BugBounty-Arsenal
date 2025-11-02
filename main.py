@@ -4,7 +4,7 @@
 if sys.platform.startswith("win"):
     try:
         import asyncio
-        from asyncio import WindowsSelectorEventLoopPolicy
+        from asyncio import WindowsSelectorEventLoopPolicy  # type: ignore
         asyncio.set_event_loop_policy(WindowsSelectorEventLoopPolicy())
     except Exception:
         # if unavailable, continue with default policy
@@ -18,7 +18,7 @@ from scope_parser import parse_scope, build_scope_matcher
 from scanner import run_scan
 from report_generator import generate_html_report
 
-def _create_scan_directory(base_dir: str = "reports", scan_name: str = None) -> tuple:
+def _create_scan_directory(base_dir: str = "reports", scan_name: str = "") -> tuple:
     """
     Create a timestamped directory for scan results.
     Returns: (scan_dir, output_html_path, raw_responses_dir)
@@ -182,8 +182,8 @@ def main():
         scope_matcher=scope_matcher,
         proxy=args.proxy,
         scan_both=args.scan_both,
-        secret_whitelist=secret_whitelist,
-        secret_blacklist=secret_blacklist,
+        secret_whitelist=secret_whitelist or [],
+        secret_blacklist=secret_blacklist or [],
     )
 
     generate_html_report(results, output_html, duration_seconds=metadata.get("duration", 0.0), metadata=metadata)
