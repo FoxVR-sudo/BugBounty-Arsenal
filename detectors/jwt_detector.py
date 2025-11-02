@@ -134,18 +134,21 @@ def sign_jwt_hmac(header, payload, secret):
 
 
 @register_passive
-async def jwt_detector_passive(session, url, context):
+def jwt_detector_passive(text, combined_dict):
     """
     Passive JWT detection - find JWTs in responses, URLs, headers.
     """
     findings = []
     
     try:
+        url = combined_dict["url"]
+        context = combined_dict["context"]
+        
         resp = context.get("resp")
         if not resp:
             return findings
         
-        body = context.get("body", "")
+        body = context.get("body", text)
         headers = context.get("headers", {})
         
         # JWT regex pattern (3 base64url parts separated by dots)

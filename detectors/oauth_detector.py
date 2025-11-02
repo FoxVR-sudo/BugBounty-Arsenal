@@ -48,14 +48,17 @@ OAUTH_PROVIDERS = [
 
 
 @register_passive
-async def oauth_detector_passive(session, url, context):
+def oauth_detector_passive(text, combined_dict):
     """
     Passive OAuth/SSO vulnerability detection.
     """
     findings = []
     
     try:
-        body = context.get("body", "")
+        url = combined_dict["url"]
+        context = combined_dict["context"]
+        
+        body = context.get("body", text)
         headers = context.get("headers", {})
         
         parsed = urlparse(url)

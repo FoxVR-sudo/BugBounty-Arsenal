@@ -268,7 +268,7 @@ VULNERABLE_SERVICES = {
 
 
 @register_passive
-async def subdomain_takeover_detector(session, url, context):
+def subdomain_takeover_detector(text, combined_dict):
     """
     Detect potential subdomain takeover vulnerabilities.
     
@@ -278,6 +278,8 @@ async def subdomain_takeover_detector(session, url, context):
     
     Note: This is passive detection. DNS CNAME checks require external tools.
     """
+    url = combined_dict["url"]
+    context = combined_dict["context"]
     findings = []
     
     try:

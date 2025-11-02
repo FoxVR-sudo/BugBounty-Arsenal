@@ -96,14 +96,17 @@ EXTENSION_BYPASSES = [
 
 
 @register_passive
-async def file_upload_detector_passive(session, url, context):
+def file_upload_detector_passive(text, combined_dict):
     """
     Passive detection of file upload functionality.
     """
     findings = []
     
     try:
-        body = context.get("body", "")
+        url = combined_dict["url"]
+        context = combined_dict["context"]
+        
+        body = context.get("body", text)
         
         if not body:
             return findings
