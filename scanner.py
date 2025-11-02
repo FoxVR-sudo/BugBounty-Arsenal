@@ -28,6 +28,7 @@ import detectors.fuzz_detector
 import detectors.lfi_detector
 import detectors.header_injection_detector
 import detectors.secret_detector
+import detectors.graphql_detector  # Phase 4: High-value GraphQL vulnerability detection
 import detectors.auth_bypass_detector  # Phase 3: Authentication bypass detection
 import detectors.rate_limit_bypass_detector  # Phase 3: Rate limit bypass detection
 import detectors.brute_force_detector  # Phase 3: Credential testing (SAFE mode)
