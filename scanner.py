@@ -33,6 +33,11 @@ import detectors.jwt_detector  # Phase 4: JWT/Token manipulation (account takeov
 import detectors.file_upload_detector  # Phase 4: File upload bypass (RCE potential)
 import detectors.subdomain_takeover_detector  # Phase 4: Subdomain takeover (easy wins)
 import detectors.cors_detector  # Phase 4: CORS misconfiguration
+import detectors.oauth_detector  # Phase 4: OAuth/SSO bypass (account takeover)
+import detectors.cache_poisoning_detector  # Phase 4: Cache poisoning (XSS, defacement)
+import detectors.prototype_pollution_detector  # Phase 4: Prototype pollution (RCE potential)
+import detectors.nosql_injection_detector  # Phase 4: NoSQL injection (auth bypass)
+import detectors.api_security_detector  # Phase 4: API security issues
 import detectors.auth_bypass_detector  # Phase 3: Authentication bypass detection
 import detectors.rate_limit_bypass_detector  # Phase 3: Rate limit bypass detection
 import detectors.brute_force_detector  # Phase 3: Credential testing (SAFE mode)
