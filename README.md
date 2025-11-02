@@ -173,6 +173,13 @@ python main.py --recon example.com --consent \
   --nuclei-severity high,critical \
   --concurrency 20
 
+# 🛡️ Bypass Cloudflare/CDN Protection (NEW!)
+python main.py --recon example.com --consent \
+  --bypass-cloudflare \
+  --bypass-delay-min 2 \
+  --bypass-delay-max 4 \
+  --concurrency 3
+
 # Skip specific phases
 python main.py --recon example.com --consent --skip-nuclei
 python main.py --recon example.com --consent --skip-scanner
@@ -220,6 +227,44 @@ python main.py \
 ```bash
 python main.py -s targets.csv --consent --proxy http://127.0.0.1:8080
 ```
+
+### 🛡️ Cloudflare/CDN Bypass Mode (🆕)
+
+Many bug bounty targets use Cloudflare or other CDN protections that block automated scanners. Our bypass features mimic real browser behavior:
+
+```bash
+# Enable Cloudflare bypass with realistic delays
+python main.py --scope targets.csv --consent \
+  --bypass-cloudflare \
+  --bypass-delay-min 2 \
+  --bypass-delay-max 4 \
+  --concurrency 3
+
+# Bypass in recon mode
+python main.py --recon target.com --consent \
+  --bypass-cloudflare \
+  --bypass-delay-min 1.5 \
+  --bypass-delay-max 3.5
+```
+
+**Bypass Features:**
+- 🎭 **User-Agent Rotation**: 11+ real browser signatures (Chrome, Firefox, Safari, Edge)
+- 📝 **Realistic Headers**: Browser-specific Accept headers, sec-ch-ua, DNT, etc.
+- ⏱️ **Human-like Delays**: Configurable random delays between requests (1-4s recommended)
+- 🍪 **Cookie Persistence**: Maintains session cookies across requests
+- 🔍 **Challenge Detection**: Automatically detects when Cloudflare blocks you
+- 🌐 **Brotli Support**: Handles modern compression (install: `pip install brotli`)
+
+**When to Use Bypass:**
+- Target shows "Just a moment..." or "Checking your browser" pages
+- High false positive rate (URL reflection in error pages)
+- Consistent timeout/connection errors
+- CF-RAY headers in responses
+
+**Recommended Settings:**
+- `--bypass-delay-min 2` to `--bypass-delay-max 4` for aggressive CDN
+- `--concurrency 3` (lower = more human-like)
+- Increase delays if still getting blocked
 
 ## 🎯 v2.0 Usage Modes
 

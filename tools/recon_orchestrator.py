@@ -66,7 +66,10 @@ class ReconOrchestrator:
         nuclei_severity: Optional[List[str]] = None,
         scanner_concurrency: int = 10,
         nuclei_rate_limit: int = 150,
-        recursive_subs: bool = False
+        recursive_subs: bool = False,
+        bypass_cloudflare: bool = False,
+        bypass_delay_min: float = 1.0,
+        bypass_delay_max: float = 3.0
     ) -> Dict[str, Any]:
         """
         Run the full reconnaissance pipeline.
@@ -79,6 +82,9 @@ class ReconOrchestrator:
             scanner_concurrency: Concurrency for custom scanner
             nuclei_rate_limit: Rate limit for Nuclei
             recursive_subs: Use recursive subdomain enumeration
+            bypass_cloudflare: Enable Cloudflare/CDN bypass
+            bypass_delay_min: Minimum delay between requests (seconds)
+            bypass_delay_max: Maximum delay between requests (seconds)
             
         Returns:
             Dictionary with all findings and metadata
@@ -170,7 +176,10 @@ class ReconOrchestrator:
                     concurrency=scanner_concurrency,
                     timeout=15,
                     output_dir=str(domain_output / "scanner_responses"),
-                    per_host_rate=1.0
+                    per_host_rate=1.0,
+                    bypass_cloudflare=bypass_cloudflare,
+                    bypass_delay_min=bypass_delay_min,
+                    bypass_delay_max=bypass_delay_max
                 )
                 
                 # Save scanner results
@@ -333,7 +342,10 @@ def run_recon_pipeline(
     nuclei_severity: Optional[List[str]] = None,
     scanner_concurrency: int = 10,
     nuclei_rate_limit: int = 150,
-    recursive_subs: bool = False
+    recursive_subs: bool = False,
+    bypass_cloudflare: bool = False,
+    bypass_delay_min: float = 1.0,
+    bypass_delay_max: float = 3.0
 ) -> Dict[str, Any]:
     """
     Convenience function to run the full recon pipeline.
@@ -347,6 +359,9 @@ def run_recon_pipeline(
         scanner_concurrency: Scanner concurrency level
         nuclei_rate_limit: Nuclei rate limit
         recursive_subs: Use recursive subdomain enumeration
+        bypass_cloudflare: Enable Cloudflare/CDN bypass
+        bypass_delay_min: Minimum delay between requests (seconds)
+        bypass_delay_max: Maximum delay between requests (seconds)
         
     Returns:
         Recon results dictionary
@@ -360,5 +375,8 @@ def run_recon_pipeline(
         nuclei_severity=nuclei_severity,
         scanner_concurrency=scanner_concurrency,
         nuclei_rate_limit=nuclei_rate_limit,
-        recursive_subs=recursive_subs
+        recursive_subs=recursive_subs,
+        bypass_cloudflare=bypass_cloudflare,
+        bypass_delay_min=bypass_delay_min,
+        bypass_delay_max=bypass_delay_max
     )

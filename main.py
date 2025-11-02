@@ -82,6 +82,11 @@ def main():
     parser.add_argument("--secret-blacklist", help="Comma-separated blacklist substrings to require-match in secret detector")
     parser.add_argument("--no-auto-reports", action="store_true", help="Do not automatically generate masked/correlated/combined reports after scan")
     
+    # Cloudflare/CDN bypass options
+    parser.add_argument("--bypass-cloudflare", action="store_true", help="🛡️  Enable Cloudflare/CDN bypass (User-Agent rotation, realistic headers, delays)")
+    parser.add_argument("--bypass-delay-min", type=float, default=1.0, help="Minimum delay between requests (seconds) for bypass mode (default: 1.0)")
+    parser.add_argument("--bypass-delay-max", type=float, default=3.0, help="Maximum delay between requests (seconds) for bypass mode (default: 3.0)")
+    
     # Recon mode options
     parser.add_argument("--recon-output", default="recon_output", help="Output directory for recon mode")
     parser.add_argument("--skip-scanner", action="store_true", help="Skip custom scanner in recon mode")
@@ -121,7 +126,10 @@ def main():
             skip_nuclei=args.skip_nuclei,
             nuclei_severity=nuclei_sev,
             scanner_concurrency=args.concurrency,
-            recursive_subs=args.recursive_subs
+            recursive_subs=args.recursive_subs,
+            bypass_cloudflare=args.bypass_cloudflare,
+            bypass_delay_min=args.bypass_delay_min,
+            bypass_delay_max=args.bypass_delay_max
         )
         
         if "error" in results:
@@ -184,6 +192,9 @@ def main():
         scan_both=args.scan_both,
         secret_whitelist=secret_whitelist or [],
         secret_blacklist=secret_blacklist or [],
+        bypass_cloudflare=args.bypass_cloudflare,
+        bypass_delay_min=args.bypass_delay_min,
+        bypass_delay_max=args.bypass_delay_max,
     )
 
     generate_html_report(results, output_html, duration_seconds=metadata.get("duration", 0.0), metadata=metadata)

@@ -41,6 +41,7 @@ import detectors.prototype_pollution_detector
 from detectors.registry import ACTIVE_DETECTORS, PASSIVE_DETECTORS
 import crawler
 import payloads
+from utils.cloudflare_bypass import CloudflareBypass, get_bypass_config
 # Logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -172,11 +173,16 @@ async def scan_single_url(
     proxy: str = None,  # type: ignore
     secret_whitelist: List[str] = None,  # type: ignore
     secret_blacklist: List[str] = None,  # type: ignore
+    bypass: CloudflareBypass = None,  # type: ignore
 ):
     if isinstance(url, list):
         url = url[0]
     original_url = url
     result = {"url": url, "issues": [], "discovered_in_scope": [], "discovered_out_of_scope": []}
+    
+    # Apply Cloudflare bypass delay if configured
+    if bypass:
+        await bypass.delay()
 
     try:
         parsed_try = urlparse(url)
@@ -217,6 +223,12 @@ async def scan_single_url(
             logger.exception("Unexpected error fetching %s: %s", url, e)
             result["error"] = str(e)
             return result
+
+        # Check if we hit a Cloudflare challenge
+        if bypass and CloudflareBypass.is_cloudflare_challenge(text, headers):
+            logger.warning("⚠️  Cloudflare challenge detected for %s - response may be unreliable", url)
+            result["cloudflare_challenge"] = True
+            # Continue scanning but mark findings as potentially unreliable
 
         # crawler discovery
         context = {}
@@ -368,6 +380,7 @@ async def _bounded_scan_with_retries(
     proxy: str = None,  # type: ignore
     secret_whitelist: List[str] = None,  # type: ignore
     secret_blacklist: List[str] = None,  # type: ignore
+    bypass: CloudflareBypass = None,  # type: ignore
 ):
     attempt = 0
     last_exc = None
@@ -394,6 +407,7 @@ async def _bounded_scan_with_retries(
                     proxy=proxy,
                     secret_whitelist=secret_whitelist,
                     secret_blacklist=secret_blacklist,
+                    bypass=bypass,
                 )
         except Exception as e:
             last_exc = e
@@ -430,9 +444,26 @@ async def async_run(
     use_public_dns: bool = True,  # automatic fallback enabled
     secret_whitelist: List[str] = None,  # type: ignore
     secret_blacklist: List[str] = None,  # type: ignore
+    bypass_cloudflare: bool = False,  # Enable Cloudflare bypass
+    bypass_delay_min: float = 1.0,  # Minimum delay between requests
+    bypass_delay_max: float = 3.0,  # Maximum delay between requests
 ):
     results = []
     start_time = time.time()
+    
+    # Initialize Cloudflare bypass if enabled
+    bypass = get_bypass_config(
+        enable_bypass=bypass_cloudflare,
+        delay_min=bypass_delay_min,
+        delay_max=bypass_delay_max,
+        rotate_ua=True
+    ) if bypass_cloudflare else None
+
+    # Use bypass headers if configured, otherwise use provided headers
+    if bypass:
+        headers = bypass.get_headers()
+        logger.info("🛡️  Cloudflare bypass enabled: User-Agent rotation, realistic headers, delays %.1f-%.1fs", 
+                   bypass_delay_min, bypass_delay_max)
 
     connector = aiohttp.TCPConnector(limit=concurrency)
     timeout_obj = aiohttp.ClientTimeout(total=timeout)
@@ -457,6 +488,8 @@ async def async_run(
         "scanner_version": SCANNER_VERSION,
         "secret_whitelist": secret_whitelist,
         "secret_blacklist": secret_blacklist,
+        "bypass_cloudflare": bypass_cloudflare,
+        "bypass_delay_range": (bypass_delay_min, bypass_delay_max) if bypass_cloudflare else None,
     }
 
     async with aiohttp.ClientSession(connector=connector, timeout=timeout_obj, headers=headers) as session:
@@ -580,6 +613,7 @@ async def async_run(
                     proxy=proxy,
                     secret_whitelist=secret_whitelist,
                     secret_blacklist=secret_blacklist,
+                    bypass=bypass,
                 )
             )
             for target in processed_targets
@@ -704,6 +738,9 @@ def run_scan(
     use_public_dns: bool = True,
     secret_whitelist: List[str] = None,  # type: ignore
     secret_blacklist: List[str] = None,  # type: ignore
+    bypass_cloudflare: bool = False,  # type: ignore
+    bypass_delay_min: float = 1.0,  # type: ignore
+    bypass_delay_max: float = 3.0,  # type: ignore
 ):
     try:
         return asyncio.run(
@@ -723,6 +760,9 @@ def run_scan(
                 use_public_dns=use_public_dns,
                 secret_whitelist=secret_whitelist,
                 secret_blacklist=secret_blacklist,
+                bypass_cloudflare=bypass_cloudflare,
+                bypass_delay_min=bypass_delay_min,
+                bypass_delay_max=bypass_delay_max,
             )
         )
     except Exception as e:
