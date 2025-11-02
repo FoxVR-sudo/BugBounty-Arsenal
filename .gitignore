@@ -372,6 +372,7 @@ __pycache__/
 reports/*
 !reports/.gitkeep
 recon_output/
+raw_responses/
 screenshots/
 *.csv
 !targets.csv

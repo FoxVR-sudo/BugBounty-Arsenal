@@ -1,9 +1,0 @@
-{"url": "https://gslink.hackerone.com", "status": 404, "headers": {"Content-Type": "text/html", "Content-Length": "146", "Connection": "keep-alive", "Server": "nginx", "Date": "Sun, 02 Nov 2025 09:03:58 GMT", "X-Cache": "Error from cloudfront", "Via": "1.1 dac39398b1dfdd95d7cfc8f7fe2d60a0.cloudfront.net (CloudFront)", "X-Amz-Cf-Pop": "MCT50-P1", "X-Amz-Cf-Id": "ZhMtmWv3CFDOYiqlfaSOJHwQkk2wMmKcUcRUVGdAttjbf9NRYnKJag=="}}
-
-<html>
-<head><title>404 Not Found</title></head>
-<body>
-<center><h1>404 Not Found</h1></center>
-<hr><center>nginx</center>
-</body>
-</html>
