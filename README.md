@@ -70,17 +70,25 @@ A comprehensive, automated security vulnerability scanner designed for professio
 
 ### Key Features
 
-- ✅ **22+ Active Security Detectors**
-  - **Prototype Pollution** 🔥🔥🔥 NEW! ($1000-8000+)
-  - **GraphQL Injection** 🔥🔥🔥 NEW! ($1000-5000+)
-  - **Race Conditions** 🔥🔥🔥 NEW! ($500-5000+)
+- ✅ **23+ Active Security Detectors**
+  - **Advanced SSRF with Real Exploitation** 🔥🔥🔥🔥 NEW! ($5000-30000+)
+    - AWS IAM credential extraction
+    - GCP service account token access
+    - Azure managed identity exploitation
+    - Internal service interaction (Redis, ElasticSearch, MongoDB)
+    - Local file reading (file:// protocol)
+    - Internal port scanning
+    - **HackerOne/Bugcrowd approved methods** ✅
+  - **Prototype Pollution** 🔥🔥🔥 ($1000-8000+)
+  - **GraphQL Injection** 🔥🔥🔥 ($1000-5000+)
+  - **Race Conditions** 🔥🔥🔥 ($500-5000+)
   - **SSTI (Server-Side Template Injection)** 🔥🔥 ($2000-8000+)
   - **XXE (XML External Entity)** 🔥🔥 ($1000-5000+)
   - **Command Injection** 🔥 ($2000-10000+)
   - **JWT Vulnerabilities** 🔥 ($1000-8000+)
   - **NoSQL Injection** 🔥 ($1000-5000+)
-  - SSRF (Server-Side Request Forgery)
-  - XSS (Cross-Site Scripting)
+  - SSRF (Server-Side Request Forgery) - Basic detection
+  - XSS (Cross-Site Scripting) - Improved false positive filtering
   - SQL Injection patterns
   - LFI (Local File Inclusion)
   - **IDOR (Insecure Direct Object Reference)** ⭐

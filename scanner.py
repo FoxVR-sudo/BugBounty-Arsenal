@@ -16,6 +16,7 @@ from aiohttp.client_exceptions import ClientConnectorDNSError, ClientConnectorEr
 import detectors.reflection_detector
 import detectors.sql_pattern_detector
 import detectors.ssrf_detector
+import detectors.advanced_ssrf_detector  # Real SSRF exploitation tests
 import detectors.xss_pattern_detector
 import detectors.injector
 import detectors.open_redirect_detector
