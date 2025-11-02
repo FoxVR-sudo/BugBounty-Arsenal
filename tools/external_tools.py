@@ -94,7 +94,7 @@ class SubfinderWrapper(ExternalTool):
         domain: str,
         silent: bool = True,
         recursive: bool = False,
-        timeout: int = 300
+        timeout: int = 600
     ) -> List[str]:
         """
         Enumerate subdomains for a given domain.

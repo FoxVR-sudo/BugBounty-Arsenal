@@ -106,7 +106,7 @@ class ReconOrchestrator:
         subdomains = self.subfinder.enumerate_subdomains(
             domain,
             recursive=recursive_subs,
-            timeout=300
+            timeout=600  # Increased from 300s to 600s for large targets like GitHub
         )
         
         if not subdomains:

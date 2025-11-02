@@ -117,7 +117,9 @@ async def injector(session, url, context):
                             logger.debug("Injector confirmation request failed for %s: %s", test_url_b, e)
                             continue
 
-                        if marker_b in (body_b or ""):
+                        # CRITICAL FIX: Verify that marker_b is reflected and marker_a is NOT
+                        # This prevents false positives from static content
+                        if marker_b in (body_b or "") and marker_a not in (body_b or ""):
                             findings.append({
                                 "type": f"{ptype.upper()} Injection Candidate",
                                 "evidence": f"Markers {marker_a} and {marker_b} observed for param '{param}'",
