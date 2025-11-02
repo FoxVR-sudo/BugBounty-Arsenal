@@ -28,6 +28,9 @@ import detectors.fuzz_detector
 import detectors.lfi_detector
 import detectors.header_injection_detector
 import detectors.secret_detector
+import detectors.auth_bypass_detector  # Phase 3: Authentication bypass detection
+import detectors.rate_limit_bypass_detector  # Phase 3: Rate limit bypass detection
+import detectors.brute_force_detector  # Phase 3: Credential testing (SAFE mode)
 import detectors.idor_detector
 import detectors.command_injection_detector
 import detectors.jwt_vulnerability_scanner
