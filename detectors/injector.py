@@ -73,8 +73,9 @@ async def injector(session, url, context):
                     marker_b = f"rb-{uuid.uuid4().hex[:8]}"
 
                     template = p.get("payload", "%s")
-                    payload_a = template % marker_a if "%s" in template else template
-                    payload_b = template % marker_b if "%s" in template else template
+                    # Use .replace() instead of % formatting to avoid issues with %C, %2e, etc in payloads
+                    payload_a = template.replace("%s", marker_a) if "%s" in template else template
+                    payload_b = template.replace("%s", marker_b) if "%s" in template else template
 
                     # build test URL A
                     new_qs = dict(existing_qs)
