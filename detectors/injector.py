@@ -119,7 +119,18 @@ async def injector(session, url, context):
 
                         # CRITICAL FIX: Verify that marker_b is reflected and marker_a is NOT
                         # This prevents false positives from static content
+                        # ALSO: Check it's not just URL reflection (Cloudflare/CDN error pages)
                         if marker_b in (body_b or "") and marker_a not in (body_b or ""):
+                            # Additional check: marker should not appear in the URL itself in the body
+                            # Common false positive: Cloudflare/CDN showing requested URL in error page
+                            url_in_body = test_url_b in (body_b or "")
+                            cloudflare_page = any(x in (body_b or "").lower() for x in ["cloudflare", "just a moment", "checking your browser"])
+                            
+                            # Skip if marker only appears because the full URL is shown
+                            if url_in_body or cloudflare_page:
+                                logger.debug(f"Skipping false positive: URL reflection or CDN page for {test_url_b}")
+                                continue
+                            
                             findings.append({
                                 "type": f"{ptype.upper()} Injection Candidate",
                                 "evidence": f"Markers {marker_a} and {marker_b} observed for param '{param}'",
