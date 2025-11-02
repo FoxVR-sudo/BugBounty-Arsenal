@@ -484,7 +484,14 @@ async def async_run(
         "skipped_unreachable": [],
         "resolved_via_public_dns": [],
         "used_public_dns": False,
-        "scan_options": {"concurrency": concurrency, "timeout": timeout, "retries": retries, "scan_both": scan_both},
+        "scan_options": {
+            "concurrency": concurrency,
+            "timeout": timeout,
+            "retries": retries,
+            "scan_both": scan_both,
+            "allow_destructive": allow_destructive,
+            "bypass_cloudflare": bypass_cloudflare
+        },
         "scanner_version": SCANNER_VERSION,
         "secret_whitelist": secret_whitelist,
         "secret_blacklist": secret_blacklist,

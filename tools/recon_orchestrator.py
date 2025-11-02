@@ -67,10 +67,11 @@ class ReconOrchestrator:
         scanner_concurrency: int = 10,
         nuclei_rate_limit: int = 150,
         recursive_subs: bool = False,
+        allow_destructive: bool = False,
         bypass_cloudflare: bool = False,
         bypass_delay_min: float = 1.0,
         bypass_delay_max: float = 3.0
-    ) -> Dict[str, Any]:
+    ):
         """
         Run the full reconnaissance pipeline.
         
@@ -177,6 +178,7 @@ class ReconOrchestrator:
                     timeout=15,
                     output_dir=str(domain_output / "scanner_responses"),
                     per_host_rate=1.0,
+                    allow_destructive=allow_destructive,
                     bypass_cloudflare=bypass_cloudflare,
                     bypass_delay_min=bypass_delay_min,
                     bypass_delay_max=bypass_delay_max
@@ -343,10 +345,11 @@ def run_recon_pipeline(
     scanner_concurrency: int = 10,
     nuclei_rate_limit: int = 150,
     recursive_subs: bool = False,
+    allow_destructive: bool = False,
     bypass_cloudflare: bool = False,
     bypass_delay_min: float = 1.0,
     bypass_delay_max: float = 3.0
-) -> Dict[str, Any]:
+) -> dict:
     """
     Convenience function to run the full recon pipeline.
     
@@ -376,6 +379,7 @@ def run_recon_pipeline(
         scanner_concurrency=scanner_concurrency,
         nuclei_rate_limit=nuclei_rate_limit,
         recursive_subs=recursive_subs,
+        allow_destructive=allow_destructive,
         bypass_cloudflare=bypass_cloudflare,
         bypass_delay_min=bypass_delay_min,
         bypass_delay_max=bypass_delay_max

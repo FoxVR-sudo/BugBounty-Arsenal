@@ -121,12 +121,13 @@ def main():
         
         results = run_recon_pipeline(
             domain=args.recon,
-            output_dir=recon_dir,  # Use timestamped directory
+            output_dir=recon_dir,
             skip_scanner=args.skip_scanner,
             skip_nuclei=args.skip_nuclei,
             nuclei_severity=nuclei_sev,
             scanner_concurrency=args.concurrency,
             recursive_subs=args.recursive_subs,
+            allow_destructive=args.allow_destructive,
             bypass_cloudflare=args.bypass_cloudflare,
             bypass_delay_min=args.bypass_delay_min,
             bypass_delay_max=args.bypass_delay_max
