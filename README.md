@@ -7,11 +7,11 @@
              |___/                             |___/                                       
 ```
 
-# 🎯 BugBounty Arsenal v2.0
+# 🎯 BugBounty Arsenal v2.0 + MobileBounty-Arsenal
 
-**Advanced Security Reconnaissance & Vulnerability Discovery Platform**
+**Advanced Security Reconnaissance & Mobile Security Testing Platform**
 
-A comprehensive, automated security vulnerability scanner designed for professional bug bounty hunters and security researchers. Powered by **22+ active detectors** and intelligent async scanning engine with **full reconnaissance pipeline** integration.
+A comprehensive, automated security vulnerability scanner designed for professional bug bounty hunters and security researchers. Powered by **22+ web detectors**, **18+ mobile detectors**, **iOS .ipa analysis**, and **brutal dynamic exploitation** for concrete proof-of-concept generation.
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
@@ -37,13 +37,25 @@ A comprehensive, automated security vulnerability scanner designed for professio
 
 ### 🚀 What's New in v2.0
 
-**Phase 2: External Tool Integration Pipeline**
+**Phase 2: External Tool Integration + Mobile Security**
 
 - 🔍 **Subfinder** integration for subdomain enumeration
 - 🌐 **HTTPX** integration for live host probing  
 - ⚡ **Nuclei** integration for template-based vulnerability scanning
 - 🎯 **Full Recon Mode**: Automated pipeline from domain → findings
 - 📊 Unified reporting across all tools
+
+**NEW: MobileBounty-Arsenal**
+
+- 🍎 **iOS Security Scanner** - .ipa analysis with ATS/URL scheme/binary checks
+- 🤖 **Android Enhanced** - 18 detectors with CVSS v3.1/CWE/OWASP Mobile
+- 💀 **BRUTAL Dynamic Exploitation** - Real exploitation for concrete PoC
+  - Frida SSL pinning bypass
+  - ADB backup extraction & analysis
+  - Root detection bypass (Magisk Hide)
+  - SQLite database dumping
+  - Automatic evidence generation
+- 📱 **HackerOne Ready** - Professional mobile bug bounty reports
 
 ---
 
