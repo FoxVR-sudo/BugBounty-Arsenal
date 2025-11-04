@@ -32,7 +32,7 @@ class iOSScanner:
         self.ipa_path = ipa_path
         self.output_dir = output_dir
         self.app_name = Path(ipa_path).stem
-        self.extract_dir = None
+        self.extract_dir: str = ""  # Will be set in extract_ipa()
         self.info_plist = None
         self.findings = []
         
