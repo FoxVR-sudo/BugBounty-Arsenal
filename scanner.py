@@ -49,8 +49,8 @@ import detectors.xxe_detector
 import detectors.ssti_detector
 import detectors.race_condition_detector
 import detectors.graphql_injection_detector
-import detectors.prototype_pollution_detector
-# import detectors.api_security_detector  # DISABLED - causes scanner hang, needs more investigation
+## Note: avoid duplicate imports - detectors are expected to register themselves once
+## import detectors.api_security_detector  # DISABLED - causes scanner hang, needs more investigation
 
 from detectors.registry import ACTIVE_DETECTORS, PASSIVE_DETECTORS
 import crawler
@@ -244,12 +244,26 @@ async def scan_single_url(
             result["cloudflare_challenge"] = True
             # Continue scanning but mark findings as potentially unreliable
 
-        # crawler discovery
-        context = {}
+        # crawler discovery - merge discovered params with the existing context
         try:
-            context = await crawler.discover_params(session, url)
+            discovered = await crawler.discover_params(session, url)
         except Exception:
-            context = {}
+            discovered = {}
+
+        # Do NOT overwrite caller's context; merge discovered fields into it
+        if isinstance(context, dict):
+            # keep a copy to avoid mutating caller-supplied dict
+            merged_context = dict(context)
+        else:
+            merged_context = {}
+
+        # Merge discovered keys (forms, links, etc.) but do not clobber explicit keys
+        for k, v in (discovered or {}).items():
+            # if key already present, skip to preserve caller intent
+            if k not in merged_context:
+                merged_context[k] = v
+
+        context = merged_context
 
         # classify discovered links by scope
         links = context.get("links", []) or []
@@ -479,7 +493,12 @@ async def async_run(
         logger.info("🛡️  Cloudflare bypass enabled: User-Agent rotation, realistic headers, delays %.1f-%.1fs", 
                    bypass_delay_min, bypass_delay_max)
 
-    connector = aiohttp.TCPConnector(limit=concurrency)
+    # Use overall connection limit and also a per-host limit to avoid overwhelming single hosts
+    try:
+        connector = aiohttp.TCPConnector(limit=concurrency, limit_per_host=max(1, concurrency // 2))
+    except TypeError:
+        # Older aiohttp versions may not support limit_per_host parameter
+        connector = aiohttp.TCPConnector(limit=concurrency)
     timeout_obj = aiohttp.ClientTimeout(total=timeout)
 
     host_state_tokens = {}
@@ -551,6 +570,7 @@ async def async_run(
                         seen.add(https_u)
 
         processed_candidates = normalized_targets
+        metadata["targets_considered"] = list(processed_candidates)
 
         # DNS pre-check: skip targets whose hostnames do not resolve from this environment
         loop = asyncio.get_running_loop()
@@ -618,6 +638,9 @@ async def async_run(
         metadata["resolved_via_public_dns"] = sorted(list(resolved_via_public))
 
         processed_targets = resolvable
+        metadata["targets_scanned"] = list(processed_targets)
+        metadata["total_targets_considered"] = len(processed_candidates)
+        metadata["total_targets_scanned"] = len(processed_targets)
 
         tasks = [
             asyncio.create_task(

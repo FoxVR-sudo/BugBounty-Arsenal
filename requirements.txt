@@ -14,3 +14,4 @@ tqdm==4.67.1
 typing_extensions==4.15.0
 yarl==1.22.0
 PyYAML==6.0.3
+playwright==1.47.0

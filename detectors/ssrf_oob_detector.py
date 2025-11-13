@@ -1,109 +1,19 @@
 # detectors/ssrf_oob_detector.py
-"""
-Out-of-Band (OOB) SSRF detector using DNS callback verification.
-Uses interact.sh for DNS pingback detection to confirm real SSRF vulnerabilities.
-
-This eliminates false positives from reflection-based detection by verifying
-that the server actually makes external requests.
-"""
+"""Out-of-band SSRF detector using interact.sh for callback verification."""
 import asyncio
-import aiohttp
+import base64
 import logging
-import hashlib
-import time
+import secrets
 from urllib.parse import urlparse, parse_qs, urlencode
+
 from detectors.registry import register_active, await_host_token
+from detectors.interactsh_client import get_interactsh_client
 
 logger = logging.getLogger(__name__)
 
-# Use interact.sh as free DNS callback service
-INTERACTSH_SERVER = "oast.pro"  # Alternative: oast.live, oast.fun, interact.sh
-
-class DNSCallbackManager:
-    """Manages DNS callback generation and verification using interact.sh API"""
-    
-    def __init__(self):
-        self.session = None
-        self.polling_id = None
-        self.base_domain = None
-        self.correlation_id = None
-        
-    async def initialize(self):
-        """Initialize interact.sh session and get polling details"""
-        try:
-            # Generate unique correlation ID
-            self.correlation_id = hashlib.sha256(
-                f"{time.time()}{id(self)}".encode()
-            ).hexdigest()[:16]
-            
-            # For simplicity, use predictable subdomain format
-            # In production, you'd register with interact.sh API
-            self.base_domain = f"{self.correlation_id}.{INTERACTSH_SERVER}"
-            
-            logger.info(f"🔗 DNS Callback initialized: {self.base_domain}")
-            return True
-            
-        except Exception as e:
-            logger.warning(f"Failed to initialize DNS callback: {e}")
-            return False
-    
-    def generate_callback_url(self, marker: str) -> str:
-        """Generate unique DNS callback URL with marker"""
-        subdomain = f"{marker}.{self.base_domain}"
-        return f"http://{subdomain}"
-    
-    async def check_callback(self, marker: str, timeout: int = 5) -> bool:
-        """
-        Check if DNS callback was triggered (simplified).
-        
-        Note: Real implementation would poll interact.sh API.
-        For this implementation, we use DNS resolution as proxy indicator.
-        """
-        try:
-            # Try to resolve the callback domain
-            # If server made request, DNS query will exist in logs
-            callback_domain = f"{marker}.{self.base_domain}"
-            
-            # Simple check: try connecting (won't succeed but DNS query happens)
-            try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(
-                        f"http://{callback_domain}",
-                        timeout=aiohttp.ClientTimeout(total=timeout)
-                    ) as resp:
-                        pass
-            except Exception:
-                pass
-            
-            # Real implementation would query interact.sh API here
-            # For now, return False (requires manual verification)
-            return False
-            
-        except Exception as e:
-            logger.debug(f"DNS callback check failed: {e}")
-            return False
-    
-    async def cleanup(self):
-        """Cleanup resources"""
-        if self.session:
-            await self.session.close()
-
-
-# Global DNS callback manager (reused across requests)
-_dns_manager = None
-_dns_manager_lock = asyncio.Lock()
-
-
-async def get_dns_manager():
-    """Get or create global DNS callback manager"""
-    global _dns_manager
-    
-    async with _dns_manager_lock:
-        if _dns_manager is None:
-            _dns_manager = DNSCallbackManager()
-            await _dns_manager.initialize()
-        
-        return _dns_manager
+# Grace period for callback propagation (seconds)
+CALLBACK_WAIT_SECONDS = 2
+CALLBACK_RETRIES = 3
 
 
 @register_active
@@ -130,12 +40,11 @@ async def ssrf_oob_detector(session, url, context):
     per_host_rate = context.get("per_host_rate", None)
     
     try:
-        # Get DNS callback manager
-        dns_manager = await get_dns_manager()
-        if not dns_manager or not dns_manager.base_domain:
-            logger.debug("DNS callback not available, skipping OOB SSRF detection")
+        interact_client = await get_interactsh_client()
+        if not interact_client or not interact_client.base_domain:
+            logger.debug("Interactsh client unavailable, skipping OOB SSRF detection")
             return findings
-        
+
         parsed = urlparse(url)
         host = parsed.netloc.lower()
         existing_qs = parse_qs(parsed.query, keep_blank_values=True)
@@ -150,12 +59,8 @@ async def ssrf_oob_detector(session, url, context):
         for param in candidate_params[:5]:
             
             # Generate unique marker for this test
-            marker = hashlib.sha256(
-                f"{url}{param}{time.time()}".encode()
-            ).hexdigest()[:12]
-            
-            # Generate callback URL
-            callback_url = dns_manager.generate_callback_url(marker)
+            marker = secrets.token_hex(6)
+            callback_url = interact_client.generate_url(marker)
             
             # Build test URL
             new_qs = dict(existing_qs)
@@ -177,18 +82,27 @@ async def ssrf_oob_detector(session, url, context):
                     status = resp.status
                     headers = dict(resp.headers)
                 
-                # Wait a bit for DNS propagation
-                await asyncio.sleep(2)
-                
-                # Check if callback was triggered
-                callback_received = await dns_manager.check_callback(marker, timeout=3)
-                
-                if callback_received:
-                    # CONFIRMED SSRF - DNS callback received!
+                await asyncio.sleep(CALLBACK_WAIT_SECONDS)
+                interaction = await interact_client.check_callback(
+                    marker,
+                    timeout=CALLBACK_WAIT_SECONDS,
+                    max_retries=CALLBACK_RETRIES,
+                )
+
+                if interaction:
+                    protocol = interaction.get("protocol") or interaction.get("protocol-type", "unknown")
+                    full_id = interaction.get("full-id") or interaction.get("full_id")
+                    raw_request = interaction.get("raw-request") or interaction.get("raw_request")
+                    if raw_request:
+                        try:
+                            raw_request = base64.b64decode(raw_request).decode("utf-8", errors="replace")
+                        except Exception:
+                            pass
+
                     findings.append({
-                        "type": "SSRF - DNS Callback Confirmed",
-                        "evidence": f"DNS callback received for {callback_url} - Server made external request",
-                        "how_found": f"Injected callback URL into parameter '{param}' and received DNS pingback (confirmed)",
+                        "type": "SSRF - Interactsh Callback Confirmed",
+                        "evidence": f"Callback {protocol.upper()} interaction recorded via interact.sh ({full_id})",
+                        "how_found": f"Injected interactsh URL into parameter '{param}' and observed callback",
                         "severity": "critical",
                         "payload": callback_url,
                         "evidence_url": test_url,
@@ -196,38 +110,33 @@ async def ssrf_oob_detector(session, url, context):
                         "evidence_headers": headers,
                         "evidence_status": status,
                         "test_param": param,
-                        "test_payload_template": f"http://{marker}.{dns_manager.base_domain}",
                         "callback_marker": marker,
-                        "callback_domain": f"{marker}.{dns_manager.base_domain}",
-                        "verification_method": "DNS callback",
+                        "callback_domain": full_id,
+                        "verification_method": "interactsh_callback",
+                        "interaction": interaction,
+                        "raw_callback_request": raw_request,
                     })
-                    
+
                     logger.warning(
-                        f"🔥 CONFIRMED SSRF: {url} - DNS callback received for param '{param}'"
+                        "🔥 CONFIRMED SSRF via interact.sh: %s param '%s'", url, param
                     )
-                    
-                else:
-                    # Check for reflection (potential SSRF but unconfirmed)
-                    if callback_url in body or marker in body:
-                        # Parameter reflected but no callback = likely NOT SSRF
-                        logger.debug(
-                            f"SSRF candidate on {url} param '{param}': "
-                            f"Reflection detected but NO DNS callback (likely false positive)"
-                        )
-                        
-                        # Optionally report as low-confidence finding
-                        findings.append({
-                            "type": "Potential SSRF - Reflection Only",
-                            "evidence": f"Parameter '{param}' reflects URL but no DNS callback received",
-                            "how_found": f"URL reflected in response but server did not make external request",
-                            "severity": "low",
-                            "payload": callback_url,
-                            "evidence_url": test_url,
-                            "test_param": param,
-                            "callback_marker": marker,
-                            "verification_method": "reflection (unconfirmed)",
-                            "confidence": "low",
-                        })
+
+                elif callback_url in body or marker in body:
+                    logger.debug(
+                        "SSRF candidate on %s param '%s': reflection but no callback", url, param
+                    )
+                    findings.append({
+                        "type": "Potential SSRF - Reflection Only",
+                        "evidence": f"Parameter '{param}' reflects payload but no callback received",
+                        "how_found": "Payload reflected; manual verification required",
+                        "severity": "low",
+                        "payload": callback_url,
+                        "evidence_url": test_url,
+                        "test_param": param,
+                        "callback_marker": marker,
+                        "verification_method": "reflection_only",
+                        "confidence": "low",
+                    })
             
             except asyncio.TimeoutError:
                 logger.debug(f"Timeout testing SSRF on {test_url}")
@@ -237,7 +146,7 @@ async def ssrf_oob_detector(session, url, context):
                 continue
     
     except Exception as e:
-        logger.exception(f"ssrf_oob_detector error for {url}: {e}")
+        logger.exception("ssrf_oob_detector error for %s: %s", url, e)
     
     return findings
 

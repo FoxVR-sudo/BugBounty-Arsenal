@@ -1,1 +1,0 @@
-# safe_bugbounty_scanner

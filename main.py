@@ -93,6 +93,16 @@ def main():
     parser.add_argument("--skip-nuclei", action="store_true", help="Skip Nuclei in recon mode")
     parser.add_argument("--nuclei-severity", help="Nuclei severity filter (comma-separated: info,low,medium,high,critical)")
     parser.add_argument("--recursive-subs", action="store_true", help="Use recursive subdomain enumeration")
+    parser.add_argument(
+        "--enable-dom-playwright",
+        action="store_true",
+        help="Run Playwright DOM audit stage for client-side issues (recon & standard modes)",
+    )
+    parser.add_argument(
+        "--enable-exploit-validation",
+        action="store_true",
+        help="Run Exploit-DB backed exploit validation stage after primary scanner"
+    )
     
     args = parser.parse_args()
 
@@ -130,7 +140,9 @@ def main():
             allow_destructive=args.allow_destructive,
             bypass_cloudflare=args.bypass_cloudflare,
             bypass_delay_min=args.bypass_delay_min,
-            bypass_delay_max=args.bypass_delay_max
+            bypass_delay_max=args.bypass_delay_max,
+            enable_dom_playwright=args.enable_dom_playwright,
+            enable_exploit_validation=args.enable_exploit_validation
         )
         
         if "error" in results:
@@ -197,6 +209,36 @@ def main():
         bypass_delay_min=args.bypass_delay_min,
         bypass_delay_max=args.bypass_delay_max,
     )
+
+    dom_playwright_summary = None
+    if args.enable_dom_playwright:
+        dom_targets = metadata.get("targets_scanned") or metadata.get("targets_considered") or []
+        dom_targets = [t for t in dom_targets if isinstance(t, str) and t]
+        if not dom_targets:
+            print("[!] No scanned targets available for DOM audit; skipping Playwright stage.")
+            dom_playwright_summary = {"skipped": "no_targets"}
+        else:
+            # Deduplicate while preserving order
+            deduped_targets = list(dict.fromkeys(dom_targets))
+            dom_stage_dir = os.path.join(scan_dir, "dom_playwright")
+            print(f"[+] Running Playwright DOM audit on {len(deduped_targets)} URLs...")
+            try:
+                from tools.dom_playwright_scanner import run_dom_playwright_scan
+
+                dom_playwright_summary = run_dom_playwright_scan(deduped_targets, dom_stage_dir)
+                if dom_playwright_summary.get("error") == "playwright_missing":
+                    print("[!] Playwright is not installed. Skipping DOM audit stage.")
+                elif dom_playwright_summary.get("error"):
+                    print(f"[!] DOM audit failed: {dom_playwright_summary['error']}")
+                else:
+                    issues = dom_playwright_summary.get("potential_issues", 0)
+                    print(f"[+] DOM audit complete. Potential issues flagged: {issues}")
+            except Exception as exc:
+                print(f"[!] DOM audit encountered an exception: {exc}")
+                dom_playwright_summary = {"error": str(exc)}
+
+    if dom_playwright_summary is not None:
+        metadata["dom_playwright_summary"] = dom_playwright_summary
 
     generate_html_report(results, output_html, duration_seconds=metadata.get("duration", 0.0), metadata=metadata)
     
