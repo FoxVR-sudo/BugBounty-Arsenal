@@ -80,6 +80,11 @@ def main():
     parser.add_argument("--scan-both", action="store_true", help="Try both https:// and http:// for each target (will double requests)")
     parser.add_argument("--secret-whitelist", help="Comma-separated whitelist substrings to ignore in secret detector (e.g. example,internal)")
     parser.add_argument("--secret-blacklist", help="Comma-separated blacklist substrings to require-match in secret detector")
+    parser.add_argument(
+        "--enable-403-probing",
+        action="store_true",
+        help="Attempt automatic 403 bypass heuristics when forbidden responses are encountered",
+    )
     parser.add_argument("--no-auto-reports", action="store_true", help="Do not automatically generate masked/correlated/combined reports after scan")
     
     # Cloudflare/CDN bypass options
@@ -102,6 +107,11 @@ def main():
         "--enable-exploit-validation",
         action="store_true",
         help="Run Exploit-DB backed exploit validation stage after primary scanner"
+    )
+    parser.add_argument(
+        "--enable-cloudflare-solver",
+        action="store_true",
+        help="Use Playwright to automatically solve Cloudflare browser challenges when encountered",
     )
     
     args = parser.parse_args()
@@ -142,7 +152,9 @@ def main():
             bypass_delay_min=args.bypass_delay_min,
             bypass_delay_max=args.bypass_delay_max,
             enable_dom_playwright=args.enable_dom_playwright,
-            enable_exploit_validation=args.enable_exploit_validation
+            enable_exploit_validation=args.enable_exploit_validation,
+            enable_cloudflare_solver=args.enable_cloudflare_solver,
+            enable_403_probe=args.enable_403_probing,
         )
         
         if "error" in results:
@@ -208,6 +220,8 @@ def main():
         bypass_cloudflare=args.bypass_cloudflare,
         bypass_delay_min=args.bypass_delay_min,
         bypass_delay_max=args.bypass_delay_max,
+        enable_forbidden_probe=args.enable_403_probing,
+        enable_cloudflare_solver=args.enable_cloudflare_solver,
     )
 
     dom_playwright_summary = None

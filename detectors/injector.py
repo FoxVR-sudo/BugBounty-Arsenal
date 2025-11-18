@@ -63,9 +63,18 @@ async def injector(session, url, context):
         if not candidate_params:
             candidate_params = ["input"]
 
+        waf_mode = bool(context.get("cloudflare_challenge_detected") or context.get("recent_403"))
+
         for param in candidate_params:
             for ptype, plist in payloads.PAYLOADS.items():
-                for p in plist:
+                if waf_mode and ptype == "sql":
+                    prioritized = [c for c in plist if "cloudflare" in (c.get("tags") or [])]
+                    fallback = [c for c in plist if c not in prioritized]
+                    candidates = prioritized + fallback
+                else:
+                    candidates = plist
+
+                for p in candidates:
                     if p.get("destructive", False) and not allow_destructive:
                         continue
 

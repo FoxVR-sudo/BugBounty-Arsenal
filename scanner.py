@@ -9,8 +9,9 @@ import json
 import hashlib
 import getpass
 from urllib.parse import urlparse
-from typing import Dict, Tuple, List, Optional
+from typing import Dict, Tuple, List, Optional, Any
 from aiohttp.client_exceptions import ClientConnectorDNSError, ClientConnectorError
+from yarl import URL
 
 # Ensure detectors modules register themselves
 import detectors.reflection_detector
@@ -49,6 +50,7 @@ import detectors.xxe_detector
 import detectors.ssti_detector
 import detectors.race_condition_detector
 import detectors.graphql_injection_detector
+import detectors.simple_file_list_detector
 ## Note: avoid duplicate imports - detectors are expected to register themselves once
 ## import detectors.api_security_detector  # DISABLED - causes scanner hang, needs more investigation
 
@@ -56,6 +58,7 @@ from detectors.registry import ACTIVE_DETECTORS, PASSIVE_DETECTORS
 import crawler
 import payloads
 from utils.cloudflare_bypass import CloudflareBypass, get_bypass_config
+from utils.cloudflare_solver import CloudflareSolver
 # Logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -170,14 +173,217 @@ async def _wait_for_token(host_state: Dict, host: str, rate: float, capacity: fl
     hs["last"] = time.time()
 
 
-async def _fetch_with_timeout(session: aiohttp.ClientSession, url: str, timeout: int, proxy: Optional[str] = None):
+async def _fetch_with_timeout(
+    session: aiohttp.ClientSession,
+    url: str,
+    timeout: int,
+    proxy: Optional[str] = None,
+    *,
+    method: str = "GET",
+    headers_override: Optional[Dict[str, str]] = None,
+    data: Optional[str] = None,
+):
     t = aiohttp.ClientTimeout(total=timeout)
-    async with session.get(url, timeout=t, allow_redirects=True, proxy=proxy) as resp:
+    start = time.time()
+    async with session.request(
+        method,
+        url,
+        timeout=t,
+        allow_redirects=True,
+        proxy=proxy,
+        headers=headers_override,
+        data=data,
+    ) as resp:
         try:
             text = await resp.text()
         except Exception:
             text = ""
-        return resp.status, text, dict(resp.headers)
+        response_time = time.time() - start
+        return resp.status, text, dict(resp.headers), response_time
+
+
+def _build_forbidden_probe_playbook(url: str) -> List[Dict[str, Any]]:
+    """Prepare a sequence of lightweight 403-bypass heuristics."""
+    parsed = urlparse(url)
+    path = parsed.path or "/"
+    if not path.startswith("/"):
+        path = "/" + path
+
+    trimmed = path.rstrip("/") if path not in ("", "/") else path
+    path_variants: List[str] = []
+
+    if path and not path.endswith("/"):
+        path_variants.append(path + "/")
+        path_variants.append(path + ";/")
+        path_variants.append(path + "%2f")
+        path_variants.append(path + "%3b/")
+    if trimmed and trimmed not in ("", "/"):
+        path_variants.append(trimmed + "/.")
+        path_variants.append(trimmed + "/..;/")
+        path_variants.append(trimmed + "/.%2e/")
+        path_variants.append(trimmed + "/%2e/")
+        path_variants.append(trimmed + "/../")
+        path_variants.append(trimmed + "%20/")
+    leading = path.lstrip("/")
+    path_variants.append("/." + leading)
+    path_variants.append("//" + leading)
+    path_variants.append("/..;/" + leading)
+    path_variants.append("/%2e" + leading)
+    path_variants.append("/%2e/" + leading)
+    path_variants.append("/" + leading + "/../")
+    path_variants.append(path + "?/.;/")
+    path_variants.append(path + "?/../")
+
+    # Deduplicate while preserving order
+    seen_variants = set()
+    unique_variants: List[str] = []
+    for variant in path_variants:
+        if not variant.startswith("/"):
+            variant = "/" + variant
+        if variant not in seen_variants:
+            seen_variants.add(variant)
+            unique_variants.append(variant)
+
+    playbook: List[Dict[str, Any]] = []
+
+    # Method variations first
+    playbook.append({"label": "method-head", "method": "HEAD"})
+    playbook.append({"label": "method-post", "method": "POST", "data": ""})
+
+    for variant in unique_variants:
+        mutated_url = parsed._replace(path=variant).geturl()
+        playbook.append({"label": f"path-variant:{variant}", "url": mutated_url})
+
+    header_sets: List[Tuple[str, Dict[str, str]]] = [
+        (
+            "x-original-url",
+            {
+                "X-Original-URL": path,
+                "X-Rewrite-URL": path,
+            },
+        ),
+        (
+            "x-forwarded-for",
+            {
+                "X-Forwarded-For": "127.0.0.1",
+                "X-Client-IP": "127.0.0.1",
+                "X-Forwarded-Host": parsed.netloc,
+            },
+        ),
+        (
+            "x-custom-ip-authorization",
+            {
+                "X-Custom-IP-Authorization": "127.0.0.1",
+            },
+        ),
+        (
+            "x-referer",
+            {
+                "Referer": f"{parsed.scheme or 'https'}://{parsed.netloc}{path}",
+            },
+        ),
+        (
+            "forwarded-standard",
+            {
+                "Forwarded": f"for=127.0.0.1;host={parsed.netloc};proto={parsed.scheme or 'https'}",
+            },
+        ),
+        (
+            "true-client-ip",
+            {
+                "True-Client-IP": "127.0.0.1",
+                "X-Originating-IP": "127.0.0.1",
+                "X-Remote-IP": "127.0.0.1",
+                "X-Remote-Addr": "127.0.0.1",
+            },
+        ),
+        (
+            "via-proxy",
+            {
+                "Via": "1.1 127.0.0.1",
+                "X-Forwarded-Proto": parsed.scheme or "https",
+                "X-Forwarded-Port": "443",
+                "X-Forwarded-Server": parsed.netloc,
+            },
+        ),
+        (
+            "x-host",
+            {
+                "X-Host": parsed.netloc,
+                "X-Forwarded-Server": parsed.netloc,
+                "Host": parsed.netloc,
+            },
+        ),
+        (
+            "authorization-test",
+            {
+                "Authorization": "Basic dGVzdDp0ZXN0",
+            },
+        ),
+    ]
+
+    for label, headers in header_sets:
+        playbook.append({"label": label, "headers": headers})
+
+    return playbook
+
+
+async def _attempt_forbidden_probe(
+    session: aiohttp.ClientSession,
+    url: str,
+    timeout: int,
+    proxy: Optional[str] = None,
+) -> Dict[str, Any]:
+    playbook = _build_forbidden_probe_playbook(url)
+    attempts: List[Dict[str, Any]] = []
+
+    for strategy in playbook:
+        label = strategy.get("label", "unknown")
+        target_url = strategy.get("url", url)
+        method = strategy.get("method", "GET")
+        headers_override = strategy.get("headers")
+        data = strategy.get("data")
+
+        try:
+            status, body, headers, response_time = await _fetch_with_timeout(
+                session,
+                target_url,
+                timeout,
+                proxy=proxy,
+                method=method,
+                headers_override=headers_override,
+                data=data,
+            )
+        except Exception as exc:
+            attempts.append({
+                "strategy": label,
+                "url": target_url,
+                "error": str(exc),
+            })
+            continue
+
+        if status != 403:
+            return {
+                "bypassed": True,
+                "strategy": label,
+                "url": target_url,
+                "status": status,
+                "body": body,
+                "headers": headers,
+                "response_time": response_time,
+                "method": method,
+                "applied_headers": headers_override or {},
+                "attempts": attempts,
+            }
+
+        attempts.append({
+            "strategy": label,
+            "url": target_url,
+            "status": status,
+            "response_time": response_time,
+        })
+
+    return {"bypassed": False, "attempts": attempts}
 
 
 async def scan_single_url(
@@ -206,10 +412,13 @@ async def scan_single_url(
 
         # perform timed fetch (measure response_time)
         try:
-            t0 = time.time()
             timeout = context.get('timeout', 15)  # type: ignore
-            status, text, headers = await _fetch_with_timeout(session, url, timeout, proxy=proxy)
-            resp_time = time.time() - t0
+            status, text, headers, resp_time = await _fetch_with_timeout(
+                session,
+                url,
+                timeout,
+                proxy=proxy,
+            )
         except ClientConnectorDNSError as e:
             host = parsed_try.netloc or parsed_try.path
             logger.error("DNS lookup failed for host %s: %s", host, e)
@@ -222,9 +431,12 @@ async def scan_single_url(
                 try:
                     fallback_url = parsed_try._replace(scheme="http").geturl()
                     logger.info("Trying HTTP fallback for %s -> %s", url, fallback_url)
-                    t0 = time.time()
-                    status, text, headers = await _fetch_with_timeout(session, fallback_url, timeout, proxy=proxy)
-                    resp_time = time.time() - t0
+                    status, text, headers, resp_time = await _fetch_with_timeout(
+                        session,
+                        fallback_url,
+                        timeout,
+                        proxy=proxy,
+                    )
                     url = fallback_url
                 except Exception as e2:
                     logger.warning("HTTP fallback failed for %s: %s", fallback_url, type(e2).__name__)
@@ -237,12 +449,130 @@ async def scan_single_url(
             logger.exception("Unexpected error fetching %s: %s", url, e)
             result["error"] = str(e)
             return result
+        output_dir = context.get('output_dir', 'raw_responses')  # type: ignore
+        cloudflare_solver_enabled = bool(context.get("enable_cf_solver"))
+        cloudflare_solver: Optional[CloudflareSolver] = context.get("cloudflare_solver")
+        solver_summary: Optional[Dict[str, Any]] = None
+        recent_403 = status == 403
+        cloudflare_challenge_detected = False
 
-        # Check if we hit a Cloudflare challenge
-        if bypass and CloudflareBypass.is_cloudflare_challenge(text, headers):
-            logger.warning("⚠️  Cloudflare challenge detected for %s - response may be unreliable", url)
+        # Optional 403 probing
+        forbidden_probe_enabled = bool(context.get("enable_403_probe"))
+        probe_summary: Optional[Dict[str, Any]] = None
+        if status == 403 and forbidden_probe_enabled:
+            probe_summary = await _attempt_forbidden_probe(session, url, timeout, proxy=proxy)
+            if probe_summary.get("bypassed"):
+                result["forbidden_probe"] = {
+                    "attempted": True,
+                    "bypassed": True,
+                    "strategy": probe_summary.get("strategy"),
+                    "alt_url": probe_summary.get("url"),
+                    "status": probe_summary.get("status"),
+                    "attempt_count": len(probe_summary.get("attempts", [])) + 1,
+                    "attempt_statuses": [
+                        a.get("status") for a in probe_summary.get("attempts", []) if "status" in a
+                    ],
+                }
+                bypass_headers = probe_summary.get("applied_headers", {})
+                bypass_method = probe_summary.get("method", "GET")
+                bypass_url = probe_summary.get("url", url)
+                bypass_status = probe_summary.get("status", status)
+
+                logger.info(
+                    "403 bypass succeeded for %s → %s using strategy %s (status %s)",
+                    original_url,
+                    bypass_url,
+                    probe_summary.get("strategy"),
+                    bypass_status,
+                )
+
+                # Update working response with bypassed content
+                url = bypass_url
+                result["url"] = url
+                status = bypass_status
+                text = probe_summary.get("body", text)
+                headers = probe_summary.get("headers", headers)
+                resp_time = probe_summary.get("response_time", resp_time)
+
+                base_req_headers = dict(session.headers) if getattr(session, "headers", None) else {}
+                base_req_headers.update(bypass_headers)
+
+                try:
+                    evidence_path = _save_raw_response(
+                        os.path.join(output_dir or "raw_responses", _get_host(url)),
+                        url,
+                        url,
+                        status,
+                        headers,
+                        text,
+                    )
+                except Exception:
+                    evidence_path = None
+
+                result["issues"].append(
+                    {
+                        "url": url,
+                        "type": "403 Bypass",
+                        "description": f"403 bypassed via strategy '{probe_summary.get('strategy')}' (status {status})",
+                        "evidence": f"Received HTTP {status} using {bypass_method}",
+                        "how_found": "automatic 403 probe",
+                        "payload": probe_summary.get("strategy"),
+                        "severity": "medium",
+                        "evidence_path": evidence_path,
+                        "detector": "scanner.forbidden_probe",
+                        "request_headers": base_req_headers,
+                        "response_headers": headers,
+                        "status": status,
+                        "response_time": resp_time,
+                    }
+                )
+            else:
+                result["forbidden_probe"] = {
+                    "attempted": True,
+                    "bypassed": False,
+                    "attempt_count": len(probe_summary.get("attempts", [])),
+                    "attempt_statuses": [
+                        a.get("status") for a in probe_summary.get("attempts", []) if "status" in a
+                    ],
+                }
+
+        # Check if we hit a Cloudflare challenge and optionally solve it
+        if CloudflareBypass.is_cloudflare_challenge(text, headers):
+            logger.warning("⚠️  Cloudflare challenge detected for %s", url)
             result["cloudflare_challenge"] = True
-            # Continue scanning but mark findings as potentially unreliable
+            cloudflare_challenge_detected = True
+
+            if cloudflare_solver_enabled:
+                if cloudflare_solver is None:
+                    solver_summary = {"success": False, "error": "solver_unavailable"}
+                else:
+                    solver_summary = await cloudflare_solver.solve(url, proxy=proxy)
+
+                if solver_summary:
+                    result["cloudflare_solver"] = solver_summary
+
+                if solver_summary and solver_summary.get("success"):
+                    cookies = solver_summary.get("cookies") or {}
+                    if cookies:
+                        try:
+                            session.cookie_jar.update_cookies(cookies, response_url=URL(url))
+                        except Exception as exc:
+                            logger.debug("Failed to update cookies from Cloudflare solver for %s: %s", url, exc)
+
+                    solver_headers = solver_summary.get("headers") or {}
+                    try:
+                        status, text, headers, resp_time = await _fetch_with_timeout(
+                            session,
+                            url,
+                            timeout,
+                            proxy=proxy,
+                            headers_override=solver_headers if solver_headers else None,
+                        )
+                        solver_summary["refetch_status"] = status
+                        solver_summary["resolved"] = not CloudflareBypass.is_cloudflare_challenge(text, headers)
+                        solver_summary["cookies_used"] = list((cookies or {}).keys())
+                    except Exception as exc:
+                        solver_summary["refetch_error"] = str(exc)
 
         # crawler discovery - merge discovered params with the existing context
         try:
@@ -264,6 +594,19 @@ async def scan_single_url(
                 merged_context[k] = v
 
         context = merged_context
+
+        if recent_403:
+            context["recent_403"] = True
+        if cloudflare_challenge_detected:
+            context["cloudflare_challenge_detected"] = True
+            context["cloudflare_solver_attempted"] = bool(cloudflare_solver_enabled)
+            context["cloudflare_solver_success"] = bool(solver_summary and solver_summary.get("success"))
+        if probe_summary:
+            context["forbidden_probe_meta"] = {
+                "attempted": True,
+                "bypassed": bool(probe_summary.get("bypassed")),
+                "strategy": probe_summary.get("strategy"),
+            }
 
         # classify discovered links by scope
         links = context.get("links", []) or []
@@ -287,7 +630,6 @@ async def scan_single_url(
 
         # Get values from context (these should already be set by caller)
         allow_destructive = context.get('allow_destructive', False)  # type: ignore
-        output_dir = context.get('output_dir', 'raw_responses')  # type: ignore
         per_host_rate = context.get('per_host_rate', 0.0)  # type: ignore
         scope_matcher = context.get('scope_matcher')  # type: ignore
         context["in_scope_links"] = in_links
@@ -297,6 +639,15 @@ async def scan_single_url(
 
         # build some per-request metadata available to detectors
         request_headers = dict(session.headers) if getattr(session, "headers", None) else {}
+        if result.get("forbidden_probe", {}).get("bypassed") and probe_summary:
+            # Include any additional headers used during bypass in detector context
+            probe_headers = probe_summary.get("applied_headers", {})
+            request_headers.update(probe_headers)
+        if solver_summary and solver_summary.get("success"):
+            solver_headers = solver_summary.get("headers") or {}
+            for key, value in solver_headers.items():
+                if value:
+                    request_headers[key] = value
 
         # Active detectors
         for det in ACTIVE_DETECTORS:
@@ -405,6 +756,10 @@ async def _bounded_scan_with_retries(
     output_dir,
     allow_destructive,
     scope_matcher,
+    timeout,
+    enable_forbidden_probe,
+    cloudflare_solver,
+    enable_cloudflare_solver,
     proxy: Optional[str] = None,
     secret_whitelist: Optional[List[str]] = None,
     secret_blacklist: Optional[List[str]] = None,
@@ -422,11 +777,14 @@ async def _bounded_scan_with_retries(
                 await _wait_for_token(host_state_tokens, host, per_host_rate)
                 # Build context dict for scan_single_url
                 context = {
-                    'timeout': 15,
+                    'timeout': timeout,
                     'allow_destructive': allow_destructive,
                     'output_dir': output_dir,
                     'per_host_rate': per_host_rate,
-                    'scope_matcher': scope_matcher
+                    'scope_matcher': scope_matcher,
+                    'enable_403_probe': enable_forbidden_probe,
+                    'enable_cf_solver': enable_cloudflare_solver,
+                    'cloudflare_solver': cloudflare_solver,
                 }
                 return await scan_single_url(
                     session,
@@ -475,6 +833,8 @@ async def async_run(
     bypass_cloudflare: bool = False,  # Enable Cloudflare bypass
     bypass_delay_min: float = 1.0,  # Minimum delay between requests
     bypass_delay_max: float = 3.0,  # Maximum delay between requests
+        enable_forbidden_probe: bool = False,
+        enable_cloudflare_solver: bool = False,
 ):
     results = []
     start_time = time.time()
@@ -503,6 +863,10 @@ async def async_run(
 
     host_state_tokens = {}
 
+    cloudflare_solver: Optional[CloudflareSolver] = None
+    if enable_cloudflare_solver:
+        cloudflare_solver = CloudflareSolver()
+
     metadata = {
         "auto_confirm": bool(auto_confirm),
         "triggered_by": getpass.getuser(),
@@ -523,7 +887,9 @@ async def async_run(
             "retries": retries,
             "scan_both": scan_both,
             "allow_destructive": allow_destructive,
-            "bypass_cloudflare": bypass_cloudflare
+            "bypass_cloudflare": bypass_cloudflare,
+            "enable_403_probe": bool(enable_forbidden_probe),
+            "enable_cloudflare_solver": bool(enable_cloudflare_solver),
         },
         "scanner_version": SCANNER_VERSION,
         "secret_whitelist": secret_whitelist,
@@ -654,6 +1020,10 @@ async def async_run(
                     output_dir,
                     allow_destructive,
                     scope_matcher,
+                    timeout,
+                    enable_forbidden_probe,
+                    cloudflare_solver,
+                    enable_cloudflare_solver,
                     proxy=proxy,
                     secret_whitelist=secret_whitelist,
                     secret_blacklist=secret_blacklist,
@@ -758,6 +1128,15 @@ async def async_run(
             issue.setdefault("response_time", None)
             results.append(issue)
 
+    if enable_forbidden_probe:
+        metadata["forbidden_probe_summary"] = {
+            "enabled": True,
+            "bypass_findings": sum(1 for issue in results if issue.get("type") == "403 Bypass"),
+        }
+
+    if cloudflare_solver:
+        metadata["cloudflare_solver_stats"] = cloudflare_solver.get_stats()
+
     elapsed = time.time() - start_time
     metadata["end_time"] = time.strftime("%Y-%m-%dT%H:%M:%S%z")
     metadata["duration"] = elapsed
@@ -785,6 +1164,8 @@ def run_scan(
     bypass_cloudflare: bool = False,
     bypass_delay_min: float = 1.0,
     bypass_delay_max: float = 3.0,
+    enable_forbidden_probe: bool = False,
+    enable_cloudflare_solver: bool = False,
 ):
     try:
         return asyncio.run(
@@ -807,6 +1188,8 @@ def run_scan(
                 bypass_cloudflare=bypass_cloudflare,
                 bypass_delay_min=bypass_delay_min,
                 bypass_delay_max=bypass_delay_max,
+                enable_forbidden_probe=enable_forbidden_probe,
+                enable_cloudflare_solver=enable_cloudflare_solver,
             )
         )
     except Exception as e:

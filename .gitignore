@@ -368,6 +368,10 @@ __pycache__/
 *.pyc
 *.pyo
 
+# Local virtualenvs and caches
+venv_new/
+
+
 # Reports and sensitive data
 reports/*
 !reports/.gitkeep
@@ -382,6 +386,8 @@ screenshots/
 resp.html
 *.log
 *.tmp
+tmp_dom_results/
+.archive/
 
 # IDE
 .vscode/

@@ -82,6 +82,8 @@ class ReconOrchestrator:
         bypass_delay_max: float = 3.0,
         enable_dom_playwright: bool = False,
         enable_exploit_validation: bool = False,
+        enable_403_probe: bool = False,
+        enable_cloudflare_solver: bool = False,
     ):
         """
         Run the full reconnaissance pipeline.
@@ -99,6 +101,8 @@ class ReconOrchestrator:
             bypass_delay_max: Maximum delay between requests (seconds)
             enable_dom_playwright: Run optional Playwright DOM audit for client-side issues
             enable_exploit_validation: Run optional exploit validation (Exploit-DB + PoC filtering)
+            enable_403_probe: Attempt common HTTP 403 bypass heuristics during scanning
+            enable_cloudflare_solver: Attempt to automatically solve Cloudflare browser challenges
             
         Returns:
             Dictionary with all findings and metadata
@@ -205,7 +209,9 @@ class ReconOrchestrator:
                         allow_destructive=allow_destructive,
                         bypass_cloudflare=bypass_cloudflare,
                         bypass_delay_min=bypass_delay_min,
-                        bypass_delay_max=bypass_delay_max
+                        bypass_delay_max=bypass_delay_max,
+                        enable_forbidden_probe=enable_403_probe,
+                        enable_cloudflare_solver=enable_cloudflare_solver,
                     )
 
                     scanner_file = domain_output / f"{phase_index:02d}_scanner_findings.json"
@@ -530,7 +536,9 @@ def run_recon_pipeline(
     bypass_delay_min: float = 1.0,
     bypass_delay_max: float = 3.0,
     enable_dom_playwright: bool = False,
-    enable_exploit_validation: bool = False
+    enable_exploit_validation: bool = False,
+    enable_403_probe: bool = False,
+    enable_cloudflare_solver: bool = False,
 ) -> dict:
     """
     Convenience function to run the full recon pipeline.
@@ -549,6 +557,8 @@ def run_recon_pipeline(
         bypass_delay_max: Maximum delay between requests (seconds)
     enable_dom_playwright: Run optional Playwright DOM audit
     enable_exploit_validation: Run optional exploit validation (Exploit-DB backed)
+    enable_403_probe: Attempt automatic 403 bypass heuristics during scanner phase
+    enable_cloudflare_solver: Attempt Cloudflare JS challenge solving via Playwright
         
     Returns:
         Recon results dictionary
@@ -568,5 +578,7 @@ def run_recon_pipeline(
         bypass_delay_min=bypass_delay_min,
         bypass_delay_max=bypass_delay_max,
         enable_dom_playwright=enable_dom_playwright,
-        enable_exploit_validation=enable_exploit_validation
+        enable_exploit_validation=enable_exploit_validation,
+        enable_403_probe=enable_403_probe,
+        enable_cloudflare_solver=enable_cloudflare_solver,
     )

