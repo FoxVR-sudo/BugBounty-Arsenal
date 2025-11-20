@@ -64,6 +64,7 @@ async def injector(session, url, context):
             candidate_params = ["input"]
 
         waf_mode = bool(context.get("cloudflare_challenge_detected") or context.get("recent_403"))
+        scan_mode = str(context.get("scan_mode", "normal")).lower()
 
         for param in candidate_params:
             for ptype, plist in payloads.PAYLOADS.items():
@@ -73,6 +74,22 @@ async def injector(session, url, context):
                     candidates = prioritized + fallback
                 else:
                     candidates = plist
+
+                # Mode-based payload down-selection
+                if scan_mode == "safe":
+                    # Keep only first few benign payloads (non-destructive) per type
+                    reduced = []
+                    for entry in candidates:
+                        if entry.get("destructive"):
+                            continue
+                        reduced.append(entry)
+                        if len(reduced) >= 5:
+                            break
+                    candidates = reduced
+                elif scan_mode == "brute":
+                    # Use all non-destructive payloads unless allow_destructive enabled
+                    if not allow_destructive:
+                        candidates = [e for e in candidates if not e.get("destructive")]
 
                 for p in candidates:
                     if p.get("destructive", False) and not allow_destructive:

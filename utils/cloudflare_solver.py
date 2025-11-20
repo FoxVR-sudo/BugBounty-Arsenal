@@ -10,7 +10,7 @@ import logging
 from typing import Dict, Optional, Any
 
 try:
-    from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
+    from playwright.async_api import async_playwright, TimeoutError
 except ImportError:  # Playwright optional
     async_playwright = None  # type: ignore
 
@@ -69,7 +69,7 @@ class CloudflareSolver:
                             timeout=self.wait_timeout * 1000,
                         )
                         await page.wait_for_load_state("networkidle", timeout=self.wait_timeout * 1000)
-                    except PlaywrightTimeoutError:
+                    except TimeoutError:
                         # Continue even if we hit timeout; cookies may still be issued
                         self.logger.debug("Cloudflare solver timeout while waiting for %s", url)
                     except Exception as exc:  # pragma: no cover - defensive against Playwright quirks
@@ -78,7 +78,12 @@ class CloudflareSolver:
                     await page.wait_for_timeout(3000)  # allow challenge JS to finish
 
                     cookies_list = await context.cookies()
-                    cookies = {cookie["name"]: cookie["value"] for cookie in cookies_list}
+                    cookies: Dict[str, str] = {}
+                    for cookie in cookies_list:
+                        name = cookie.get("name")  # type: ignore[attr-defined]
+                        value = cookie.get("value")  # type: ignore[attr-defined]
+                        if isinstance(name, str) and isinstance(value, str):
+                            cookies[name] = value
                     user_agent = await page.evaluate("() => navigator.userAgent")
                     page_url = page.url
                     response_status = response.status if response else None

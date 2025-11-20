@@ -35,7 +35,9 @@ def _parse_version(raw: str) -> Optional[Tuple[int, int, int]]:
 
 
 async def _safe_fetch(session, target_url: str, host: str, timeout: float, rate: Optional[float]) -> Tuple[Optional[int], Optional[str], Dict[str, str]]:
-    await await_host_token(host, rate)
+    # Throttle only if rate is a valid float > 0
+    if isinstance(rate, (int, float)) and rate > 0:
+        await await_host_token(host, float(rate))
     try:
         async with session.get(target_url, allow_redirects=True, timeout=timeout) as resp:
             text = await resp.text(errors="ignore")
@@ -69,14 +71,16 @@ async def simple_file_list_detector(session, url: str, context: Dict) -> List[Di
     readme_status, readme_body, _ = await _safe_fetch(session, readme_url, host, timeout, rate)
 
     detected_version: Optional[Tuple[int, int, int]] = None
-    detected_version_raw: Optional[str] = None
+    detected_version_raw: str = ""
 
     if readme_body:
         for pattern in READ_ME_PATTERNS:
             match = pattern.search(readme_body)
             if match:
-                detected_version_raw = match.group(1)
-                detected_version = _parse_version(detected_version_raw)
+                raw = match.group(1)
+                if raw:
+                    detected_version_raw = raw
+                    detected_version = _parse_version(detected_version_raw)
                 break
 
     engine_status, _, _ = await _safe_fetch(session, engine_url, host, timeout, rate)

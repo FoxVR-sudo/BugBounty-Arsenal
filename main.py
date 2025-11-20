@@ -67,7 +67,8 @@ def main():
     parser.add_argument("--recon", metavar="DOMAIN", help="🚀 [V2.0] Full recon mode: Subfinder → HTTPX → Scanner → Nuclei")
     
     # Standard scanning mode
-    parser.add_argument("--scope", "-s", help="CSV file with URL,Status (required for standard mode)")
+    parser.add_argument("--scope", "-s", help="CSV file with URL,Status (required for standard mode). If omitted, interactive menu launches.")
+    parser.add_argument("--scan-mode", choices=["safe","normal","brute"], default="normal", help="Scanning intensity preset (safe, normal, brute). Brute uses full payload sets without DoS.")
     parser.add_argument("--concurrency", "-c", type=int, default=10)
     parser.add_argument("--per-host-rate", "-r", type=float, default=1.0, help="requests per second per host")
     parser.add_argument("--timeout", "-t", type=int, default=15)
@@ -115,6 +116,37 @@ def main():
     )
     
     args = parser.parse_args()
+
+    def interactive_menu():
+        print("\n=== BUG BOUNTY ARSENAL INTERACTIVE MODE ===")
+        print("Изберете scope файл (.csv или .txt). .txt ще бъде конвертиран.")
+        scope_path = input("[1] Въведи път до scope файл (default targets.csv): ").strip() or "targets.csv"
+        if not os.path.exists(scope_path):
+            print(f"[!] Файлът {scope_path} не съществува.")
+            sys.exit(1)
+        # Convert .txt lines -> temp csv if needed
+        if scope_path.lower().endswith('.txt'):
+            tmp_csv = f"_auto_scope_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            with open(scope_path, 'r', encoding='utf-8', errors='ignore') as src, open(tmp_csv, 'w', encoding='utf-8') as dst:
+                for line in src:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    dst.write(f"{line},200\n")
+            print(f"[+] Конвертиран TXT → CSV: {tmp_csv}")
+            scope_path = tmp_csv
+        print("\nИзберете режим на сканиране:")
+        print("  1) safe   - минимални, пасивни и нискорискови детектори")
+        print("  2) normal - пълен стандартен набор без агресивни масови опити")
+        print("  3) brute  - всички payload-и + brute/rate/auth тестове (анти-DoS лимити)")
+        choice = input("[2] Въведи число (1/2/3) [default 2]: ").strip() or "2"
+        mapping = {"1":"safe","2":"normal","3":"brute"}
+        scan_mode = mapping.get(choice, "normal")
+        return scope_path, scan_mode
+
+    # Launch interactive if no recon and no scope provided
+    if not args.recon and not args.scope:
+        args.scope, args.scan_mode = interactive_menu()
 
     # V2.0: Recon mode (Subfinder → HTTPX → Scanner → Nuclei)
     if args.recon:
@@ -170,9 +202,7 @@ def main():
 
     # Standard scanning mode (requires --scope)
     if not args.scope:
-        print("[!] Either --recon DOMAIN or --scope FILE is required")
-        print("    Use --recon for full reconnaissance pipeline")
-        print("    Use --scope for targeted scanning")
+        print("[!] Either --recon DOMAIN or --scope FILE is required (interactive attempted).")
         sys.exit(1)
 
     if not args.consent:
@@ -203,12 +233,20 @@ def main():
     print(f"[+] Scan directory: {scan_dir}")
     print(f"[+] Raw responses: {raw_responses_dir}")
 
+    # Adjust concurrency / rate for brute mode to avoid DoS
+    eff_concurrency = args.concurrency
+    eff_rate = args.per_host_rate
+    if args.scan_mode == 'brute':
+        eff_concurrency = min(eff_concurrency, 5)
+        eff_rate = min(eff_rate, 2.0)
+        print(f"[!] Brute mode активен → ограничаване concurrency={eff_concurrency}, per_host_rate={eff_rate}")
+
     results, metadata = run_scan(
         in_scope,
-        concurrency=args.concurrency,
+        concurrency=eff_concurrency,
         timeout=args.timeout,
         retries=args.retries,
-        per_host_rate=args.per_host_rate,
+        per_host_rate=eff_rate,
         allow_destructive=args.allow_destructive,
         output_dir=raw_responses_dir,  # Use timestamped directory
         auto_confirm=args.auto_confirm,
@@ -222,6 +260,7 @@ def main():
         bypass_delay_max=args.bypass_delay_max,
         enable_forbidden_probe=args.enable_403_probing,
         enable_cloudflare_solver=args.enable_cloudflare_solver,
+        scan_mode=args.scan_mode,
     )
 
     dom_playwright_summary = None
@@ -266,6 +305,7 @@ def main():
     print(f"✅ Scan completed!")
     print(f"{'='*70}")
     print(f"📁 Scan directory: {scan_dir}")
+    print(f"🔧 Scan mode:     {args.scan_mode}")
     print(f"📄 HTML report:    {output_html}")
     print(f"📄 JSON report:    {json_path}")
     print(f"📂 Raw responses:  {raw_responses_dir}")

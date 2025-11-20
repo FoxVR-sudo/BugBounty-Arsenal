@@ -650,7 +650,19 @@ async def scan_single_url(
                     request_headers[key] = value
 
         # Active detectors
+        scan_mode = str(context.get('scan_mode','normal')).lower()
+        # Detector filtering based on scan_mode
+        brute_only = {"brute_force_detector", "rate_limit_bypass_detector", "auth_bypass_detector", "fuzz_detector", "race_condition_detector"}
+        high_risk = {"command_injection_detector"}
+        filtered_active = []
         for det in ACTIVE_DETECTORS:
+            name = getattr(det, "__name__", "")
+            if scan_mode == "safe" and (name in brute_only or name in high_risk):
+                continue
+            if scan_mode == "normal" and name in brute_only:
+                continue
+            filtered_active.append(det)
+        for det in filtered_active:
             detector_name = getattr(det, "__name__", str(det))
             try:
                 findings = await det(session, url, context)
@@ -760,6 +772,7 @@ async def _bounded_scan_with_retries(
     enable_forbidden_probe,
     cloudflare_solver,
     enable_cloudflare_solver,
+    scan_mode,
     proxy: Optional[str] = None,
     secret_whitelist: Optional[List[str]] = None,
     secret_blacklist: Optional[List[str]] = None,
@@ -785,6 +798,7 @@ async def _bounded_scan_with_retries(
                     'enable_403_probe': enable_forbidden_probe,
                     'enable_cf_solver': enable_cloudflare_solver,
                     'cloudflare_solver': cloudflare_solver,
+                    'scan_mode': scan_mode,
                 }
                 return await scan_single_url(
                     session,
@@ -835,6 +849,7 @@ async def async_run(
     bypass_delay_max: float = 3.0,  # Maximum delay between requests
         enable_forbidden_probe: bool = False,
         enable_cloudflare_solver: bool = False,
+    scan_mode: str = "normal",
 ):
     results = []
     start_time = time.time()
@@ -881,6 +896,7 @@ async def async_run(
         "skipped_unreachable": [],
         "resolved_via_public_dns": [],
         "used_public_dns": False,
+        "scan_mode": scan_mode,
         "scan_options": {
             "concurrency": concurrency,
             "timeout": timeout,
@@ -890,6 +906,7 @@ async def async_run(
             "bypass_cloudflare": bypass_cloudflare,
             "enable_403_probe": bool(enable_forbidden_probe),
             "enable_cloudflare_solver": bool(enable_cloudflare_solver),
+            "scan_mode": scan_mode,
         },
         "scanner_version": SCANNER_VERSION,
         "secret_whitelist": secret_whitelist,
@@ -1024,6 +1041,7 @@ async def async_run(
                     enable_forbidden_probe,
                     cloudflare_solver,
                     enable_cloudflare_solver,
+                    scan_mode,
                     proxy=proxy,
                     secret_whitelist=secret_whitelist,
                     secret_blacklist=secret_blacklist,
@@ -1166,6 +1184,7 @@ def run_scan(
     bypass_delay_max: float = 3.0,
     enable_forbidden_probe: bool = False,
     enable_cloudflare_solver: bool = False,
+    scan_mode: str = "normal",
 ):
     try:
         return asyncio.run(
@@ -1190,6 +1209,7 @@ def run_scan(
                 bypass_delay_max=bypass_delay_max,
                 enable_forbidden_probe=enable_forbidden_probe,
                 enable_cloudflare_solver=enable_cloudflare_solver,
+                scan_mode=scan_mode,
             )
         )
     except Exception as e:
