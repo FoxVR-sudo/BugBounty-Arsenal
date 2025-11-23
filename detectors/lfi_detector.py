@@ -83,12 +83,16 @@ async def detect_lfi(session, url, context):
                     status_changed = (baseline_status is not None and baseline_status != status)
 
                     if keyword_hit or len_diff > 200 or status_changed:
-                        sev = "medium"
+                        # Downgrade heuristic-only (length/status) to low; elevate keyword hits.
                         if keyword_hit:
                             sev = "high"
+                            evidence_text = "LFI keywords matched in response"
+                        else:
+                            sev = "low"  # previously medium; reduce noise
+                            evidence_text = f"Body length change: {len_diff} bytes (no keyword markers)"
                         findings.append({
                             "type": "Local File Inclusion (possible)",
-                            "evidence": "LFI keywords matched in response" if keyword_hit else f"Body length change: {len_diff} bytes",
+                            "evidence": evidence_text,
                             "how_found": f"Injected LFI payload into query parameter '{param}'",
                             "severity": sev,
                             "payload": f"{param}={payload_val}",
@@ -130,12 +134,15 @@ async def detect_lfi(session, url, context):
             status_changed = (baseline_status is not None and baseline_status != status)
 
             if keyword_hit or len_diff > 200 or status_changed:
-                sev = "medium"
                 if keyword_hit:
                     sev = "high"
+                    evidence_text = "LFI keywords matched in response"
+                else:
+                    sev = "low"
+                    evidence_text = f"Body length change: {len_diff} bytes (no keyword markers)"
                 findings.append({
                     "type": "Local File Inclusion (possible)",
-                    "evidence": "LFI keywords matched in response" if keyword_hit else f"Body length change: {len_diff} bytes",
+                    "evidence": evidence_text,
                     "how_found": f"Injected LFI payload into path (payload: {payload_val})",
                     "severity": sev,
                     "payload": payload_val,
