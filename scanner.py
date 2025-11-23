@@ -867,7 +867,7 @@ async def _bounded_scan_with_retries(
     secret_whitelist: Optional[List[str]] = None,
     secret_blacklist: Optional[List[str]] = None,
     bypass: Optional[CloudflareBypass] = None,
-    extra_context: dict = None,
+    extra_context: Optional[dict] = None,
 ):
     attempt = 0
     last_exc = None
@@ -879,7 +879,7 @@ async def _bounded_scan_with_retries(
             async with sem:
                 await _wait_for_token(host_state_tokens, host, per_host_rate)
                 # Build context dict for scan_single_url
-        extra_context: Optional[dict] = None,
+                context = {
                     'timeout': timeout,
                     'allow_destructive': allow_destructive,
                     'output_dir': output_dir,
@@ -1305,7 +1305,7 @@ def run_scan(
     enable_forbidden_probe: bool = False,
     enable_cloudflare_solver: bool = False,
     scan_mode: str = "normal",
-    extra_context: dict = None,
+    extra_context: Optional[dict] = None,
 ):
     try:
         return asyncio.run(
