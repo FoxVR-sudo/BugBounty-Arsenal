@@ -11,6 +11,7 @@ import getpass
 from urllib.parse import urlparse
 from typing import Dict, Tuple, List, Optional, Any
 from aiohttp.client_exceptions import ClientConnectorDNSError, ClientConnectorError
+from aiohttp.http_exceptions import ContentEncodingError
 from yarl import URL
 
 # Ensure detectors modules register themselves
@@ -51,6 +52,7 @@ import detectors.ssti_detector
 import detectors.race_condition_detector
 import detectors.graphql_injection_detector
 import detectors.simple_file_list_detector
+import detectors.basic_param_fuzzer
 ## Note: avoid duplicate imports - detectors are expected to register themselves once
 ## import detectors.api_security_detector  # DISABLED - causes scanner hang, needs more investigation
 
@@ -59,9 +61,36 @@ import crawler
 import payloads
 from utils.cloudflare_bypass import CloudflareBypass, get_bypass_config
 from utils.cloudflare_solver import CloudflareSolver
-# Logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+class Color:
+    INFO = "\033[36m"
+    SUCCESS = "\033[1;32m"
+    WARN = "\033[1;33m"
+    ERROR = "\033[1;31m"
+    DEBUG = "\033[2;37m"
+    RESET = "\033[0m"
+    CRIT = "\033[1;31m"  # same as ERROR for critical findings
+    HIGH = "\033[1;33m"  # yellow
+    MED = "\033[36m"     # cyan
+    LOW = "\033[2;37m"   # dim gray
+
+class ColorFormatter(logging.Formatter):
+    def format(self, record):
+        base = super().format(record)
+        if record.levelno >= logging.ERROR:
+            return Color.ERROR + base + Color.RESET
+        if record.levelno >= logging.WARNING:
+            return Color.WARN + base + Color.RESET
+        if record.levelno == logging.INFO:
+            return Color.INFO + base + Color.RESET
+        if record.levelno == logging.DEBUG:
+            return Color.DEBUG + base + Color.RESET
+        return base
+
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler()
+handler.setFormatter(ColorFormatter("%(asctime)s [%(levelname)s] %(message)s"))
+logger.handlers = [handler]
 
 SCANNER_VERSION = "2.0"  # Phase 2: External tool integrations (Subfinder, HTTPX, Nuclei)
 
@@ -185,21 +214,49 @@ async def _fetch_with_timeout(
 ):
     t = aiohttp.ClientTimeout(total=timeout)
     start = time.time()
-    async with session.request(
-        method,
-        url,
-        timeout=t,
-        allow_redirects=True,
-        proxy=proxy,
-        headers=headers_override,
-        data=data,
-    ) as resp:
-        try:
-            text = await resp.text()
-        except Exception:
-            text = ""
-        response_time = time.time() - start
-        return resp.status, text, dict(resp.headers), response_time
+    try:
+        async with session.request(
+            method,
+            url,
+            timeout=t,
+            allow_redirects=True,
+            proxy=proxy,
+            headers=headers_override,
+            data=data,
+        ) as resp:
+            try:
+                text = await resp.text()
+            except Exception:
+                text = ""
+            response_time = time.time() - start
+            return resp.status, text, dict(resp.headers), response_time
+    except ContentEncodingError:
+        # Brotli not supported in current environment. Retry without br encoding.
+        fallback_headers = dict(headers_override or getattr(session, 'headers', {}) or {})
+        ae = fallback_headers.get("Accept-Encoding", "")
+        if ae:
+            new_encs = [e.strip() for e in ae.split(',') if 'br' not in e.lower()]
+            if not new_encs:
+                new_encs = ["gzip", "deflate"]
+            fallback_headers["Accept-Encoding"] = ", ".join(new_encs)
+        else:
+            fallback_headers["Accept-Encoding"] = "gzip, deflate"
+        logger.warning("Brotli not available. Fallback retry without 'br' for %s", url)
+        async with session.request(
+            method,
+            url,
+            timeout=t,
+            allow_redirects=True,
+            proxy=proxy,
+            headers=fallback_headers,
+            data=data,
+        ) as resp:
+            try:
+                text = await resp.text()
+            except Exception:
+                text = ""
+            response_time = time.time() - start
+            return resp.status, text, dict(resp.headers), response_time
 
 
 def _build_forbidden_probe_playbook(url: str) -> List[Dict[str, Any]]:
@@ -404,6 +461,29 @@ async def scan_single_url(
     if bypass:
         await bypass.delay()
 
+    # --- Basic Param Fuzzer for single URL mode ---
+    # Only run if context signals single_url_scan (set by main.py or orchestrator)
+    if context.get("single_url_scan", False):
+        print(f"{Color.INFO}▶️ Стартиране на Basic Param Fuzzer за {url}{Color.RESET}")
+        try:
+            fuzzer = detectors.basic_param_fuzzer.BasicParamFuzzer(session, url, logger=logging.getLogger("basic_param_fuzzer"))
+            fuzzer_findings = await fuzzer.fuzz()
+            for f in fuzzer_findings:
+                f_record = {
+                    "url": f.get("url", url),
+                    "type": f.get("type", "Finding"),
+                    "description": f.get("evidence", ""),
+                    "evidence": f.get("evidence", ""),
+                    "how_found": "basic_param_fuzzer",
+                    "payload": None,
+                    "severity": "medium" if f.get("type") == "LFI" else "low",
+                    "evidence_path": None,
+                    "test_param": None,
+                }
+                result["issues"].append(f_record)
+            print(f"{Color.SUCCESS}✔️ Basic Param Fuzzer завърши за {url}{Color.RESET}")
+        except Exception as e:
+            print(f"{Color.ERROR}Грешка при Basic Param Fuzzer: {e}{Color.RESET}")
     try:
         parsed_try = urlparse(url)
         if not parsed_try.scheme:
@@ -664,11 +744,16 @@ async def scan_single_url(
             filtered_active.append(det)
         for det in filtered_active:
             detector_name = getattr(det, "__name__", str(det))
+            print(f"{Color.INFO}▶️ Стартира {detector_name} за {url}{Color.RESET}")
             try:
                 findings = await det(session, url, context)
             except Exception as e:
                 logger.exception("Active detector %s error for %s: %s", detector_name, url, e)
                 findings = []
+            if findings:
+                print(f"{Color.SUCCESS}✔️ {detector_name} намери {len(findings)} резултата за {url}{Color.RESET}")
+            else:
+                print(f"{Color.LOW}ℹ️ {detector_name} не намери уязвимости за {url}{Color.RESET}")
             for f in findings:
                 f_record = {
                     "url": url,
@@ -716,11 +801,16 @@ async def scan_single_url(
         # Passive detectors
         for det in PASSIVE_DETECTORS:
             detector_name = getattr(det, "__name__", str(det))
+            print(f"{Color.INFO}▶️ Стартира пасивен {detector_name} за {url}{Color.RESET}")
             try:
                 findings = det(text, {"url": url, "context": context})
             except Exception as e:
                 logger.exception("Passive detector %s error for %s: %s", detector_name, url, e)
                 findings = []
+            if findings:
+                print(f"{Color.SUCCESS}✔️ {detector_name} намери {len(findings)} резултата за {url}{Color.RESET}")
+            else:
+                print(f"{Color.LOW}ℹ️ {detector_name} не намери уязвимости за {url}{Color.RESET}")
             for f in findings:
                 f_record = {
                     "url": url,
@@ -777,10 +867,10 @@ async def _bounded_scan_with_retries(
     secret_whitelist: Optional[List[str]] = None,
     secret_blacklist: Optional[List[str]] = None,
     bypass: Optional[CloudflareBypass] = None,
+    extra_context: dict = None,
 ):
     attempt = 0
     last_exc = None
-    # Normalize target to string
     target_url = target if not isinstance(target, list) else target[0]
     host = _get_host(target_url)
 
@@ -789,7 +879,7 @@ async def _bounded_scan_with_retries(
             async with sem:
                 await _wait_for_token(host_state_tokens, host, per_host_rate)
                 # Build context dict for scan_single_url
-                context = {
+        extra_context: Optional[dict] = None,
                     'timeout': timeout,
                     'allow_destructive': allow_destructive,
                     'output_dir': output_dir,
@@ -804,7 +894,6 @@ async def _bounded_scan_with_retries(
                     session,
                     target_url,
                     context,
-                    proxy=proxy,
                     secret_whitelist=secret_whitelist,
                     secret_blacklist=secret_blacklist,
                     bypass=bypass,
@@ -833,13 +922,11 @@ async def async_run(
     concurrency: int = 10,
     timeout: int = 15,
     retries: int = 3,
-    headers=None,
     per_host_rate: float = 1.0,
     allow_destructive: bool = False,
     output_dir: str = "raw_responses",
     auto_confirm: bool = False,
     scope_matcher=None,
-    proxy: Optional[str] = None,
     scan_both: bool = False,
     use_public_dns: bool = True,  # automatic fallback enabled
     secret_whitelist: Optional[List[str]] = None,
@@ -847,12 +934,14 @@ async def async_run(
     bypass_cloudflare: bool = False,  # Enable Cloudflare bypass
     bypass_delay_min: float = 1.0,  # Minimum delay between requests
     bypass_delay_max: float = 3.0,  # Maximum delay between requests
-        enable_forbidden_probe: bool = False,
-        enable_cloudflare_solver: bool = False,
+    enable_forbidden_probe: bool = False,
+    enable_cloudflare_solver: bool = False,
     scan_mode: str = "normal",
+        extra_context: Optional[dict] = None,
 ):
-    results = []
     start_time = time.time()
+    headers = None
+    results = []
     
     # Initialize Cloudflare bypass if enabled
     bypass = get_bypass_config(
@@ -889,7 +978,6 @@ async def async_run(
         "start_time": time.strftime("%Y-%m-%dT%H:%M:%S%z", time.localtime(start_time)),
         "concurrency": concurrency,
         "per_host_rate": per_host_rate,
-        "proxy": proxy,
         "scan_both": bool(scan_both),
         "network_note": None,
         "skipped_unresolved": [],
@@ -904,7 +992,6 @@ async def async_run(
             "scan_both": scan_both,
             "allow_destructive": allow_destructive,
             "bypass_cloudflare": bypass_cloudflare,
-            "enable_403_probe": bool(enable_forbidden_probe),
             "enable_cloudflare_solver": bool(enable_cloudflare_solver),
             "scan_mode": scan_mode,
         },
@@ -959,6 +1046,7 @@ async def async_run(
         loop = asyncio.get_running_loop()
         resolvable = []
         skipped_unresolved = []
+        logger.info("Phase: DNS PREFLIGHT (candidates=%d)", len(processed_candidates))
         for tgt in processed_candidates:
             try:
                 parsed = urlparse(tgt)
@@ -1010,6 +1098,7 @@ async def async_run(
 
         # update skipped_unresolved after attempting public DNS
         still_skipped = []
+        logger.info("Phase: PUBLIC DNS FALLBACK (unresolved_initial=%d)", len(skipped_unresolved))
         for tgt in skipped_unresolved:
             parsed = urlparse(tgt)
             host = parsed.hostname or parsed.netloc or parsed.path
@@ -1025,6 +1114,7 @@ async def async_run(
         metadata["total_targets_considered"] = len(processed_candidates)
         metadata["total_targets_scanned"] = len(processed_targets)
 
+        logger.info("Phase: DISPATCH TASKS (targets_resolvable=%d, concurrency=%d)", len(processed_targets), concurrency)
         tasks = [
             asyncio.create_task(
                 _bounded_scan_with_retries(
@@ -1042,7 +1132,6 @@ async def async_run(
                     cloudflare_solver,
                     enable_cloudflare_solver,
                     scan_mode,
-                    proxy=proxy,
                     secret_whitelist=secret_whitelist,
                     secret_blacklist=secret_blacklist,
                     bypass=bypass,
@@ -1063,6 +1152,16 @@ async def async_run(
 
             for issue in scan_result.get("issues", []):
                 issue.setdefault("url", scan_result.get("url"))
+                sev = (issue.get("severity") or "").lower()
+                if sev:
+                    if sev == "critical":
+                        logger.info(Color.CRIT + f"Finding [CRITICAL] {issue.get('type') or 'unknown'}" + Color.RESET)
+                    elif sev == "high":
+                        logger.info(Color.HIGH + f"Finding [HIGH] {issue.get('type') or 'unknown'}" + Color.RESET)
+                    elif sev == "medium":
+                        logger.info(Color.MED + f"Finding [MEDIUM] {issue.get('type') or 'unknown'}" + Color.RESET)
+                    elif sev == "low":
+                        logger.info(Color.LOW + f"Finding [LOW] {issue.get('type') or 'unknown'}" + Color.RESET)
                 collected_findings.append(issue)
 
             if "error" in scan_result:
@@ -1088,6 +1187,26 @@ async def async_run(
 
         pbar.close()
 
+        # Post-process: LFI deduplication and downgrade confirmation.
+        lfi_seen = set()
+        filtered_findings = []
+        for f in collected_findings:
+            if f.get("type") == "Local File Inclusion (possible)":
+                # If evidence indicates only length change and no keywords, ensure severity low.
+                ev = (f.get("evidence") or "").lower()
+                if "no keyword" in ev or ev.startswith("body length change"):
+                    if f.get("severity") not in ("low", "critical", "high"):
+                        f["severity"] = "low"
+                    # annotate how_found for clarity
+                    if "no keyword" not in (f.get("how_found") or "").lower():
+                        f["how_found"] = (f.get("how_found") or "") + " (no keyword markers; downgraded)"
+                key = (f.get("url"), f.get("payload"), f.get("evidence"))
+                if key in lfi_seen:
+                    continue  # skip duplicate
+                lfi_seen.add(key)
+            filtered_findings.append(f)
+        collected_findings = filtered_findings
+
         # Derive skipped_unreachable from scan errors (timeouts/connection failures)
         skipped_unreachable_hosts = set()
         for f in collected_findings:
@@ -1112,6 +1231,7 @@ async def async_run(
                     to_confirm.append((idx, f))
 
             if to_confirm:
+                logger.info("Phase: AUTO-CONFIRM (candidates=%d)", len(to_confirm))
                 confirm_concurrency = min(20, max(2, concurrency))
                 sem_confirm = asyncio.Semaphore(confirm_concurrency)
 
@@ -1185,21 +1305,20 @@ def run_scan(
     enable_forbidden_probe: bool = False,
     enable_cloudflare_solver: bool = False,
     scan_mode: str = "normal",
+    extra_context: dict = None,
 ):
     try:
         return asyncio.run(
             async_run(
-                targets,
+                targets=targets,
                 concurrency=concurrency,
                 timeout=timeout,
                 retries=retries,
-                headers=headers,
                 per_host_rate=per_host_rate,
                 allow_destructive=allow_destructive,
                 output_dir=output_dir,
                 auto_confirm=auto_confirm,
                 scope_matcher=scope_matcher,
-                proxy=proxy,
                 scan_both=scan_both,
                 use_public_dns=use_public_dns,
                 secret_whitelist=secret_whitelist,
@@ -1210,6 +1329,7 @@ def run_scan(
                 enable_forbidden_probe=enable_forbidden_probe,
                 enable_cloudflare_solver=enable_cloudflare_solver,
                 scan_mode=scan_mode,
+                extra_context=extra_context,
             )
         )
     except Exception as e:
