@@ -641,7 +641,8 @@
         
         try {
             const response = await fetch(`/scan-stop/${jobId}`, {
-                method: 'POST'
+                method: 'POST',
+                credentials: 'include'
             });
             
             if (response.ok) {
