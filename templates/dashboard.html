@@ -640,7 +640,7 @@
         }
         
         try {
-            const response = await fetch(`/scan-stop/${jobId}`, {
+            const response = await fetch(`/api/scan-stop/${jobId}`, {
                 method: 'POST',
                 credentials: 'include'
             });

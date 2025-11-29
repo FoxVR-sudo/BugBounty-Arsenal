@@ -1031,7 +1031,7 @@ async def stream_scan_log(
     )
 
 
-@app.post("/scan-stop/{job_id}")
+@app.post("/api/scan-stop/{job_id}")
 async def stop_scan(
     job_id: str,
     user: User = Depends(get_current_user),
