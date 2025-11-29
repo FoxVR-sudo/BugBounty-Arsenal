@@ -1038,36 +1038,54 @@ async def stop_scan(
     db: Session = Depends(get_db)
 ):
     """Stop a running scan by terminating its process."""
-    if job_id not in ACTIVE_SCANS:
-        return JSONResponse({"error": "Job not found"}, status_code=404)
     
-    scan_info = ACTIVE_SCANS[job_id]
+    # First check ACTIVE_SCANS (for scans started by current server instance)
+    if job_id in ACTIVE_SCANS:
+        scan_info = ACTIVE_SCANS[job_id]
+        
+        if scan_info["status"] != "running":
+            return JSONResponse({"error": "Scan not running"}, status_code=400)
+        
+        try:
+            proc = psutil.Process(scan_info["pid"])
+            proc.terminate()  # SIGTERM
+            proc.wait(timeout=5)  # Wait up to 5 seconds
+        except psutil.TimeoutExpired:
+            proc.kill()  # Force kill if doesn't terminate
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass
+        
+        scan_info["status"] = "stopped"
+        scan_info["completed"] = datetime.now()
+        
+        if "log_file_handle" in scan_info:
+            scan_info["log_file_handle"].close()
+            del scan_info["log_file_handle"]
     
-    if scan_info["status"] != "running":
-        return JSONResponse({"error": "Scan not running"}, status_code=400)
+    # Also check database (for scans that survived server restart)
+    scan = db.query(Scan).filter(Scan.job_id == job_id, Scan.user_id == user.id).first()
+    if not scan:
+        return JSONResponse({"error": "Scan not found or access denied"}, status_code=404)
     
-    try:
-        proc = psutil.Process(scan_info["pid"])
-        proc.terminate()  # SIGTERM
-        proc.wait(timeout=5)  # Wait up to 5 seconds
-    except psutil.TimeoutExpired:
-        proc.kill()  # Force kill if doesn't terminate
-    except (psutil.NoSuchProcess, psutil.AccessDenied):
-        pass
+    # If scan is running and has PID, try to kill it
+    if scan.status == ScanStatus.RUNNING and scan.pid:
+        try:
+            proc = psutil.Process(scan.pid)
+            # Check if process is actually our scan (basic validation)
+            if "python" in proc.name().lower() or "main.py" in " ".join(proc.cmdline()):
+                proc.terminate()
+                try:
+                    proc.wait(timeout=5)
+                except psutil.TimeoutExpired:
+                    proc.kill()
+        except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
+            # Process already dead or no access
+            pass
     
-    scan_info["status"] = "stopped"
-    scan_info["completed"] = datetime.now()
-    
-    # Update scan in database
-    scan = db.query(Scan).filter(Scan.job_id == job_id).first()
-    if scan:
-        scan.status = "stopped"
-        scan.completed_at = datetime.now()
-        db.commit()
-    
-    if "log_file_handle" in scan_info:
-        scan_info["log_file_handle"].close()
-        del scan_info["log_file_handle"]
+    # Update database
+    scan.status = ScanStatus.STOPPED
+    scan.completed_at = datetime.now()
+    db.commit()
     
     return JSONResponse({"success": True, "message": f"Scan {job_id} stopped"})
 
