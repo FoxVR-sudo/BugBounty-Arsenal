@@ -1,4 +1,33 @@
 ﻿import sys
+# Ensure all Python dependencies are installed before running
+import subprocess
+def ensure_requirements():
+    try:
+        with open('requirements.txt') as f:
+            required = [line.strip() for line in f if line.strip() and not line.startswith('#')]
+        
+        # Use importlib.metadata instead of pkg_resources (modern approach)
+        try:
+            from importlib.metadata import distributions
+            installed = {dist.name.lower().replace('-', '_') for dist in distributions()}
+        except ImportError:
+            # Fallback for older Python
+            import pkg_resources
+            installed = {pkg.key for pkg in pkg_resources.working_set}
+        
+        missing = []
+        for req in required:
+            pkg = req.split('==')[0].split('>=')[0].split('[')[0].lower().replace('-', '_')
+            if pkg not in installed:
+                missing.append(req)
+        if missing:
+            print("[INFO] Installing missing Python packages:", ', '.join(missing))
+            subprocess.check_call([sys.executable, '-m', 'pip', 'install', *missing])
+    except Exception as e:
+        print(f"[WARN] Could not auto-install requirements: {e}")
+        print("[!] Please run: pip install -r requirements.txt")
+
+ensure_requirements()
 # On Windows use the selector event loop policy to avoid "Event loop is closed"
 # errors from Proactor transports during interpreter shutdown.
 if sys.platform.startswith("win"):
@@ -10,10 +39,11 @@ if sys.platform.startswith("win"):
         # if unavailable, continue with default policy
         pass
 
+
 import os
+from datetime import datetime
 import argparse
 import subprocess
-from datetime import datetime
 from scope_parser import parse_scope, build_scope_matcher
 from scanner import run_scan
 from report_generator import generate_html_report
@@ -290,6 +320,12 @@ def main():
     # Standard scanning mode (requires --scope)
     if not args.scope:
         print("[!] Either --recon DOMAIN or --scope FILE is required (interactive attempted).")
+        sys.exit(1)
+    
+    # Check if scope file exists
+    if not os.path.exists(args.scope):
+        print(Color.ERROR + f"[!] Scope file not found: {args.scope}" + Color.RESET)
+        print(Color.INFO + f"[i] Create the file or use --url for single target scanning." + Color.RESET)
         sys.exit(1)
 
     # --- Recon pipeline integration ---

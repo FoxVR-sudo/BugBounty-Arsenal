@@ -526,8 +526,13 @@ async def scan_single_url(
                 result["error"] = f"Connection error: {e}"
                 return result
         except Exception as e:
-            logger.exception("Unexpected error fetching %s: %s", url, e)
-            result["error"] = str(e)
+            # Log timeout and other errors more concisely
+            error_type = type(e).__name__
+            if "Timeout" in error_type or "CancelledError" in error_type:
+                logger.warning("Request timeout for %s", url)
+            else:
+                logger.error("Unexpected error fetching %s: %s", url, error_type)
+            result["error"] = f"{error_type}: {str(e)[:100]}"
             return result
         output_dir = context.get('output_dir', 'raw_responses')  # type: ignore
         cloudflare_solver_enabled = bool(context.get("enable_cf_solver"))

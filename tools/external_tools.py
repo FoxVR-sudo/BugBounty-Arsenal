@@ -94,7 +94,7 @@ class SubfinderWrapper(ExternalTool):
         domain: str,
         silent: bool = True,
         recursive: bool = False,
-        timeout: int = 600
+        timeout: int = 60
     ) -> List[str]:
         """
         Enumerate subdomains for a given domain.
@@ -103,7 +103,7 @@ class SubfinderWrapper(ExternalTool):
             domain: Target domain (e.g., "example.com")
             silent: Only show subdomains in output
             recursive: Use recursive subdomain enumeration
-            timeout: Command timeout in seconds
+            timeout: Command timeout in seconds (default: 60s)
             
         Returns:
             List of discovered subdomains
@@ -114,6 +114,9 @@ class SubfinderWrapper(ExternalTool):
             args.append("-silent")
         if recursive:
             args.append("-recursive")
+        
+        # Add explicit timeout to subfinder itself (30s max per source)
+        args.extend(["-timeout", "30"])
         
         try:
             output = self._run_command(args, timeout=timeout)

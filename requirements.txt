@@ -15,4 +15,13 @@ typing_extensions==4.15.0
 yarl==1.22.0
 PyYAML==6.0.3
 playwright==1.47.0
+brotli
+requests
+bs4
+
+# External tools (install manually if not present):
+# subfinder
+# httpx
+# nuclei
 Flask==3.0.3
+beautifulsoup4
