@@ -57,6 +57,7 @@ import detectors.basic_param_fuzzer
 ## import detectors.api_security_detector  # DISABLED - causes scanner hang, needs more investigation
 
 from detectors.registry import ACTIVE_DETECTORS, PASSIVE_DETECTORS
+from subscription import BASIC_DETECTORS, ADVANCED_DETECTORS, ENTERPRISE_DETECTORS
 import crawler
 import payloads
 from utils.cloudflare_bypass import CloudflareBypass, get_bypass_config
@@ -736,12 +737,33 @@ async def scan_single_url(
 
         # Active detectors
         scan_mode = str(context.get('scan_mode','normal')).lower()
-        # Detector filtering based on scan_mode
+        user_tier = str(context.get('user_tier', 'free')).lower()
+        
+        # Get allowed detectors based on tier
+        if user_tier == "free":
+            allowed_by_tier = set(BASIC_DETECTORS)
+        elif user_tier == "basic":
+            allowed_by_tier = set(BASIC_DETECTORS + ADVANCED_DETECTORS[:5])
+        elif user_tier == "pro":
+            allowed_by_tier = set(BASIC_DETECTORS + ADVANCED_DETECTORS)
+        elif user_tier == "enterprise":
+            allowed_by_tier = set(BASIC_DETECTORS + ADVANCED_DETECTORS + ENTERPRISE_DETECTORS)
+        else:
+            # Default to free tier if unknown
+            allowed_by_tier = set(BASIC_DETECTORS)
+        
+        # Detector filtering based on scan_mode AND tier
         brute_only = {"brute_force_detector", "rate_limit_bypass_detector", "auth_bypass_detector", "fuzz_detector", "race_condition_detector"}
         high_risk = {"command_injection_detector"}
         filtered_active = []
         for det in ACTIVE_DETECTORS:
             name = getattr(det, "__name__", "")
+            
+            # Filter by tier first
+            if name not in allowed_by_tier:
+                continue
+            
+            # Then filter by scan_mode
             if scan_mode == "safe" and (name in brute_only or name in high_risk):
                 continue
             if scan_mode == "normal" and name in brute_only:
@@ -868,6 +890,7 @@ async def _bounded_scan_with_retries(
     cloudflare_solver,
     enable_cloudflare_solver,
     scan_mode,
+    user_tier,
     proxy: Optional[str] = None,
     secret_whitelist: Optional[List[str]] = None,
     secret_blacklist: Optional[List[str]] = None,
@@ -894,6 +917,7 @@ async def _bounded_scan_with_retries(
                     'enable_cf_solver': enable_cloudflare_solver,
                     'cloudflare_solver': cloudflare_solver,
                     'scan_mode': scan_mode,
+                    'user_tier': user_tier,
                 }
                 return await scan_single_url(
                     session,
@@ -942,6 +966,7 @@ async def async_run(
     enable_forbidden_probe: bool = False,
     enable_cloudflare_solver: bool = False,
     scan_mode: str = "normal",
+    user_tier: str = "free",
         extra_context: Optional[dict] = None,
 ):
     start_time = time.time()
@@ -990,6 +1015,7 @@ async def async_run(
         "resolved_via_public_dns": [],
         "used_public_dns": False,
         "scan_mode": scan_mode,
+        "user_tier": user_tier,
         "scan_options": {
             "concurrency": concurrency,
             "timeout": timeout,
@@ -999,6 +1025,7 @@ async def async_run(
             "bypass_cloudflare": bypass_cloudflare,
             "enable_cloudflare_solver": bool(enable_cloudflare_solver),
             "scan_mode": scan_mode,
+            "user_tier": user_tier,
         },
         "scanner_version": SCANNER_VERSION,
         "secret_whitelist": secret_whitelist,
@@ -1137,6 +1164,7 @@ async def async_run(
                     cloudflare_solver,
                     enable_cloudflare_solver,
                     scan_mode,
+                    user_tier,
                     secret_whitelist=secret_whitelist,
                     secret_blacklist=secret_blacklist,
                     bypass=bypass,
@@ -1310,6 +1338,7 @@ def run_scan(
     enable_forbidden_probe: bool = False,
     enable_cloudflare_solver: bool = False,
     scan_mode: str = "normal",
+    user_tier: str = "free",
     extra_context: Optional[dict] = None,
 ):
     try:
@@ -1334,6 +1363,7 @@ def run_scan(
                 enable_forbidden_probe=enable_forbidden_probe,
                 enable_cloudflare_solver=enable_cloudflare_solver,
                 scan_mode=scan_mode,
+                user_tier=user_tier,
                 extra_context=extra_context,
             )
         )

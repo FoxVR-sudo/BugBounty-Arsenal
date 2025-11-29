@@ -864,10 +864,22 @@
         }
         
         // Get token from cookie for authentication
-        const token = document.cookie.split('; ').find(row => row.startsWith('access_token='))?.split('=')[1];
+        const getCookie = (name) => {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        };
+        
+        const token = getCookie('access_token');
+        
+        if (!token) {
+            logContainer.innerHTML = '<span style="color: #ef4444;">[Authentication error: No token found. Please refresh the page.]</span>';
+            return;
+        }
         
         // Create EventSource for Server-Sent Events with token in URL
-        const url = `/api/scan/${jobId}/stream-log${token ? '?token=' + token : ''}`;
+        const url = `/api/scan/${jobId}/stream-log?token=${encodeURIComponent(token)}`;
         const eventSource = new EventSource(url);
         window.logEventSource = eventSource;
         

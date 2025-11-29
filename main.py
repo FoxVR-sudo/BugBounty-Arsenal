@@ -112,6 +112,7 @@ def main():
     # Standard scanning mode
     parser.add_argument("--scope", "-s", help="CSV file with URL,Status (required for standard mode). If omitted, interactive menu launches.")
     parser.add_argument("--scan-mode", choices=["safe","normal","brute"], default="normal", help="Scanning intensity preset (safe, normal, brute). Brute uses full payload sets without DoS.")
+    parser.add_argument("--tier", choices=["free","basic","pro","enterprise"], default="free", help="User subscription tier (limits available detectors)")
     parser.add_argument("--url", help="Scan a single URL (overrides --scope if provided). Creates temporary scope file internally.")
     parser.add_argument("--auto-suite", action="store_true", help="Run full automated suite (safe → normal → brute) and generate comparative summary.")
     parser.add_argument("--concurrency", "-c", type=int, default=10)
@@ -553,6 +554,7 @@ def main():
         enable_forbidden_probe=args.enable_403_probing,
         enable_cloudflare_solver=args.enable_cloudflare_solver,
         scan_mode=args.scan_mode,
+        user_tier=args.tier,
         extra_context={"single_url_scan": single_url_scan},
     )
 

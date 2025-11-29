@@ -335,7 +335,8 @@ async def login(
     db.commit()
     
     # Create JWT token
-    access_token = create_access_token(data={"sub": user.email})
+    # Create access token with user_id
+    access_token = create_access_token(data={"sub": user.email, "user_id": user.id})
     
     response = JSONResponse(content={
         "message": "Login successful",
@@ -344,7 +345,7 @@ async def login(
     response.set_cookie(
         key="access_token",
         value=access_token,
-        httponly=True,
+        httponly=False,  # Allow JavaScript to read for EventSource
         max_age=60 * 60 * 24 * 7,  # 7 days
         samesite="lax"
     )
@@ -724,6 +725,7 @@ async def start_scan(
         sys.executable,
         "main.py",
         "--consent",
+        "--tier", user_tier.lower(),
     ]
 
     if mode == "recon" and recon_domain:
@@ -907,12 +909,26 @@ async def stream_scan_log(
     
     try:
         payload = decode_access_token(token)
+        if not payload:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        
+        # Try to get user_id from payload, fallback to email lookup
         user_id = payload.get("user_id")
-        user = db.query(User).filter(User.id == user_id).first()
+        if user_id:
+            user = db.query(User).filter(User.id == user_id).first()
+        else:
+            # Fallback for old tokens without user_id
+            email = payload.get("sub")
+            if not email:
+                raise HTTPException(status_code=401, detail="Invalid token payload")
+            user = db.query(User).filter(User.email == email).first()
+        
         if not user:
             raise HTTPException(status_code=401, detail="User not found")
-    except:
-        raise HTTPException(status_code=401, detail="Invalid token")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Token validation failed: {str(e)}")
     
     # Get scan from database
     scan = db.query(Scan).filter(Scan.job_id == job_id, Scan.user_id == user.id).first()
@@ -932,56 +948,71 @@ async def stream_scan_log(
         # Send initial connection message
         yield "data: [Connected to scan log stream]\n\n"
         
+        # Wait for log file if it doesn't exist yet
         if not os.path.exists(log_path):
             yield "data: [Waiting for scan to start...]\n\n"
-            # Wait a bit for log file to be created
-            for _ in range(10):
+            # Wait up to 30 seconds for log file
+            for _ in range(60):
                 await asyncio.sleep(0.5)
                 if os.path.exists(log_path):
+                    yield "data: [Log file found, streaming started...]\n\n"
                     break
             else:
-                yield "data: [Log file not found - scan may have already completed]\n\n"
-                return
+                # If no log file after 30 seconds, keep connection alive with status updates
+                yield "data: [Still waiting for scan output...]\n\n"
         
         last_position = 0
-        retry_count = 0
-        max_retries = 120  # 60 seconds of no new data
+        idle_count = 0
+        max_idle = 300  # 150 seconds with no activity (5 minutes max)
+        keepalive_count = 0
         
         try:
-            while retry_count < max_retries:
+            while idle_count < max_idle:
                 try:
-                    with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
-                        f.seek(last_position)
-                        new_content = f.read()
-                        
-                        if new_content:
-                            for line in new_content.splitlines():
-                                if line.strip():  # Skip empty lines
-                                    # Escape special characters for SSE
-                                    safe_line = line.replace('\n', ' ').replace('\r', '')
-                                    yield f"data: {safe_line}\n\n"
-                            last_position = f.tell()
-                            retry_count = 0  # Reset retry count when we get data
-                        else:
-                            # No new data, wait a bit
-                            await asyncio.sleep(0.5)
-                            retry_count += 1
+                    if os.path.exists(log_path):
+                        with open(log_path, "r", encoding="utf-8", errors="ignore") as f:
+                            f.seek(last_position)
+                            new_content = f.read()
                             
-                        # Check if scan is completed
-                        db.refresh(scan)
-                        if scan.status in [ScanStatus.COMPLETED, ScanStatus.FAILED, ScanStatus.STOPPED]:
-                            # Give it a few more seconds to catch final logs
-                            if retry_count > 10:
-                                yield "data: [✓ Scan completed - stream ending]\n\n"
-                                break
+                            if new_content:
+                                for line in new_content.splitlines():
+                                    if line.strip():  # Skip empty lines
+                                        # Escape special characters for SSE
+                                        safe_line = line.replace('\n', ' ').replace('\r', '')
+                                        yield f"data: {safe_line}\n\n"
+                                last_position = f.tell()
+                                idle_count = 0  # Reset idle count when we get data
+                                keepalive_count = 0
+                            else:
+                                # No new data - send keepalive comment every 15 seconds
+                                await asyncio.sleep(0.5)
+                                idle_count += 1
+                                keepalive_count += 1
+                                
+                                # Send keepalive comment (not visible to client)
+                                if keepalive_count >= 30:  # Every 15 seconds
+                                    yield ": keepalive\n\n"
+                                    keepalive_count = 0
+                    else:
+                        # Log file doesn't exist yet
+                        await asyncio.sleep(0.5)
+                        idle_count += 1
+                            
+                    # Check if scan is completed
+                    db.refresh(scan)
+                    if scan.status in [ScanStatus.COMPLETED, ScanStatus.FAILED, ScanStatus.STOPPED]:
+                        # Give it a few more seconds to catch final logs
+                        if idle_count > 10:
+                            yield "data: [✓ Scan completed - stream ending]\n\n"
+                            break
                                 
                 except FileNotFoundError:
-                    yield "data: [Log file removed or not accessible]\n\n"
-                    break
+                    await asyncio.sleep(0.5)
+                    idle_count += 1
                 except Exception as e:
                     yield f"data: [Error reading file: {str(e)}]\n\n"
                     await asyncio.sleep(1)
-                    retry_count += 1
+                    idle_count += 1
                     
         except asyncio.CancelledError:
             # Client disconnected - this is normal
