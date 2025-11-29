@@ -614,6 +614,9 @@
 </div>
 
 <script>
+    // Store last known scan statuses to detect changes
+    let lastScanStatuses = {};
+    
     // Poll scan status via AJAX and update only the scan list (no full page reload)
     async function updateScanStatuses() {
         try {
@@ -622,12 +625,22 @@
             
             const data = await response.json();
             
-            // If there are changes, reload the page (simple approach for now)
-            // In production, you'd update the DOM directly without reload
-            // For now, only reload if status changes
-            const currentScans = document.querySelectorAll('.scan-item').length;
-            if (data.scans && data.scans.length !== currentScans) {
-                window.location.reload();
+            // Check if any scan status changed
+            let statusChanged = false;
+            if (data.scans) {
+                for (const scan of data.scans) {
+                    const lastStatus = lastScanStatuses[scan.job_id];
+                    if (lastStatus && lastStatus !== scan.status) {
+                        statusChanged = true;
+                        console.log(`Scan ${scan.job_id} status changed: ${lastStatus} → ${scan.status}`);
+                    }
+                    lastScanStatuses[scan.job_id] = scan.status;
+                }
+                
+                // Reload page if any status changed
+                if (statusChanged) {
+                    window.location.reload();
+                }
             }
         } catch (error) {
             console.error('Failed to update scan statuses:', error);

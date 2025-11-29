@@ -843,11 +843,31 @@ def _update_scan_statuses(db: Optional[Session] = None):
 
 
 @app.get("/scan-status", response_class=JSONResponse)
-async def scan_status(db: Session = Depends(get_db)):
-    """Return real-time status of all active scans."""
+async def scan_status(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Return real-time status of all active scans and user's scan history."""
     _update_scan_statuses(db)
     
     running_count = sum(1 for s in ACTIVE_SCANS.values() if s["status"] == "running")
+    
+    # Get user's scan history if authenticated
+    scan_history = []
+    if user:
+        scans = db.query(Scan).filter(Scan.user_id == user.id).order_by(Scan.started_at.desc()).limit(20).all()
+        scan_history = [
+            {
+                "job_id": scan.job_id,
+                "status": scan.status.value,
+                "target": scan.target,
+                "started_at": scan.started_at.isoformat() if scan.started_at else None,
+                "completed_at": scan.completed_at.isoformat() if scan.completed_at else None,
+            }
+            for scan in scans
+        ]
+    
+    return JSONResponse({
+        "running_count": running_count,
+        "scans": scan_history
+    })
     
     return {
         "in_progress": running_count > 0,
@@ -945,28 +965,28 @@ async def stream_scan_log(
         """Stream log file content with live updates."""
         import asyncio
         
-        # Send initial connection message
-        yield "data: [Connected to scan log stream]\n\n"
-        
-        # Wait for log file if it doesn't exist yet
-        if not os.path.exists(log_path):
-            yield "data: [Waiting for scan to start...]\n\n"
-            # Wait up to 30 seconds for log file
-            for _ in range(60):
-                await asyncio.sleep(0.5)
-                if os.path.exists(log_path):
-                    yield "data: [Log file found, streaming started...]\n\n"
-                    break
-            else:
-                # If no log file after 30 seconds, keep connection alive with status updates
-                yield "data: [Still waiting for scan output...]\n\n"
-        
-        last_position = 0
-        idle_count = 0
-        max_idle = 300  # 150 seconds with no activity (5 minutes max)
-        keepalive_count = 0
-        
         try:
+            # Send initial connection message
+            yield "data: [Connected to scan log stream]\n\n"
+            
+            # Wait for log file if it doesn't exist yet
+            if not os.path.exists(log_path):
+                yield "data: [Waiting for scan to start...]\n\n"
+                # Wait up to 30 seconds for log file
+                for _ in range(60):
+                    await asyncio.sleep(0.5)
+                    if os.path.exists(log_path):
+                        yield "data: [Log file found, streaming started...]\n\n"
+                        break
+                else:
+                    # If no log file after 30 seconds, keep connection alive with status updates
+                    yield "data: [Still waiting for scan output...]\n\n"
+        
+            last_position = 0
+            idle_count = 0
+            max_idle = 300  # 150 seconds with no activity (5 minutes max)
+            keepalive_count = 0
+            
             while idle_count < max_idle:
                 try:
                     if os.path.exists(log_path):
@@ -998,13 +1018,19 @@ async def stream_scan_log(
                         await asyncio.sleep(0.5)
                         idle_count += 1
                             
-                    # Check if scan is completed
-                    db.refresh(scan)
-                    if scan.status in [ScanStatus.COMPLETED, ScanStatus.FAILED, ScanStatus.STOPPED]:
-                        # Give it a few more seconds to catch final logs
-                        if idle_count > 10:
-                            yield "data: [✓ Scan completed - stream ending]\n\n"
-                            break
+                    # Check if scan is completed (query database with new session)
+                    try:
+                        temp_db = SessionLocal()
+                        current_scan = temp_db.query(Scan).filter(Scan.job_id == job_id).first()
+                        if current_scan and current_scan.status in [ScanStatus.COMPLETED, ScanStatus.FAILED, ScanStatus.STOPPED]:
+                            # Give it a few more seconds to catch final logs
+                            if idle_count > 10:
+                                yield "data: [✓ Scan completed - stream ending]\n\n"
+                                temp_db.close()
+                                break
+                        temp_db.close()
+                    except Exception:
+                        pass  # Continue streaming even if status check fails
                                 
                 except FileNotFoundError:
                     await asyncio.sleep(0.5)
