@@ -58,9 +58,26 @@ async def startup_event():
     init_db()
     print("✓ Database initialized")
 
-# Mount /reports as static, so we can link to HTML reports directly
-if os.path.isdir(REPORTS_DIR):
-    app.mount("/reports", StaticFiles(directory=REPORTS_DIR), name="reports")
+# Custom endpoint for reports with no-cache headers
+@app.get("/reports/{filename}")
+async def serve_report(filename: str):
+    """Serve HTML reports with no-cache headers to always show latest version"""
+    report_path = os.path.join(REPORTS_DIR, filename)
+    if not os.path.exists(report_path):
+        raise HTTPException(status_code=404, detail="Report not found")
+    
+    with open(report_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    
+    return Response(
+        content=content,
+        media_type="text/html",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0"
+        }
+    )
 
 # Templates directory (already exists in the repo)
 TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
@@ -188,7 +205,7 @@ async def dashboard(
                 "created_at": scan.created_at,
                 "completed_at": scan.completed_at,
                 "vulnerabilities": scan.vulnerabilities_found,
-                "report_path": scan.report_path,
+                "report_path": scan.report_path.replace("reports/", "") if scan.report_path and scan.report_path.startswith("reports/") else scan.report_path,
             }
             for scan in scans
         ]
@@ -222,6 +239,9 @@ async def dashboard(
     # Check active scans status
     _update_scan_statuses(db)
     
+    import time
+    current_timestamp = int(time.time() * 1000)  # Milliseconds for cache busting
+    
     return templates.TemplateResponse(
         "dashboard.html",
         {
@@ -235,6 +255,7 @@ async def dashboard(
             "user": user,
             "is_superuser": user.is_superuser if user else False,
             "scan_stats": scan_stats,
+            "now": current_timestamp,
         },
     )
 

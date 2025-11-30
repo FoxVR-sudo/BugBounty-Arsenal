@@ -440,7 +440,7 @@
                 {% for r in reports %}
                     <tr>
                         <td>
-                            <a class="report-link" href="/reports/{{ r.rel_path }}" target="_blank">{{ r.name }}</a>
+                            <a class="report-link" href="/reports/{{ r.rel_path }}?v={{ now }}" target="_blank">{{ r.name }}</a>
                         </td>
                         <td>
                             {% if r.created %}{{ r.created.strftime('%Y-%m-%d %H:%M:%S') }}{% else %}-{% endif %}
@@ -506,7 +506,7 @@
                                 {% endif %}
                                 <button onclick="viewScanDetails('{{ scan.job_id }}')" class="btn-sm btn-primary" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; background: #2563eb; border-radius: 0.3rem; border: none; color: white; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">📋 Details</button>
                                 {% if scan.status == 'completed' and scan.report_path %}
-                                <button onclick="window.open('/reports/{{ scan.report_path }}', '_blank')" class="btn-sm" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; background: #10b981; border-radius: 0.3rem; border: none; color: white; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">📄 Report</button>
+                                <button onclick="window.open('/reports/{{ scan.report_path }}?v=' + Date.now(), '_blank')" class="btn-sm" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; background: #10b981; border-radius: 0.3rem; border: none; color: white; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">📄 Report</button>
                                 <button onclick="exportScan('{{ scan.job_id }}', 'json')" class="btn-sm" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; background: #059669; border-radius: 0.3rem; border: none; color: white; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='#047857'" onmouseout="this.style.background='#059669'">JSON</button>
                                 <button onclick="exportScan('{{ scan.job_id }}', 'md')" class="btn-sm" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; background: #7c3aed; border-radius: 0.3rem; border: none; color: white; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='#6d28d9'" onmouseout="this.style.background='#7c3aed'">MD</button>
                                 {% endif %}
@@ -1033,7 +1033,7 @@
                     </div>
                     ${scan.report_path ? `
                     <div>
-                        <a href="${scan.report_path}" target="_blank" class="btn-primary" style="display: inline-block; padding: 0.5rem 1rem; text-decoration: none; border-radius: 0.4rem;">
+                        <a href="${scan.report_path}?v=${Date.now()}" target="_blank" class="btn-primary" style="display: inline-block; padding: 0.5rem 1rem; text-decoration: none; border-radius: 0.4rem;">
                             📄 View Full Report
                         </a>
                     </div>

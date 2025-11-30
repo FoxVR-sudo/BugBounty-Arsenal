@@ -115,6 +115,9 @@ def generate_html_report_from_findings(job_id: str, findings_file: Path) -> str:
 <html>
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Comprehensive Security Report - {job_id}</title>
     <style>
         * {{ box-sizing: border-box; margin: 0; padding: 0; }}
@@ -403,6 +406,9 @@ def generate_html_report_from_findings(job_id: str, findings_file: Path) -> str:
                     confidence = finding.get('confidence', 'unknown')
                     payload = finding.get('payload', finding.get('evidence', ''))
                     method = finding.get('method', 'GET')
+                    how_found = finding.get('how_found', 'N/A')
+                    evidence_path = finding.get('evidence_path', '')
+                    repro_command = finding.get('repro_command', '')
                     
                     # Get remediation info
                     remediation_info = None
@@ -430,6 +436,11 @@ def generate_html_report_from_findings(job_id: str, findings_file: Path) -> str:
                     <div class="description">{description}</div>
                 </div>
                 
+                <div class="finding-section">
+                    <div class="section-title">🔍 How It Was Found</div>
+                    <div class="description" style="color: #fbbf24;">{how_found}</div>
+                </div>
+                
                 <div class="detail-grid">
                     <div class="detail-item">
                         <div class="detail-label">Detection Method</div>
@@ -450,11 +461,29 @@ def generate_html_report_from_findings(job_id: str, findings_file: Path) -> str:
                 </div>
 """
                     
+                    # Add evidence path if available
+                    if evidence_path:
+                        html += f"""
+                <div class="finding-section">
+                    <div class="section-title">📂 Evidence Location</div>
+                    <div class="code-block" style="font-size: 0.8rem;">{evidence_path}</div>
+                </div>
+"""
+                    
                     if payload:
                         html += f"""
                 <div class="finding-section">
                     <div class="section-title">🔬 Payload / Evidence</div>
                     <div class="code-block">{payload}</div>
+                </div>
+"""
+                    
+                    # Add reproduction command if available
+                    if repro_command:
+                        html += f"""
+                <div class="finding-section">
+                    <div class="section-title">🔄 Reproduction Command</div>
+                    <div class="code-block" style="background: #0f172a; color: #22d3ee;">{repro_command}</div>
                 </div>
 """
                     
