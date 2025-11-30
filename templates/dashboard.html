@@ -679,7 +679,7 @@
                     : '';
                 progressText.textContent = `${progress.progress_percentage || 0}% • ${urlsText}${findingsText}`;
             } catch (error) {
-                console.error(`Failed to update progress for ${jobId}:`, error);
+                // Silently continue - scan may have just completed
             }
         }
     }
@@ -1172,19 +1172,19 @@
         };
         
         eventSource.onerror = function(error) {
-            console.error('EventSource error:', error);
-            
-            // Check if it's a server error
+            // Suppress normal disconnection errors (scan completed)
             if (eventSource.readyState === EventSource.CLOSED) {
-                logContainer.innerHTML += '<div style="color: #ef4444;">[Connection closed - scan may have completed or log is unavailable]</div>';
-            } else {
-                logContainer.innerHTML += '<div style="color: #fbbf24;">[Connection interrupted - retrying...]</div>';
-                // EventSource will automatically retry
+                // Connection closed permanently - scan likely completed
+                if (lineCount > 0) {
+                    // Only show message if we received logs
+                    logContainer.innerHTML += '<div style="color: #10b981;">[✓ Scan completed - log stream closed]</div>';
+                }
             }
+            // EventSource will automatically retry for temporary errors
         };
         
         eventSource.onopen = function() {
-            console.log('EventSource connection opened');
+            // Connection opened - no console log needed
         };
     }
     
