@@ -5,10 +5,116 @@ import time
 import os
 import json
 import psutil
+from pathlib import Path
 from datetime import datetime
 from threading import Thread
 from database import get_db_session
 from models import Scan, ScanStatus
+
+
+def generate_html_report_from_findings(job_id: str, findings_file: Path) -> str:
+    """Generate simple HTML report from scanner_findings.json"""
+    try:
+        with open(findings_file, 'r') as f:
+            data = json.load(f)
+        
+        results = data.get("results", [])
+        
+        # Group by severity
+        by_severity = {"critical": [], "high": [], "medium": [], "low": [], "info": []}
+        for finding in results:
+            severity = finding.get("severity", "info").lower()
+            if severity not in by_severity:
+                severity = "info"
+            by_severity[severity].append(finding)
+        
+        # Count totals
+        total = len(results)
+        severity_counts = {k: len(v) for k, v in by_severity.items()}
+        
+        # Generate HTML
+        html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Scan Report - {job_id}</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; background: #1a1a1a; color: #e0e0e0; padding: 20px; }}
+        .header {{ background: #2a2a2a; padding: 20px; border-radius: 8px; margin-bottom: 20px; }}
+        .summary {{ display: flex; gap: 15px; margin: 20px 0; }}
+        .stat-card {{ background: #2a2a2a; padding: 15px; border-radius: 6px; flex: 1; }}
+        .finding {{ background: #2a2a2a; padding: 15px; margin: 10px 0; border-radius: 6px; border-left: 4px solid; }}
+        .critical {{ border-color: #dc2626; }}
+        .high {{ border-color: #ea580c; }}
+        .medium {{ border-color: #f59e0b; }}
+        .low {{ border-color: #10b981; }}
+        .info {{ border-color: #3b82f6; }}
+        .url {{ color: #60a5fa; word-break: break-all; }}
+        h1, h2, h3 {{ color: #f3f4f6; }}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 Security Scan Report</h1>
+        <p><strong>Scan ID:</strong> {job_id}</p>
+        <p><strong>Generated:</strong> {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}</p>
+    </div>
+    
+    <div class="summary">
+        <div class="stat-card">
+            <h3>Total Findings</h3>
+            <h2>{total}</h2>
+        </div>
+        <div class="stat-card" style="border-left: 3px solid #dc2626;">
+            <h3>Critical</h3>
+            <h2>{severity_counts['critical']}</h2>
+        </div>
+        <div class="stat-card" style="border-left: 3px solid #ea580c;">
+            <h3>High</h3>
+            <h2>{severity_counts['high']}</h2>
+        </div>
+        <div class="stat-card" style="border-left: 3px solid #f59e0b;">
+            <h3>Medium</h3>
+            <h2>{severity_counts['medium']}</h2>
+        </div>
+        <div class="stat-card" style="border-left: 3px solid #10b981;">
+            <h3>Low</h3>
+            <h2>{severity_counts['low']}</h2>
+        </div>
+    </div>
+"""
+        
+        # Add findings by severity
+        for severity in ['critical', 'high', 'medium', 'low', 'info']:
+            if by_severity[severity]:
+                html += f"\n    <h2>{severity.upper()} ({len(by_severity[severity])})</h2>\n"
+                for finding in by_severity[severity]:
+                    html += f"""
+    <div class="finding {severity}">
+        <h3>{finding.get('type', 'Unknown')}</h3>
+        <p class="url">📍 {finding.get('url', 'N/A')}</p>
+        <p>{finding.get('description', 'No description')}</p>
+        <p><small><strong>Detector:</strong> {finding.get('detector', 'N/A')} | <strong>Confidence:</strong> {finding.get('confidence', 'unknown')}</small></p>
+    </div>
+"""
+        
+        html += """
+</body>
+</html>"""
+        
+        # Save HTML report
+        report_dir = Path("reports")
+        report_dir.mkdir(exist_ok=True)
+        report_path = report_dir / f"{job_id}_report.html"
+        
+        with open(report_path, 'w') as f:
+            f.write(html)
+        
+        return str(report_path)
+        
+    except Exception as e:
+        print(f"Error generating HTML report for {job_id}: {e}")
+        return ""
 
 
 def monitor_scan_status(job_id: str, pid: int):
@@ -41,6 +147,28 @@ def monitor_scan_status(job_id: str, pid: int):
                                 except Exception as e:
                                     print(f"Error reading progress file for {job_id}: {e}")
                             
+                            # Generate HTML report from findings if available
+                            if not scan.report_path:
+                                # Try to find scanner_findings.json
+                                recon_base = Path("recon_output")
+                                base_job_id = job_id[:-1]  # Handle ±1 second timestamp
+                                for pattern in [f"{job_id}*", f"{base_job_id}[0-9]*"]:
+                                    for scan_dir in recon_base.glob(pattern):
+                                        findings_file = None
+                                        for json_file in scan_dir.rglob("*scanner_findings.json"):
+                                            findings_file = json_file
+                                            break
+                                        
+                                        if findings_file and findings_file.exists():
+                                            report_path = generate_html_report_from_findings(job_id, findings_file)
+                                            if report_path:
+                                                scan.report_path = report_path
+                                                print(f"✓ Generated HTML report: {report_path}")
+                                            break
+                                    
+                                    if scan.report_path:
+                                        break
+                            
                             scan.status = ScanStatus.COMPLETED
                             scan.completed_at = datetime.now()
                             db.commit()
@@ -64,6 +192,28 @@ def monitor_scan_status(job_id: str, pid: int):
                                 scan.vulnerabilities_found = progress_data.get("vulnerabilities_found", 0)
                             except Exception as e:
                                 print(f"Error reading progress file for {job_id}: {e}")
+                        
+                        # Generate HTML report from findings if available
+                        if not scan.report_path:
+                            # Try to find scanner_findings.json
+                            recon_base = Path("recon_output")
+                            base_job_id = job_id[:-1]  # Handle ±1 second timestamp
+                            for pattern in [f"{job_id}*", f"{base_job_id}[0-9]*"]:
+                                for scan_dir in recon_base.glob(pattern):
+                                    findings_file = None
+                                    for json_file in scan_dir.rglob("*scanner_findings.json"):
+                                        findings_file = json_file
+                                        break
+                                    
+                                    if findings_file and findings_file.exists():
+                                        report_path = generate_html_report_from_findings(job_id, findings_file)
+                                        if report_path:
+                                            scan.report_path = report_path
+                                            print(f"✓ Generated HTML report: {report_path}")
+                                        break
+                                
+                                if scan.report_path:
+                                    break
                         
                         scan.status = ScanStatus.COMPLETED
                         scan.completed_at = datetime.now()
