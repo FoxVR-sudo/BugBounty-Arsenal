@@ -2,6 +2,8 @@
 Background tasks for monitoring scan status and updating database.
 """
 import time
+import os
+import json
 import psutil
 from datetime import datetime
 from threading import Thread
@@ -22,13 +24,27 @@ def monitor_scan_status(job_id: str, pid: int):
             try:
                 proc = psutil.Process(pid)
                 if not proc.is_running():
-                    # Process finished
+                    # Process finished - update database with final progress
                     with get_db_session() as db:
                         scan = db.query(Scan).filter(Scan.job_id == job_id).first()
                         if scan and scan.status == ScanStatus.RUNNING:
+                            # Read final progress from file
+                            progress_file = os.path.join("scan_progress", f"{job_id}.json")
+                            if os.path.exists(progress_file):
+                                try:
+                                    with open(progress_file, 'r') as f:
+                                        progress_data = json.load(f)
+                                    scan.total_urls = progress_data.get("total_urls", 0)
+                                    scan.urls_scanned = progress_data.get("urls_scanned", 0)
+                                    scan.progress_percentage = 100
+                                    scan.vulnerabilities_found = progress_data.get("vulnerabilities_found", 0)
+                                except Exception as e:
+                                    print(f"Error reading progress file for {job_id}: {e}")
+                            
                             scan.status = ScanStatus.COMPLETED
                             scan.completed_at = datetime.now()
                             db.commit()
+                            print(f"✓ Scan {job_id} marked as completed")
                     break
                 time.sleep(5)  # Check every 5 seconds
             except psutil.NoSuchProcess:
@@ -36,9 +52,23 @@ def monitor_scan_status(job_id: str, pid: int):
                 with get_db_session() as db:
                     scan = db.query(Scan).filter(Scan.job_id == job_id).first()
                     if scan and scan.status == ScanStatus.RUNNING:
+                        # Read final progress from file
+                        progress_file = os.path.join("scan_progress", f"{job_id}.json")
+                        if os.path.exists(progress_file):
+                            try:
+                                with open(progress_file, 'r') as f:
+                                    progress_data = json.load(f)
+                                scan.total_urls = progress_data.get("total_urls", 0)
+                                scan.urls_scanned = progress_data.get("urls_scanned", 0)
+                                scan.progress_percentage = 100
+                                scan.vulnerabilities_found = progress_data.get("vulnerabilities_found", 0)
+                            except Exception as e:
+                                print(f"Error reading progress file for {job_id}: {e}")
+                        
                         scan.status = ScanStatus.COMPLETED
                         scan.completed_at = datetime.now()
                         db.commit()
+                        print(f"✓ Scan {job_id} marked as completed")
                 break
             except Exception as e:
                 print(f"Error monitoring scan {job_id}: {e}")
