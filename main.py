@@ -305,6 +305,7 @@ def main():
             enable_exploit_validation=args.enable_exploit_validation,
             enable_cloudflare_solver=args.enable_cloudflare_solver,
             enable_403_probe=args.enable_403_probing,
+            job_id=args.job_id,
         )
         
         if "error" in results:

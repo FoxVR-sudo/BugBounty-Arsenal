@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 class ReconOrchestrator:
     """Orchestrates the full reconnaissance and scanning pipeline."""
     
-    def __init__(self, output_dir: str = "recon_output"):
+    def __init__(self, output_dir: str = "recon_output", job_id: Optional[str] = None):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True, parents=True)
         
@@ -48,6 +48,35 @@ class ReconOrchestrator:
         
         # Check tool installation
         self.tools_status = check_tool_installation()
+        
+        # Progress tracking
+        self.job_id = job_id
+        self.progress_file = None
+        if self.job_id:
+            import os
+            progress_dir = "scan_progress"
+            os.makedirs(progress_dir, exist_ok=True)
+            self.progress_file = os.path.join(progress_dir, f"{self.job_id}.json")
+            # Initialize progress
+            self._update_progress(0, 0, 0, 0)
+    
+    def _update_progress(self, total_urls: int, urls_scanned: int, findings: int, progress_pct: int):
+        """Update progress file for web UI."""
+        if not self.progress_file:
+            return
+        import json
+        import time
+        try:
+            with open(self.progress_file, 'w') as f:
+                json.dump({
+                    "total_urls": total_urls,
+                    "urls_scanned": urls_scanned,
+                    "progress_percentage": progress_pct,
+                    "vulnerabilities_found": findings,
+                    "started_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                }, f)
+        except Exception:
+            pass
         
     def check_prerequisites(self) -> bool:
         """
@@ -159,6 +188,7 @@ class ReconOrchestrator:
         }
 
         logger.info(f"✓ Found {len(subdomains)} subdomains in {time.time() - phase_start:.1f}s")
+        self._update_progress(total_phases, 1, 0, 25)  # 25% after Phase 1
         phase_index += 1
 
         # Phase 2: HTTP Probing
@@ -188,6 +218,7 @@ class ReconOrchestrator:
         }
 
         logger.info(f"✓ Found {len(live_hosts)} live hosts in {time.time() - phase_start:.1f}s")
+        self._update_progress(total_phases, 2, 0, 50)  # 50% after Phase 2
         phase_index += 1
 
         # Phase 3: Custom Scanner (our 22+ detectors)
@@ -237,6 +268,7 @@ class ReconOrchestrator:
                     logger.info(
                         f"✓ Scanner found {len(scanner_results)} issues in {time.time() - phase_start:.1f}s"
                     )
+                    self._update_progress(total_phases, 3, len(scanner_results), 75)  # 75% after Phase 3
 
                 except Exception as exc:
                     logger.error(f"Scanner phase failed: {exc}")
@@ -422,6 +454,14 @@ class ReconOrchestrator:
         # Print summary
         self._print_summary(results)
         
+        # Update final progress
+        total_findings = 0
+        if "custom_scanner" in results["phases"]:
+            total_findings += results["phases"]["custom_scanner"].get("findings", 0)
+        if "nuclei" in results["phases"]:
+            total_findings += results["phases"]["nuclei"].get("findings", 0)
+        self._update_progress(total_phases, total_phases, total_findings, 100)
+        
         return results
     
     def _print_summary(self, results: Dict[str, Any]):
@@ -539,6 +579,7 @@ def run_recon_pipeline(
     enable_exploit_validation: bool = False,
     enable_403_probe: bool = False,
     enable_cloudflare_solver: bool = False,
+    job_id: Optional[str] = None,
 ) -> dict:
     """
     Convenience function to run the full recon pipeline.
@@ -563,7 +604,7 @@ def run_recon_pipeline(
     Returns:
         Recon results dictionary
     """
-    orchestrator = ReconOrchestrator(output_dir=output_dir)
+    orchestrator = ReconOrchestrator(output_dir=output_dir, job_id=job_id)
     
     return orchestrator.run_full_recon(
         domain=domain,
