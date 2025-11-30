@@ -1683,8 +1683,8 @@ async def get_scan_findings(
     # Look for scanner_findings.json in recon output
     recon_base = Path("recon_output")
     if recon_base.exists():
-        # Find matching directory
-        for scan_dir in recon_base.glob(f"{job_id[:8]}*"):
+        # Find matching directory - use full job_id to avoid matching multiple scans
+        for scan_dir in recon_base.glob(f"{job_id}*"):
             findings_file = None
             for json_file in scan_dir.rglob("*scanner_findings.json"):
                 findings_file = json_file
@@ -1711,6 +1711,7 @@ async def get_scan_findings(
                             "detector": finding.get("detector"),
                             "confidence": finding.get("confidence", "unknown")
                         })
+                    break  # Stop after finding first matching scan
                 except Exception as e:
                     logger.error(f"Error reading findings file: {e}")
     
