@@ -1651,20 +1651,21 @@ async def scan_progress(
 @app.get("/api/scan/{job_id}/findings")
 async def get_scan_findings(
     job_id: str,
-    user: User = Depends(get_current_user),
+    user: Optional[User] = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Get scan findings grouped by severity.
     Returns findings from recon scanner output.
     """
-    if not user:
-        raise HTTPException(status_code=401, detail="Authentication required")
+    # Build query
+    query = db.query(Scan).filter(Scan.job_id == job_id)
     
-    scan = db.query(Scan).filter(
-        Scan.job_id == job_id,
-        Scan.user_id == user.id
-    ).first()
+    # Filter by user if authenticated
+    if user:
+        query = query.filter(Scan.user_id == user.id)
+    
+    scan = query.first()
     
     if not scan:
         raise HTTPException(status_code=404, detail="Scan not found")
