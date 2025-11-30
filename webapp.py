@@ -1647,6 +1647,74 @@ async def scan_progress(
     })
 
 
+@app.get("/api/scan/{job_id}/findings")
+async def get_scan_findings(
+    job_id: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get scan findings grouped by severity.
+    Returns findings from recon scanner output.
+    """
+    if not user:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    scan = db.query(Scan).filter(
+        Scan.job_id == job_id,
+        Scan.user_id == user.id
+    ).first()
+    
+    if not scan:
+        raise HTTPException(status_code=404, detail="Scan not found")
+    
+    # Find scanner findings file
+    findings_data = {
+        "critical": [],
+        "high": [],
+        "medium": [],
+        "low": [],
+        "info": [],
+        "total": 0
+    }
+    
+    # Look for scanner_findings.json in recon output
+    recon_base = Path("recon_output")
+    if recon_base.exists():
+        # Find matching directory
+        for scan_dir in recon_base.glob(f"{job_id[:8]}*"):
+            findings_file = None
+            for json_file in scan_dir.rglob("*scanner_findings.json"):
+                findings_file = json_file
+                break
+            
+            if findings_file and findings_file.exists():
+                try:
+                    with open(findings_file, 'r') as f:
+                        data = json.load(f)
+                    
+                    results = data.get("results", [])
+                    findings_data["total"] = len(results)
+                    
+                    # Group by severity
+                    for finding in results:
+                        severity = finding.get("severity", "info").lower()
+                        if severity not in findings_data:
+                            severity = "info"
+                        
+                        findings_data[severity].append({
+                            "url": finding.get("url"),
+                            "type": finding.get("type"),
+                            "description": finding.get("description", "")[:100],
+                            "detector": finding.get("detector"),
+                            "confidence": finding.get("confidence", "unknown")
+                        })
+                except Exception as e:
+                    logger.error(f"Error reading findings file: {e}")
+    
+    return JSONResponse(findings_data)
+
+
 @app.delete("/api/scan/{job_id}")
 async def delete_scan(
     job_id: str,

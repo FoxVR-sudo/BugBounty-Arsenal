@@ -890,6 +890,106 @@
                 }
             }
             
+            // Fetch findings if scan is completed
+            let findingsHTML = '';
+            if (scan.status === 'completed') {
+                try {
+                    const findingsResponse = await fetch(`/api/scan/${jobId}/findings`);
+                    if (findingsResponse.ok) {
+                        const findings = await findingsResponse.json();
+                        
+                        if (findings.total > 0) {
+                            const severityColors = {
+                                critical: '#dc2626',
+                                high: '#ea580c',
+                                medium: '#f59e0b',
+                                low: '#10b981',
+                                info: '#3b82f6'
+                            };
+                            
+                            const severityIcons = {
+                                critical: '🔴',
+                                high: '🟠',
+                                medium: '🟡',
+                                low: '🟢',
+                                info: '🔵'
+                            };
+                            
+                            findingsHTML = `
+                            <div style="border-top: 1px solid #374151; padding-top: 1rem; margin-top: 1rem;">
+                                <h3 style="font-size: 1rem; margin-bottom: 1rem; color: #f3f4f6;">
+                                    🔍 Findings Breakdown
+                                </h3>
+                                
+                                <!-- Severity Summary -->
+                                <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                                    ${findings.critical.length > 0 ? `
+                                    <div style="background: rgba(220, 38, 38, 0.1); border: 1px solid ${severityColors.critical}; border-radius: 0.5rem; padding: 0.5rem 0.75rem; flex: 1; min-width: 100px;">
+                                        <div style="font-size: 0.75rem; color: #9ca3af;">Critical</div>
+                                        <div style="font-size: 1.25rem; font-weight: 700; color: ${severityColors.critical};">${findings.critical.length}</div>
+                                    </div>
+                                    ` : ''}
+                                    ${findings.high.length > 0 ? `
+                                    <div style="background: rgba(234, 88, 12, 0.1); border: 1px solid ${severityColors.high}; border-radius: 0.5rem; padding: 0.5rem 0.75rem; flex: 1; min-width: 100px;">
+                                        <div style="font-size: 0.75rem; color: #9ca3af;">High</div>
+                                        <div style="font-size: 1.25rem; font-weight: 700; color: ${severityColors.high};">${findings.high.length}</div>
+                                    </div>
+                                    ` : ''}
+                                    ${findings.medium.length > 0 ? `
+                                    <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid ${severityColors.medium}; border-radius: 0.5rem; padding: 0.5rem 0.75rem; flex: 1; min-width: 100px;">
+                                        <div style="font-size: 0.75rem; color: #9ca3af;">Medium</div>
+                                        <div style="font-size: 1.25rem; font-weight: 700; color: ${severityColors.medium};">${findings.medium.length}</div>
+                                    </div>
+                                    ` : ''}
+                                    ${findings.low.length > 0 ? `
+                                    <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid ${severityColors.low}; border-radius: 0.5rem; padding: 0.5rem 0.75rem; flex: 1; min-width: 100px;">
+                                        <div style="font-size: 0.75rem; color: #9ca3af;">Low</div>
+                                        <div style="font-size: 1.25rem; font-weight: 700; color: ${severityColors.low};">${findings.low.length}</div>
+                                    </div>
+                                    ` : ''}
+                                </div>
+                                
+                                <!-- Findings List -->
+                                <div style="max-height: 300px; overflow-y: auto; border: 1px solid #374151; border-radius: 0.5rem; background: #0f172a;">
+                                    ${['critical', 'high', 'medium', 'low', 'info'].map(severity => {
+                                        if (findings[severity].length === 0) return '';
+                                        return `
+                                        <div style="border-bottom: 1px solid #1f2937; padding: 0.75rem;">
+                                            <div style="font-size: 0.8rem; font-weight: 600; color: ${severityColors[severity]}; margin-bottom: 0.5rem;">
+                                                ${severityIcons[severity]} ${severity.toUpperCase()} (${findings[severity].length})
+                                            </div>
+                                            ${findings[severity].slice(0, 3).map(finding => `
+                                                <div style="margin-left: 1.5rem; margin-bottom: 0.5rem; padding: 0.5rem; background: rgba(0, 0, 0, 0.3); border-radius: 0.25rem;">
+                                                    <div style="font-size: 0.75rem; color: #f3f4f6; font-weight: 500;">${finding.type}</div>
+                                                    <div style="font-size: 0.7rem; color: #9ca3af; margin-top: 0.25rem;">
+                                                        <span style="color: #60a5fa;">📍 ${finding.url}</span>
+                                                    </div>
+                                                    <div style="font-size: 0.7rem; color: #d1d5db; margin-top: 0.25rem;">
+                                                        ${finding.description}
+                                                    </div>
+                                                    <div style="font-size: 0.65rem; color: #6b7280; margin-top: 0.25rem;">
+                                                        Detector: ${finding.detector} | Confidence: ${finding.confidence}
+                                                    </div>
+                                                </div>
+                                            `).join('')}
+                                            ${findings[severity].length > 3 ? `
+                                                <div style="margin-left: 1.5rem; font-size: 0.7rem; color: #6b7280; font-style: italic;">
+                                                    ...and ${findings[severity].length - 3} more
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+                            `;
+                        }
+                    }
+                } catch (e) {
+                    console.error('Failed to fetch findings:', e);
+                }
+            }
+            
             const modalContent = `
                 ${progressHTML}
                 <div style="display: grid; gap: 1rem;">
@@ -936,6 +1036,8 @@
                         </a>
                     </div>
                     ` : ''}
+                    
+                    ${findingsHTML}
                 </div>
             `;
             
