@@ -1174,8 +1174,26 @@ async def async_run(
         ]
 
         pbar = tqdm(total=len(tasks), desc="🔍 Scanning", unit="url")
+        
+        # Extract job_id from extra_context for progress tracking
+        job_id = extra_context.get("job_id") if extra_context else None
+        progress_file = None
+        if job_id:
+            progress_dir = "scan_progress"
+            os.makedirs(progress_dir, exist_ok=True)
+            progress_file = os.path.join(progress_dir, f"{job_id}.json")
+            # Initialize progress
+            with open(progress_file, 'w') as f:
+                json.dump({
+                    "total_urls": len(tasks),
+                    "urls_scanned": 0,
+                    "progress_percentage": 0,
+                    "vulnerabilities_found": 0,
+                    "started_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                }, f)
 
         collected_findings = []
+        urls_completed = 0
         for coro in asyncio.as_completed(tasks):
             try:
                 scan_result = await coro
@@ -1217,6 +1235,22 @@ async def async_run(
                 )
 
             pbar.update(1)
+            urls_completed += 1
+            
+            # Update progress file
+            if progress_file:
+                progress_percentage = int((urls_completed / len(tasks)) * 100)
+                try:
+                    with open(progress_file, 'w') as f:
+                        json.dump({
+                            "total_urls": len(tasks),
+                            "urls_scanned": urls_completed,
+                            "progress_percentage": progress_percentage,
+                            "vulnerabilities_found": len(collected_findings),
+                            "started_at": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(start_time)),
+                        }, f)
+                except Exception:
+                    pass  # Don't fail scan if progress update fails
 
         pbar.close()
 

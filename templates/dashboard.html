@@ -473,16 +473,16 @@
                 </thead>
                 <tbody>
                     {% for scan in scan_history %}
-                    <tr>
+                    <tr data-scan-id="{{ scan.job_id }}" data-scan-status="{{ scan.status }}">
                         <td><code style="font-size: 0.75rem;">{{ scan.job_id[:12] }}...</code></td>
                         <td>
                             {{ scan.target[:30] }}
                             {% if scan.status == 'running' %}
-                            <div style="margin-top: 0.5rem;">
+                            <div style="margin-top: 0.5rem;" class="scan-progress-container">
                                 <div style="width: 100%; height: 6px; background: #1f2937; border-radius: 3px; overflow: hidden;">
-                                    <div class="progress-bar-animation" style="height: 100%; background: linear-gradient(90deg, #3b82f6, #8b5cf6, #3b82f6); background-size: 200% 100%; border-radius: 3px;"></div>
+                                    <div class="scan-progress-bar" style="height: 100%; background: linear-gradient(90deg, #3b82f6, #8b5cf6); border-radius: 3px; width: 0%; transition: width 0.3s;"></div>
                                 </div>
-                                <div style="font-size: 0.65rem; color: #9ca3af; margin-top: 0.25rem;">Scanning in progress...</div>
+                                <div class="scan-progress-text" style="font-size: 0.65rem; color: #9ca3af; margin-top: 0.25rem;">Loading...</div>
                             </div>
                             {% endif %}
                         </td>
@@ -649,6 +649,45 @@
 
     // Poll every 10 seconds (less aggressive than before)
     setInterval(updateScanStatuses, 10000);
+    
+    // Update progress bars for running scans
+    async function updateProgressBars() {
+        const runningScans = document.querySelectorAll('tr[data-scan-status="running"]');
+        
+        for (const row of runningScans) {
+            const jobId = row.dataset.scanId;
+            const progressBar = row.querySelector('.scan-progress-bar');
+            const progressText = row.querySelector('.scan-progress-text');
+            
+            if (!progressBar || !progressText) continue;
+            
+            try {
+                const response = await fetch(`/api/scan/${jobId}/progress`);
+                if (!response.ok) continue;
+                
+                const progress = await response.json();
+                
+                // Update progress bar
+                progressBar.style.width = `${progress.progress_percentage || 0}%`;
+                
+                // Update text
+                const urlsText = progress.total_urls > 0 
+                    ? `${progress.urls_scanned || 0}/${progress.total_urls}` 
+                    : 'Starting...';
+                const findingsText = progress.vulnerabilities_found > 0 
+                    ? ` • ${progress.vulnerabilities_found} findings` 
+                    : '';
+                progressText.textContent = `${progress.progress_percentage || 0}% • ${urlsText}${findingsText}`;
+            } catch (error) {
+                console.error(`Failed to update progress for ${jobId}:`, error);
+            }
+        }
+    }
+    
+    // Update progress bars every 5 seconds
+    setInterval(updateProgressBars, 5000);
+    // Initial update
+    updateProgressBars();
 
     async function stopScan(jobId) {
         if (!confirm('Are you sure you want to stop this scan?')) {
@@ -807,7 +846,52 @@
             
             const scan = await response.json();
             
+            // Fetch progress data if scan is running
+            let progressHTML = '';
+            if (scan.status === 'running') {
+                try {
+                    const progressResponse = await fetch(`/api/scan/${jobId}/progress`);
+                    if (progressResponse.ok) {
+                        const progress = await progressResponse.json();
+                        const percentage = progress.progress_percentage || 0;
+                        const etaText = progress.eta_seconds ? formatDuration(progress.eta_seconds) : 'calculating...';
+                        
+                        progressHTML = `
+                        <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                <div style="font-size: 0.85rem; color: #9ca3af;">Scan Progress</div>
+                                <div style="font-size: 1rem; font-weight: 600; color: #3b82f6;">${percentage}%</div>
+                            </div>
+                            <div style="width: 100%; height: 8px; background: #1f2937; border-radius: 4px; overflow: hidden; margin-bottom: 0.75rem;">
+                                <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #8b5cf6); width: ${percentage}%; transition: width 0.3s;"></div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; font-size: 0.8rem;">
+                                <div>
+                                    <div style="color: #6b7280;">URLs Scanned</div>
+                                    <div style="color: #e5e7eb; font-weight: 600;">${progress.urls_scanned || 0} / ${progress.total_urls || 0}</div>
+                                </div>
+                                <div>
+                                    <div style="color: #6b7280;">Findings</div>
+                                    <div style="color: #ef4444; font-weight: 600;">${progress.vulnerabilities_found || 0}</div>
+                                </div>
+                                <div>
+                                    <div style="color: #6b7280;">ETA</div>
+                                    <div style="color: #e5e7eb; font-weight: 600;">${etaText}</div>
+                                </div>
+                            </div>
+                        </div>
+                        `;
+                        
+                        // Start progress polling
+                        startProgressPolling(jobId);
+                    }
+                } catch (e) {
+                    console.error('Failed to fetch progress:', e);
+                }
+            }
+            
             const modalContent = `
+                ${progressHTML}
                 <div style="display: grid; gap: 1rem;">
                     <div>
                         <div style="color: #9ca3af; font-size: 0.8rem; margin-bottom: 0.25rem;">Job ID</div>
@@ -835,8 +919,8 @@
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                         <div>
-                            <div style="color: #9ca3af; font-size: 0.8rem; margin-bottom: 0.25rem;">Created</div>
-                            <div style="font-size: 0.85rem;">${new Date(scan.created_at).toLocaleString()}</div>
+                            <div style="color: #9ca3af; font-size: 0.8rem; margin-bottom: 0.25rem;">Started</div>
+                            <div style="font-size: 0.85rem;">${scan.started_at ? new Date(scan.started_at).toLocaleString() : 'N/A'}</div>
                         </div>
                         ${scan.completed_at ? `
                         <div>
@@ -869,6 +953,51 @@
         } catch (error) {
             alert('Error loading scan details: ' + error.message);
         }
+    }
+    
+    // Helper function to format duration in human-readable format
+    function formatDuration(seconds) {
+        if (seconds < 60) return `${seconds}s`;
+        if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+        const hours = Math.floor(seconds / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
+        return `${hours}h ${mins}m`;
+    }
+    
+    // Poll progress updates
+    let progressPollingInterval = null;
+    function startProgressPolling(jobId) {
+        // Clear existing interval
+        if (progressPollingInterval) {
+            clearInterval(progressPollingInterval);
+        }
+        
+        progressPollingInterval = setInterval(async () => {
+            try {
+                const response = await fetch(`/api/scan/${jobId}/progress`);
+                if (!response.ok) {
+                    clearInterval(progressPollingInterval);
+                    return;
+                }
+                
+                const progress = await response.json();
+                
+                // Update progress bar and stats if modal is still open
+                const modal = document.getElementById('scanDetailsModal');
+                if (modal.style.display === 'flex') {
+                    viewScanDetails(jobId); // Refresh entire modal
+                } else {
+                    clearInterval(progressPollingInterval);
+                }
+                
+                // Stop polling if scan completed
+                if (progress.status !== 'running') {
+                    clearInterval(progressPollingInterval);
+                }
+            } catch (error) {
+                console.error('Progress polling error:', error);
+            }
+        }, 5000); // Poll every 5 seconds
     }
     
     function startLogStreaming(jobId) {

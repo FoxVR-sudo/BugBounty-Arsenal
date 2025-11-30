@@ -3,6 +3,7 @@ import uuid
 import subprocess
 import sys
 import psutil
+import json
 from datetime import datetime
 from typing import List, Optional, Dict
 
@@ -726,6 +727,7 @@ async def start_scan(
         "main.py",
         "--consent",
         "--tier", user_tier.lower(),
+        "--job-id", job_id,
     ]
 
     if mode == "recon" and recon_domain:
@@ -1579,6 +1581,69 @@ async def scan_details(
         "completed_at": scan.completed_at.isoformat() if scan.completed_at else None,
         "report_path": scan.report_path,
         "log_path": scan.log_path,
+    })
+
+
+@app.get("/api/scan/{job_id}/progress")
+async def scan_progress(
+    job_id: str,
+    user: Optional[User] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get real-time progress information about a running scan.
+    """
+    # Build query
+    query = db.query(Scan).filter(Scan.job_id == job_id)
+    
+    # Filter by user if authenticated
+    if user:
+        query = query.filter(Scan.user_id == user.id)
+    
+    scan = query.first()
+    if not scan:
+        raise HTTPException(status_code=404, detail="Scan not found")
+    
+    # Try to read progress from file first (real-time)
+    progress_file = os.path.join("scan_progress", f"{job_id}.json")
+    progress_data = {}
+    if os.path.exists(progress_file):
+        try:
+            with open(progress_file, 'r') as f:
+                progress_data = json.load(f)
+        except Exception:
+            pass
+    
+    # Use progress file data if available, otherwise fall back to database
+    urls_scanned = progress_data.get("urls_scanned", scan.urls_scanned or 0)
+    total_urls = progress_data.get("total_urls", scan.total_urls or 0)
+    progress_percentage = progress_data.get("progress_percentage", scan.progress_percentage or 0)
+    vulnerabilities_found = progress_data.get("vulnerabilities_found", scan.vulnerabilities_found or 0)
+    
+    # Calculate ETA if scan is running
+    eta_seconds = None
+    if scan.status == ScanStatus.RUNNING and scan.started_at:
+        elapsed = (datetime.now() - scan.started_at).total_seconds()
+        if progress_percentage > 0:
+            estimated_total = elapsed / (progress_percentage / 100)
+            eta_seconds = int(estimated_total - elapsed)
+    
+    # Calculate duration
+    duration_seconds = None
+    if scan.started_at:
+        end_time = scan.completed_at if scan.completed_at else datetime.now()
+        duration_seconds = int((end_time - scan.started_at).total_seconds())
+    
+    return JSONResponse({
+        "job_id": scan.job_id,
+        "status": scan.status.value,
+        "progress_percentage": progress_percentage,
+        "urls_scanned": urls_scanned,
+        "total_urls": total_urls,
+        "vulnerabilities_found": vulnerabilities_found,
+        "duration_seconds": duration_seconds,
+        "eta_seconds": eta_seconds,
+        "started_at": scan.started_at.isoformat() if scan.started_at else None,
     })
 
 

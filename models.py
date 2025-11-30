@@ -139,6 +139,8 @@ class Scan(Base):
     # Results
     vulnerabilities_found = Column(Integer, default=0)
     urls_scanned = Column(Integer, default=0)
+    total_urls = Column(Integer, default=0)  # Total URLs to scan
+    progress_percentage = Column(Integer, default=0)  # 0-100
     detectors_triggered = Column(Text, nullable=True)  # JSON array of detector names
     
     # Timestamps
