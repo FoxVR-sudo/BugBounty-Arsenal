@@ -892,11 +892,13 @@
             
             // Fetch findings if scan is completed
             let findingsHTML = '';
+            let findingsTotal = 0; // Track total findings from API
             if (scan.status === 'completed') {
                 try {
                     const findingsResponse = await fetch(`/api/scan/${jobId}/findings`);
                     if (findingsResponse.ok) {
                         const findings = await findingsResponse.json();
+                        findingsTotal = findings.total; // Store total from API
                         
                         if (findings.total > 0) {
                             const severityColors = {
@@ -1013,8 +1015,8 @@
                     </div>
                     <div>
                         <div style="color: #9ca3af; font-size: 0.8rem; margin-bottom: 0.25rem;">Vulnerabilities Found</div>
-                        <div style="font-size: 1.5rem; font-weight: bold; color: ${scan.vulnerabilities_found > 0 ? '#ef4444' : '#22c55e'};">
-                            ${scan.vulnerabilities_found || 0}
+                        <div style="font-size: 1.5rem; font-weight: bold; color: ${(findingsTotal || scan.vulnerabilities_found) > 0 ? '#ef4444' : '#22c55e'};">
+                            ${findingsTotal || scan.vulnerabilities_found || 0}
                         </div>
                     </div>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
