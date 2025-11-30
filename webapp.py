@@ -195,10 +195,12 @@ async def dashboard(
         
         # Generate reports list from scans with completed reports
         for scan in scans:
-            if scan.report_path and os.path.exists(os.path.join(REPORTS_DIR, scan.report_path)):
+            if scan.report_path and os.path.exists(scan.report_path):
+                # Extract just the filename for display (remove 'reports/' prefix if present)
+                display_path = scan.report_path.replace("reports/", "") if scan.report_path.startswith("reports/") else scan.report_path
                 reports.append({
                     "name": f"{scan.target} - {scan.created_at.strftime('%Y-%m-%d %H:%M')}",
-                    "rel_path": scan.report_path,
+                    "rel_path": display_path,  # Just the filename for URL
                     "created": scan.completed_at or scan.created_at,
                 })
         
