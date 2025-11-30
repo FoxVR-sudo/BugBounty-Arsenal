@@ -21,6 +21,13 @@ def generate_html_report_from_findings(job_id: str, findings_file: Path) -> str:
         results = data.get("results", [])
         scan_metadata = data.get("metadata", {})
         
+        # Extract scan information from metadata
+        target = scan_metadata.get("targets_scanned", ["N/A"])[0] if scan_metadata.get("targets_scanned") else "N/A"
+        total_urls = scan_metadata.get("total_targets_scanned", "N/A")
+        scan_duration = scan_metadata.get("duration", 0)
+        scan_start = scan_metadata.get("start_time", "N/A")
+        scan_end = scan_metadata.get("end_time", "N/A")
+        
         # Group by severity
         by_severity = {"critical": [], "high": [], "medium": [], "low": [], "info": []}
         for finding in results:
@@ -337,11 +344,19 @@ def generate_html_report_from_findings(job_id: str, findings_file: Path) -> str:
                 </div>
                 <div class="metadata-item">
                     <div class="metadata-label">Scan Target</div>
-                    <div class="metadata-value">{scan_metadata.get('target', 'N/A')}</div>
+                    <div class="metadata-value">{target}</div>
                 </div>
                 <div class="metadata-item">
                     <div class="metadata-label">URLs Scanned</div>
-                    <div class="metadata-value">{scan_metadata.get('urls_scanned', 'N/A')}</div>
+                    <div class="metadata-value">{total_urls}</div>
+                </div>
+                <div class="metadata-item">
+                    <div class="metadata-label">Scan Duration</div>
+                    <div class="metadata-value">{round(scan_duration, 2)}s</div>
+                </div>
+                <div class="metadata-item">
+                    <div class="metadata-label">Scan Started</div>
+                    <div class="metadata-value">{scan_start}</div>
                 </div>
             </div>
         </div>
