@@ -500,17 +500,17 @@
                         </td>
                         <td style="font-size: 0.8rem; color: #9ca3af;">{{ scan.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
                         <td>
-                            <div style="display: flex; gap: 0.25rem; flex-wrap: wrap;">
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
                                 {% if scan.status == 'running' %}
-                                <button onclick="stopScan('{{ scan.job_id }}')" class="btn-sm" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; background: #f59e0b; border-radius: 0.3rem; border: none; color: white; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='#d97706'" onmouseout="this.style.background='#f59e0b'">⏹️ Stop</button>
+                                <button onclick="stopScan('{{ scan.job_id }}')" class="btn-sm" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; background: #f59e0b; border-radius: 0.4rem; border: none; color: white; cursor: pointer; transition: all 0.2s; min-width: 70px; font-weight: 500;" onmouseover="this.style.background='#d97706'" onmouseout="this.style.background='#f59e0b'">⏹️ Stop</button>
                                 {% endif %}
-                                <button onclick="viewScanDetails('{{ scan.job_id }}')" class="btn-sm btn-primary" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; background: #2563eb; border-radius: 0.3rem; border: none; color: white; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">📋 Details</button>
+                                <button onclick="viewScanDetails('{{ scan.job_id }}')" class="btn-sm btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; background: #2563eb; border-radius: 0.4rem; border: none; color: white; cursor: pointer; transition: all 0.2s; min-width: 70px; font-weight: 500;" onmouseover="this.style.background='#1d4ed8'" onmouseout="this.style.background='#2563eb'">📋 Details</button>
                                 {% if scan.status == 'completed' and scan.report_path %}
-                                <button onclick="window.open('/reports/{{ scan.report_path }}?v=' + Date.now(), '_blank')" class="btn-sm" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; background: #10b981; border-radius: 0.3rem; border: none; color: white; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">📄 Report</button>
-                                <button onclick="exportScan('{{ scan.job_id }}', 'json')" class="btn-sm" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; background: #059669; border-radius: 0.3rem; border: none; color: white; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='#047857'" onmouseout="this.style.background='#059669'">JSON</button>
-                                <button onclick="exportScan('{{ scan.job_id }}', 'md')" class="btn-sm" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; background: #7c3aed; border-radius: 0.3rem; border: none; color: white; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='#6d28d9'" onmouseout="this.style.background='#7c3aed'">MD</button>
+                                <button onclick="window.open('/reports/{{ scan.report_path }}?v=' + Date.now(), '_blank')" class="btn-sm" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; background: #10b981; border-radius: 0.4rem; border: none; color: white; cursor: pointer; transition: all 0.2s; min-width: 70px; font-weight: 500;" onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">📄 Report</button>
+                                <button onclick="exportScan('{{ scan.job_id }}', 'json')" class="btn-sm" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; background: #059669; border-radius: 0.4rem; border: none; color: white; cursor: pointer; transition: all 0.2s; min-width: 60px; font-weight: 500;" onmouseover="this.style.background='#047857'" onmouseout="this.style.background='#059669'">JSON</button>
+                                <button onclick="exportScan('{{ scan.job_id }}', 'md')" class="btn-sm" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; background: #7c3aed; border-radius: 0.4rem; border: none; color: white; cursor: pointer; transition: all 0.2s; min-width: 60px; font-weight: 500;" onmouseover="this.style.background='#6d28d9'" onmouseout="this.style.background='#7c3aed'">MD</button>
                                 {% endif %}
-                                <button onclick="deleteScan('{{ scan.job_id }}')" class="btn-sm" style="padding: 0.25rem 0.5rem; font-size: 0.7rem; background: #dc2626; border-radius: 0.3rem; border: none; color: white; cursor: pointer; transition: all 0.3s;" onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'">🗑️</button>
+                                <button onclick="deleteScan('{{ scan.job_id }}')" class="btn-sm" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; background: #dc2626; border-radius: 0.4rem; border: none; color: white; cursor: pointer; transition: all 0.2s; min-width: 40px; font-weight: 500;" onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'">🗑️</button>
                             </div>
                         </td>
                     </tr>
@@ -533,7 +533,8 @@
             <!-- Dynamic content will be inserted here -->
         </div>
         
-        <!-- Terminal Log Viewer -->
+        <!-- Terminal Log Viewer - HIDDEN FOR NOW -->
+        <!--
         <div id="terminalContainer" style="display: none; margin-top: 1.5rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
                 <div style="color: #9ca3af; font-size: 0.9rem; font-weight: 600;">💻 Live Scan Output</div>
@@ -543,6 +544,7 @@
                 <div id="logLines">Initializing...</div>
             </div>
         </div>
+        -->
     </div>
 </div>
 
@@ -614,8 +616,10 @@
 </div>
 
 <script>
+    // Version: 2024-11-30-18:10 - Detector Timeline + Auto-refresh fixes
     // Store last known scan statuses to detect changes
     let lastScanStatuses = {};
+    let needsPageReload = false;
     
     // Poll scan status via AJAX and update only the scan list (no full page reload)
     async function updateScanStatuses() {
@@ -633,12 +637,17 @@
                     if (lastStatus && lastStatus !== scan.status) {
                         statusChanged = true;
                         console.log(`Scan ${scan.job_id} status changed: ${lastStatus} → ${scan.status}`);
+                        // Mark that we need reload to update reports list
+                        if (scan.status === 'completed' || scan.status === 'failed') {
+                            needsPageReload = true;
+                        }
                     }
                     lastScanStatuses[scan.job_id] = scan.status;
                 }
                 
-                // Reload page if any status changed
-                if (statusChanged) {
+                // Reload page if status changed to completed/failed (to update reports list)
+                if (statusChanged && needsPageReload) {
+                    console.log('Scan completed - reloading page to update reports...');
                     window.location.reload();
                 }
             }
@@ -820,10 +829,16 @@
     // Modal functions
     function closeModal() {
         document.getElementById('scanDetailsModal').style.display = 'none';
-        // Stop log streaming
+        
+        // Stop all polling and streaming
         if (window.logEventSource) {
             window.logEventSource.close();
             window.logEventSource = null;
+        }
+        
+        if (progressPollingInterval) {
+            clearInterval(progressPollingInterval);
+            progressPollingInterval = null;
         }
     }
     
@@ -860,19 +875,19 @@
                         <div style="background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                                 <div style="font-size: 0.85rem; color: #9ca3af;">Scan Progress</div>
-                                <div style="font-size: 1rem; font-weight: 600; color: #3b82f6;">${percentage}%</div>
+                                <div class="progress-text" style="font-size: 1rem; font-weight: 600; color: #3b82f6;">${percentage}%</div>
                             </div>
                             <div style="width: 100%; height: 8px; background: #1f2937; border-radius: 4px; overflow: hidden; margin-bottom: 0.75rem;">
-                                <div style="height: 100%; background: linear-gradient(90deg, #3b82f6, #8b5cf6); width: ${percentage}%; transition: width 0.3s;"></div>
+                                <div class="progress-fill" style="height: 100%; background: linear-gradient(90deg, #3b82f6, #8b5cf6); width: ${percentage}%; transition: width 0.3s;"></div>
                             </div>
                             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; font-size: 0.8rem;">
                                 <div>
                                     <div style="color: #6b7280;">URLs Scanned</div>
-                                    <div style="color: #e5e7eb; font-weight: 600;">${progress.urls_scanned || 0} / ${progress.total_urls || 0}</div>
+                                    <div data-urls-scanned style="color: #e5e7eb; font-weight: 600;">${progress.urls_scanned || 0} / ${progress.total_urls || 0}</div>
                                 </div>
                                 <div>
                                     <div style="color: #6b7280;">Findings</div>
-                                    <div style="color: #ef4444; font-weight: 600;">${progress.vulnerabilities_found || 0}</div>
+                                    <div data-vulns-found style="color: #ef4444; font-weight: 600;">${progress.vulnerabilities_found || 0}</div>
                                 </div>
                                 <div>
                                     <div style="color: #6b7280;">ETA</div>
@@ -1041,21 +1056,144 @@
                     
                     ${findingsHTML}
                 </div>
+                
+                <!-- Detector Timeline Section -->
+                <div id="detectorTimelineSection" style="border-top: 1px solid #374151; padding-top: 1rem; margin-top: 1rem;">
+                    <h3 style="font-size: 1rem; margin-bottom: 1rem; color: #f3f4f6;">
+                        ⏱️ Detector Timeline
+                    </h3>
+                    <div id="detectorTimelineContent" style="color: #9ca3af; font-size: 0.85rem;">
+                        Loading timeline...
+                    </div>
+                </div>
             `;
             
             document.getElementById('modalContent').innerHTML = modalContent;
             document.getElementById('scanDetailsModal').style.display = 'flex';
             
-            // Show terminal and start streaming logs if scan is running or has log file
-            if (scan.log_path) {
-                document.getElementById('terminalContainer').style.display = 'block';
-                document.getElementById('terminalContent').style.display = 'block';
-                startLogStreaming(jobId);
-            } else {
-                document.getElementById('terminalContainer').style.display = 'none';
-            }
+            // Load detector timeline after DOM has updated
+            setTimeout(() => {
+                loadDetectorTimeline(jobId);
+            }, 0);
+            
+            // Terminal container is commented out in HTML, so skip log streaming
+            // if (scan.log_path) {
+            //     document.getElementById('terminalContainer').style.display = 'block';
+            //     document.getElementById('terminalContent').style.display = 'block';
+            //     startLogStreaming(jobId);
+            // }
         } catch (error) {
             alert('Error loading scan details: ' + error.message);
+        }
+    }
+    
+    // Load and display detector timeline
+    async function loadDetectorTimeline(jobId) {
+        const timelineContent = document.getElementById('detectorTimelineContent');
+        
+        if (!timelineContent) {
+            console.warn('Timeline content element not found, skipping...');
+            return;
+        }
+        
+        try {
+            console.log(`Loading detector timeline for job ${jobId}...`);
+            const response = await fetch(`/api/scan/${jobId}/detector-timeline`);
+            if (!response.ok) {
+                console.error(`Timeline fetch failed with status ${response.status}`);
+                throw new Error('Failed to fetch timeline');
+            }
+            
+            const data = await response.json();
+            console.log(`Timeline data received:`, data);
+            const timeline = data.timeline || [];
+            
+            if (timeline.length === 0) {
+                console.warn('Timeline is empty!');
+                timelineContent.innerHTML = '<div style="color: #6b7280; font-style: italic;">No detector activity logged yet. Timeline will appear as the scan progresses.</div>';
+                return;
+            }
+            
+            console.log(`Rendering ${timeline.length} timeline events...`);
+            
+            // Build timeline HTML
+            let html = '<div style="max-height: 400px; overflow-y: auto; border: 1px solid #374151; border-radius: 0.5rem; background: #0f172a; padding: 0.75rem;">';
+            
+            // Show chronological list
+            timeline.forEach((event, idx) => {
+                const timestamp = new Date(event.timestamp);
+                const timeStr = timestamp.toLocaleTimeString('bg-BG', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                
+                // Status icon and color based on event type
+                let icon = '🔍';
+                let color = '#3b82f6';
+                let statusText = event.detector;
+                let badgeHTML = '';
+                
+                if (event.type === 'finding') {
+                    icon = '✔️';
+                    const severityColors = {
+                        critical: '#dc2626',
+                        high: '#ea580c',
+                        medium: '#f59e0b',
+                        low: '#10b981',
+                        info: '#3b82f6'
+                    };
+                    color = severityColors[event.severity] || '#22c55e';
+                    badgeHTML = `<span style="background: ${color}; color: white; padding: 0.15rem 0.4rem; border-radius: 0.25rem; font-size: 0.65rem; margin-left: 0.5rem; text-transform: uppercase;">${event.severity}</span>`;
+                    statusText = 'Found: ' + event.detector;
+                } else if (event.type === 'phase') {
+                    icon = '⚙️';
+                    color = '#8b5cf6';
+                    statusText = 'Phase: ' + event.detector;
+                } else if (event.type === 'scan_event') {
+                    if (event.status === 'started') {
+                        icon = '▶️';
+                        color = '#22c55e';
+                    } else {
+                        icon = '✅';
+                        color = '#10b981';
+                    }
+                }
+                
+                html += `
+                <div style="display: flex; gap: 0.75rem; padding: 0.5rem; margin-bottom: 0.5rem; background: rgba(0, 0, 0, 0.3); border-left: 3px solid ${color}; border-radius: 0.25rem;">
+                    <div style="flex-shrink: 0; width: 70px; color: #9ca3af; font-size: 0.7rem; font-family: monospace;">
+                        ${timeStr}
+                    </div>
+                    <div style="flex-shrink: 0; font-size: 1rem;">
+                        ${icon}
+                    </div>
+                    <div style="flex: 1;">
+                        <div style="color: #e5e7eb; font-size: 0.8rem; font-weight: 500;">
+                            ${statusText}${badgeHTML}
+                        </div>
+                    </div>
+                </div>
+                `;
+            });
+            
+            html += '</div>';
+            
+            // Add summary stats
+            const findingsCount = timeline.filter(e => e.type === 'finding').length;
+            const phasesCount = timeline.filter(e => e.type === 'phase').length;
+            
+            html += `
+            <div style="display: flex; gap: 1rem; margin-top: 0.75rem; font-size: 0.75rem;">
+                ${findingsCount > 0 ? `<div style="color: #9ca3af;"><span style="color: #22c55e; font-weight: 600;">${findingsCount}</span> findings</div>` : ''}
+                ${phasesCount > 0 ? `<div style="color: #9ca3af;"><span style="color: #8b5cf6; font-weight: 600;">${phasesCount}</span> phases</div>` : ''}
+                <div style="color: #9ca3af;">
+                    <span style="color: #e5e7eb; font-weight: 600;">${timeline.length}</span> total events
+                </div>
+            </div>
+            `;
+            
+            timelineContent.innerHTML = html;
+            
+        } catch (error) {
+            console.error('Error loading detector timeline:', error);
+            timelineContent.innerHTML = '<div style="color: #ef4444;">Failed to load detector timeline</div>';
         }
     }
     
@@ -1066,6 +1204,33 @@
         const hours = Math.floor(seconds / 3600);
         const mins = Math.floor((seconds % 3600) / 60);
         return `${hours}h ${mins}m`;
+    }
+    
+    // Update progress elements in modal without reloading entire modal
+    function updateProgressInModal(progress) {
+        // Update progress bar
+        const progressBar = document.querySelector('#scanDetailsModal .progress-fill');
+        if (progressBar && progress.progress_percentage !== undefined) {
+            progressBar.style.width = `${progress.progress_percentage}%`;
+        }
+        
+        // Update progress text
+        const progressText = document.querySelector('#scanDetailsModal .progress-text');
+        if (progressText) {
+            progressText.textContent = `${progress.progress_percentage || 0}%`;
+        }
+        
+        // Update URLs scanned
+        const urlsText = document.querySelector('#scanDetailsModal [data-urls-scanned]');
+        if (urlsText && progress.urls_scanned !== undefined) {
+            urlsText.textContent = `${progress.urls_scanned} / ${progress.total_urls || '?'}`;
+        }
+        
+        // Update vulnerabilities found
+        const vulnsText = document.querySelector('#scanDetailsModal [data-vulns-found]');
+        if (vulnsText && progress.vulnerabilities_found !== undefined) {
+            vulnsText.textContent = progress.vulnerabilities_found;
+        }
     }
     
     // Poll progress updates
@@ -1081,25 +1246,41 @@
                 const response = await fetch(`/api/scan/${jobId}/progress`);
                 if (!response.ok) {
                     clearInterval(progressPollingInterval);
+                    progressPollingInterval = null;
                     return;
                 }
                 
                 const progress = await response.json();
                 
-                // Update progress bar and stats if modal is still open
-                const modal = document.getElementById('scanDetailsModal');
-                if (modal.style.display === 'flex') {
-                    viewScanDetails(jobId); // Refresh entire modal
-                } else {
+                // Stop polling if scan completed or failed or stopped
+                if (progress.status && progress.status !== 'running') {
                     clearInterval(progressPollingInterval);
+                    progressPollingInterval = null;
+                    // Reload the modal ONCE to show completed state with findings
+                    const modal = document.getElementById('scanDetailsModal');
+                    if (modal.style.display === 'flex') {
+                        // Only reload if we haven't already shown completed state
+                        const statusTag = modal.querySelector('.status-completed, .status-failed, .status-stopped');
+                        if (!statusTag) {
+                            viewScanDetails(jobId);
+                        }
+                    }
+                    return;
                 }
                 
-                // Stop polling if scan completed
-                if (progress.status !== 'running') {
+                // Update progress bar and stats if modal is still open (without full reload)
+                const modal = document.getElementById('scanDetailsModal');
+                if (modal.style.display === 'flex') {
+                    // Update only progress elements, not the whole modal
+                    updateProgressInModal(progress);
+                } else {
                     clearInterval(progressPollingInterval);
+                    progressPollingInterval = null;
                 }
             } catch (error) {
                 console.error('Progress polling error:', error);
+                clearInterval(progressPollingInterval);
+                progressPollingInterval = null;
             }
         }, 5000); // Poll every 5 seconds
     }

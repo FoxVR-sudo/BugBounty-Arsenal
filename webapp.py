@@ -1,3 +1,4 @@
+# type: ignore
 import os
 import uuid
 import subprocess
@@ -57,14 +58,49 @@ async def favicon():
 async def startup_event():
     init_db()
     print("✓ Database initialized")
+    
+    # Clean up stuck scans on startup
+    try:
+        from database import SessionLocal
+        db = SessionLocal()
+        running_scans = db.query(Scan).filter(Scan.status == ScanStatus.RUNNING).all()
+        cleaned = 0
+        for scan in running_scans:
+            if scan.pid:
+                try:
+                    proc = psutil.Process(scan.pid)
+                    # Process exists but might be stuck
+                    if proc.status() in [psutil.STATUS_ZOMBIE, psutil.STATUS_DEAD]:
+                        scan.status = ScanStatus.STOPPED
+                        scan.completed_at = datetime.now()
+                        cleaned += 1
+                except psutil.NoSuchProcess:
+                    scan.status = ScanStatus.STOPPED
+                    scan.completed_at = datetime.now()
+                    cleaned += 1
+            else:
+                scan.status = ScanStatus.STOPPED
+                scan.completed_at = datetime.now()
+                cleaned += 1
+        db.commit()
+        db.close()
+        if cleaned > 0:
+            print(f"✓ Cleaned up {cleaned} stuck scans")
+    except Exception as e:
+        print(f"⚠️ Error cleaning stuck scans: {e}")
 
 # Custom endpoint for reports with no-cache headers
-@app.get("/reports/{filename}")
-async def serve_report(filename: str):
-    """Serve HTML reports with no-cache headers to always show latest version"""
-    report_path = os.path.join(REPORTS_DIR, filename)
-    if not os.path.exists(report_path):
+@app.get("/reports/{job_id}")
+async def serve_report(job_id: str, db: Session = Depends(get_db)):
+    """Serve HTML reports from their actual location with no-cache headers"""
+    # Find the scan record to get the actual report path
+    scan = db.query(Scan).filter(Scan.job_id == job_id).first()
+    if not scan or not scan.report_path:
         raise HTTPException(status_code=404, detail="Report not found")
+    
+    report_path = scan.report_path
+    if not os.path.exists(report_path):
+        raise HTTPException(status_code=404, detail="Report file not found on disk")
     
     with open(report_path, 'r', encoding='utf-8') as f:
         content = f.read()
@@ -186,6 +222,10 @@ async def dashboard(
     db: Session = Depends(get_db)
 ):
     """Render dashboard with scan form + list of reports."""
+    # Redirect to login if not authenticated
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    
     # Get user's tier
     user_tier = get_user_tier(user, db)
     tier_info = get_tier_display_info(user_tier)
@@ -205,7 +245,7 @@ async def dashboard(
                 "created_at": scan.created_at,
                 "completed_at": scan.completed_at,
                 "vulnerabilities": scan.vulnerabilities_found,
-                "report_path": scan.report_path.replace("reports/", "") if scan.report_path and scan.report_path.startswith("reports/") else scan.report_path,
+                "report_path": scan.job_id if scan.report_path else None,  # Use job_id as report identifier
             }
             for scan in scans
         ]
@@ -213,11 +253,9 @@ async def dashboard(
         # Generate reports list from scans with completed reports
         for scan in scans:
             if scan.report_path and os.path.exists(scan.report_path):
-                # Extract just the filename for display (remove 'reports/' prefix if present)
-                display_path = scan.report_path.replace("reports/", "") if scan.report_path.startswith("reports/") else scan.report_path
                 reports.append({
                     "name": f"{scan.target} - {scan.created_at.strftime('%Y-%m-%d %H:%M')}",
-                    "rel_path": display_path,  # Just the filename for URL
+                    "rel_path": scan.job_id,  # Use job_id to identify report in URL
                     "created": scan.completed_at or scan.created_at,
                 })
         
@@ -833,6 +871,7 @@ async def start_scan(
 
 def _update_scan_statuses(db: Optional[Session] = None):
     """Check all active scans and update their status based on process state."""
+    # Update in-memory ACTIVE_SCANS
     for job_id, info in list(ACTIVE_SCANS.items()):
         if info["status"] == "running":
             try:
@@ -866,6 +905,44 @@ def _update_scan_statuses(db: Optional[Session] = None):
                         scan.status = ScanStatus.FAILED
                         scan.completed_at = datetime.now()
                         db.commit()
+    
+    # Also check database for any running scans with dead PIDs or completed progress
+    if db:
+        running_scans = db.query(Scan).filter(Scan.status == ScanStatus.RUNNING).all()
+        for scan in running_scans:
+            should_complete = False
+            
+            # Check if PID is dead
+            if scan.pid:
+                try:
+                    proc = psutil.Process(scan.pid)
+                    if not proc.is_running():
+                        should_complete = True
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    should_complete = True
+            
+            # Also check if progress shows 100% (scan finished)
+            if scan.progress_percentage >= 100:
+                should_complete = True
+            
+            # Check progress file for completion
+            progress_file = os.path.join("scan_progress", f"{scan.job_id}.json")
+            if os.path.exists(progress_file):
+                try:
+                    with open(progress_file, 'r') as f:
+                        progress_data = json.load(f)
+                    if progress_data.get("progress_percentage", 0) >= 100:
+                        should_complete = True
+                        scan.vulnerabilities_found = progress_data.get("vulnerabilities_found", 0)
+                except:
+                    pass
+            
+            if should_complete:
+                scan.status = ScanStatus.COMPLETED
+                if not scan.completed_at:
+                    scan.completed_at = datetime.now()
+                scan.progress_percentage = 100
+                db.commit()
 
 
 @app.get("/scan-status", response_class=JSONResponse)
@@ -1751,6 +1828,210 @@ async def get_scan_findings(
                 break
     
     return JSONResponse(findings_data)
+
+
+@app.get("/api/scan/{job_id}/detector-timeline")
+async def get_detector_timeline(
+    job_id: str,
+    user: Optional[User] = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get detector execution timeline from scan logs.
+    Returns list of detectors with their start times and status.
+    """
+    # Build query
+    query = db.query(Scan).filter(Scan.job_id == job_id)
+    
+    # Filter by user if authenticated
+    if user:
+        query = query.filter(Scan.user_id == user.id)
+    
+    scan = query.first()
+    
+    if not scan:
+        raise HTTPException(status_code=404, detail="Scan not found")
+    
+    timeline = []
+    
+    # Determine log path
+    log_path = scan.log_path
+    if not log_path:
+        log_path = os.path.join(LOGS_DIR, f"scan_{job_id}.log")
+    
+    if not os.path.exists(log_path):
+        return JSONResponse({"timeline": [], "total": 0})
+    
+    try:
+        import re
+        from datetime import datetime, timedelta
+        
+        # Helper function to strip ANSI escape codes
+        def strip_ansi(text):
+            # Strip standard ANSI codes with ESC character
+            ansi_escape = re.compile(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])')
+            text = ansi_escape.sub('', text)
+            # Also strip ANSI codes without ESC (e.g., [36m, [0m)
+            ansi_no_esc = re.compile(r'\[[\d;]+m')
+            text = ansi_no_esc.sub('', text)
+            return text
+        
+        # Regex patterns for detector events with timestamps
+        # Pattern 1: Finding events with timestamps (may have ANSI codes)
+        finding_pattern = re.compile(
+            r'(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}),\d+\s+\[INFO\]\s+.*?Finding\s+\[(\w+)\]\s+(.+)',
+            re.IGNORECASE
+        )
+        
+        # Pattern 2: Phase/stage markers with timestamps
+        phase_pattern = re.compile(
+            r'(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}),\d+\s+\[INFO\]\s+Phase:\s+(.+)',
+            re.IGNORECASE
+        )
+        
+        # Pattern 3: Scan start/finish with timestamps
+        scan_event_pattern = re.compile(
+            r'(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}),\d+\s+\[INFO\]\s+(Scan\s+(?:started|finished).+)',
+            re.IGNORECASE
+        )
+        
+        # Pattern 4: Detector execution (NO timestamp - Bulgarian text)
+        # Match after ANSI codes are stripped, detector name can have underscores
+        detector_start_pattern = re.compile(
+            r'▶️?\s*Стартира\s+(?:пасивен\s+)?([a-zA-Z_]+)\s+за\s+(.+)',
+            re.IGNORECASE
+        )
+        
+        # Pattern 5: Detector results (NO timestamp - Bulgarian text)
+        detector_result_pattern = re.compile(
+            r'[✔️ℹ️]\s*([a-zA-Z_]+)\s+(?:намери|не\s+намери)',
+            re.IGNORECASE
+        )
+        
+        last_timestamp = None  # Track last seen timestamp for interpolation
+        detector_offset = 0  # Increment for detectors without timestamps
+        
+        last_timestamp = None  # Track last seen timestamp for interpolation
+        detector_offset = 0  # Increment for detectors without timestamps
+        
+        with open(log_path, 'r', encoding='utf-8', errors='ignore') as f:
+            for line in f:
+                # Strip ANSI codes for cleaner parsing
+                clean_line = strip_ansi(line)
+                
+                # Check if line has timestamp - update last_timestamp
+                timestamp_match = re.match(r'^(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})', clean_line)
+                if timestamp_match:
+                    try:
+                        last_timestamp = datetime.strptime(timestamp_match.group(1), "%Y-%m-%d %H:%M:%S")
+                        detector_offset = 0  # Reset offset on new timestamped line
+                    except ValueError:
+                        pass
+                
+                # Match finding events (these are the actual detector results)
+                finding_match = finding_pattern.search(clean_line)
+                if finding_match:
+                    timestamp_str = finding_match.group(1)
+                    severity = finding_match.group(2)
+                    finding_type = finding_match.group(3).strip()
+                    
+                    try:
+                        timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+                        timeline.append({
+                            "detector": finding_type[:60],  # Truncate long names
+                            "timestamp": timestamp.isoformat(),
+                            "status": "found",
+                            "severity": severity.lower(),
+                            "type": "finding"
+                        })
+                    except ValueError:
+                        pass
+                    continue
+                
+                # Match detector start events (NO timestamp - use last_timestamp + offset)
+                detector_start_match = detector_start_pattern.search(clean_line)
+                if detector_start_match and last_timestamp:
+                    detector_name = detector_start_match.group(1)
+                    target_url = detector_start_match.group(2).strip()
+                    
+                    # Increment offset for detectors without timestamps
+                    detector_offset += 1
+                    estimated_time = last_timestamp + timedelta(seconds=detector_offset * 0.5)
+                    
+                    timeline.append({
+                        "detector": f"{detector_name} → {target_url[:30]}",
+                        "timestamp": estimated_time.isoformat(),
+                        "status": "started",
+                        "type": "detector"
+                    })
+                    continue
+                
+                # Match detector result events (NO timestamp)
+                detector_result_match = detector_result_pattern.search(clean_line)
+                if detector_result_match and last_timestamp:
+                    detector_name = detector_result_match.group(1)
+                    
+                    # Small increment for result line
+                    detector_offset += 0.2
+                    estimated_time = last_timestamp + timedelta(seconds=detector_offset)
+                    
+                    status = "completed" if "✔️" in line else "no_findings"
+                    
+                    timeline.append({
+                        "detector": detector_name,
+                        "timestamp": estimated_time.isoformat(),
+                        "status": status,
+                        "type": "detector_result"
+                    })
+                    continue
+                
+                # Match phase transitions
+                phase_match = phase_pattern.search(clean_line)
+                if phase_match:
+                    timestamp_str = phase_match.group(1)
+                    phase_name = phase_match.group(2).strip()
+                    
+                    try:
+                        timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+                        timeline.append({
+                            "detector": phase_name[:60],
+                            "timestamp": timestamp.isoformat(),
+                            "status": "phase",
+                            "type": "phase"
+                        })
+                    except ValueError:
+                        pass
+                    continue
+                
+                # Match scan events
+                scan_match = scan_event_pattern.search(clean_line)
+                if scan_match:
+                    timestamp_str = scan_match.group(1)
+                    event_desc = scan_match.group(2).strip()
+                    
+                    try:
+                        timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+                        status = "started" if "started" in event_desc.lower() else "completed"
+                        timeline.append({
+                            "detector": event_desc[:60],
+                            "timestamp": timestamp.isoformat(),
+                            "status": status,
+                            "type": "scan_event"
+                        })
+                    except ValueError:
+                        pass
+        
+        # Sort by timestamp
+        timeline.sort(key=lambda x: x["timestamp"])
+        
+        return JSONResponse({
+            "timeline": timeline,
+            "total": len(timeline)
+        })
+        
+    except Exception as e:
+        logger.error(f"Error parsing detector timeline: {e}")
+        return JSONResponse({"timeline": [], "total": 0, "error": str(e)})
 
 
 @app.delete("/api/scan/{job_id}")

@@ -63,7 +63,7 @@ class User(Base):
     oauth_id = Column(String(255), nullable=True)
     
     # Timestamps
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now)
     last_login = Column(DateTime, nullable=True)
     
     # Relationships
@@ -91,7 +91,7 @@ class Subscription(Base):
     stripe_subscription_id = Column(String(255), nullable=True)
     
     # Dates
-    started_at = Column(DateTime, default=datetime.utcnow)
+    started_at = Column(DateTime, default=datetime.now)
     current_period_start = Column(DateTime, nullable=True)
     current_period_end = Column(DateTime, nullable=True)
     trial_ends_at = Column(DateTime, nullable=True)
@@ -100,11 +100,11 @@ class Subscription(Base):
     # Usage tracking
     scans_this_month = Column(Integer, default=0)
     api_calls_this_month = Column(Integer, default=0)
-    last_reset_at = Column(DateTime, default=datetime.utcnow)
+    last_reset_at = Column(DateTime, default=datetime.now)
     
     # Daily limits (for FREE/BASIC/PRO tiers)
     daily_scans_count = Column(Integer, default=0)
-    last_daily_reset = Column(DateTime, default=datetime.utcnow)
+    last_daily_reset = Column(DateTime, default=datetime.now)
     
     # Extra scans (purchasable add-ons)
     extra_scans_purchased = Column(Integer, default=0)
@@ -144,7 +144,7 @@ class Scan(Base):
     detectors_triggered = Column(Text, nullable=True)  # JSON array of detector names
     
     # Timestamps
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now)
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
     
@@ -186,7 +186,7 @@ class ApiKey(Base):
     rate_limit_per_minute = Column(Integer, default=60)
     
     # Timestamps
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.now)
     expires_at = Column(DateTime, nullable=True)
     
     # Relationship
@@ -213,7 +213,7 @@ class AuditLog(Base):
     extra_data = Column(Text, nullable=True)  # JSON blob (renamed from metadata)
     
     # Timestamp
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, default=datetime.now, index=True)
     
     def __repr__(self):
         return f"<AuditLog {self.event_type} user={self.user_id}>"

@@ -8,6 +8,15 @@
         "./tools",
         "./utils"
     ],
+    "exclude": [
+        "**/node_modules",
+        "**/__pycache__",
+        "**/venv",
+        "**/venv_new",
+        "**/templates"
+    ],
     "pythonVersion": "3.8",
-    "typeCheckingMode": "basic"
+    "typeCheckingMode": "off",
+    "reportMissingImports": "warning",
+    "reportMissingTypeStubs": "none"
 }

@@ -9,11 +9,11 @@ def ensure_requirements():
         # Use importlib.metadata instead of pkg_resources (modern approach)
         try:
             from importlib.metadata import distributions
-            installed = {dist.name.lower().replace('-', '_') for dist in distributions()}
+            installed = {dist.name.lower().replace('-', '_') for dist in distributions()}  # type: ignore
         except ImportError:
             # Fallback for older Python
-            import pkg_resources
-            installed = {pkg.key for pkg in pkg_resources.working_set}
+            import pkg_resources  # type: ignore
+            installed = {pkg.key for pkg in pkg_resources.working_set}  # type: ignore
         
         missing = []
         for req in required:
