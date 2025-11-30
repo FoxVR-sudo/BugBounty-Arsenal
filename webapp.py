@@ -1683,37 +1683,49 @@ async def get_scan_findings(
     # Look for scanner_findings.json in recon output
     recon_base = Path("recon_output")
     if recon_base.exists():
-        # Find matching directory - use full job_id to avoid matching multiple scans
-        for scan_dir in recon_base.glob(f"{job_id}*"):
-            findings_file = None
-            for json_file in scan_dir.rglob("*scanner_findings.json"):
-                findings_file = json_file
-                break
-            
-            if findings_file and findings_file.exists():
-                try:
-                    with open(findings_file, 'r') as f:
-                        data = json.load(f)
-                    
-                    results = data.get("results", [])
-                    findings_data["total"] = len(results)
-                    
-                    # Group by severity
-                    for finding in results:
-                        severity = finding.get("severity", "info").lower()
-                        if severity not in findings_data:
-                            severity = "info"
+        # Find matching directory - handle timestamp variations (±1 second)
+        # Try exact match first, then nearby timestamps
+        base_job_id = job_id[:-1]  # Remove last digit
+        possible_patterns = [
+            f"{job_id}*",  # Exact match
+            f"{base_job_id}[0-9]*",  # Last digit wildcard
+        ]
+        
+        for pattern in possible_patterns:
+            for scan_dir in recon_base.glob(pattern):
+                findings_file = None
+                for json_file in scan_dir.rglob("*scanner_findings.json"):
+                    findings_file = json_file
+                    break
+                
+                if findings_file and findings_file.exists():
+                    try:
+                        with open(findings_file, 'r') as f:
+                            data = json.load(f)
                         
-                        findings_data[severity].append({
-                            "url": finding.get("url"),
-                            "type": finding.get("type"),
-                            "description": finding.get("description", "")[:100],
-                            "detector": finding.get("detector"),
-                            "confidence": finding.get("confidence", "unknown")
-                        })
-                    break  # Stop after finding first matching scan
-                except Exception as e:
-                    logger.error(f"Error reading findings file: {e}")
+                        results = data.get("results", [])
+                        findings_data["total"] = len(results)
+                        
+                        # Group by severity
+                        for finding in results:
+                            severity = finding.get("severity", "info").lower()
+                            if severity not in findings_data:
+                                severity = "info"
+                            
+                            findings_data[severity].append({
+                                "url": finding.get("url"),
+                                "type": finding.get("type"),
+                                "description": finding.get("description", "")[:100],
+                                "detector": finding.get("detector"),
+                                "confidence": finding.get("confidence", "unknown")
+                            })
+                        return JSONResponse(findings_data)  # Return immediately when found
+                    except Exception as e:
+                        logger.error(f"Error reading findings file: {e}")
+            
+            # If found in this pattern, don't try next pattern
+            if findings_data["total"] > 0:
+                break
     
     return JSONResponse(findings_data)
 
