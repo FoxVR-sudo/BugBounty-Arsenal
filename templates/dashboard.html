@@ -1110,7 +1110,8 @@
             
             if (timeline.length === 0) {
                 console.warn('Timeline is empty!');
-                timelineContent.innerHTML = '<div style="color: #6b7280; font-style: italic;">No detector activity logged yet. Timeline will appear as the scan progresses.</div>';
+                // Show a helpful message - timeline might be empty if scan completed before logging details
+                timelineContent.innerHTML = '<div style="color: #6b7280; font-style: italic;">No detailed detector timeline available. This can happen if the scan completed very quickly or logs are not accessible. Check "Findings Breakdown" above for detected vulnerabilities.</div>';
                 return;
             }
             

@@ -1896,20 +1896,18 @@ async def get_detector_timeline(
         )
         
         # Pattern 4: Detector execution (NO timestamp - Bulgarian text)
-        # Match after ANSI codes are stripped, detector name can have underscores
+        # Match after ANSI codes are stripped, look for "Стартира" keyword
         detector_start_pattern = re.compile(
-            r'▶️?\s*Стартира\s+(?:пасивен\s+)?([a-zA-Z_]+)\s+за\s+(.+)',
+            r'Стартира\s+(?:пасивен\s+)?([a-z_]+)\s+за\s+(.+)',
             re.IGNORECASE
         )
         
         # Pattern 5: Detector results (NO timestamp - Bulgarian text)
+        # Match "намери" or "не намери" patterns with detector name before
         detector_result_pattern = re.compile(
-            r'[✔️ℹ️]\s*([a-zA-Z_]+)\s+(?:намери|не\s+намери)',
+            r'([a-z_]+)\s+(?:намери|не\s+намери)',
             re.IGNORECASE
         )
-        
-        last_timestamp = None  # Track last seen timestamp for interpolation
-        detector_offset = 0  # Increment for detectors without timestamps
         
         last_timestamp = None  # Track last seen timestamp for interpolation
         detector_offset = 0  # Increment for detectors without timestamps
@@ -1948,15 +1946,21 @@ async def get_detector_timeline(
                         pass
                     continue
                 
-                # Match detector start events (NO timestamp - use last_timestamp + offset)
+                # Match detector start events (NO timestamp - use last_timestamp + offset or current time)
                 detector_start_match = detector_start_pattern.search(clean_line)
-                if detector_start_match and last_timestamp:
+                if detector_start_match:
                     detector_name = detector_start_match.group(1)
                     target_url = detector_start_match.group(2).strip()
                     
                     # Increment offset for detectors without timestamps
                     detector_offset += 1
-                    estimated_time = last_timestamp + timedelta(seconds=detector_offset * 0.5)
+                    
+                    # Use last_timestamp if available, otherwise start from a baseline
+                    if last_timestamp:
+                        estimated_time = last_timestamp + timedelta(seconds=detector_offset * 0.5)
+                    else:
+                        # No timestamp seen yet - use datetime.now() as baseline
+                        estimated_time = datetime.now() + timedelta(seconds=detector_offset * 0.5)
                     
                     timeline.append({
                         "detector": f"{detector_name} → {target_url[:30]}",
@@ -1968,12 +1972,17 @@ async def get_detector_timeline(
                 
                 # Match detector result events (NO timestamp)
                 detector_result_match = detector_result_pattern.search(clean_line)
-                if detector_result_match and last_timestamp:
+                if detector_result_match:
                     detector_name = detector_result_match.group(1)
                     
                     # Small increment for result line
                     detector_offset += 0.2
-                    estimated_time = last_timestamp + timedelta(seconds=detector_offset)
+                    
+                    # Use last_timestamp if available, otherwise use current time
+                    if last_timestamp:
+                        estimated_time = last_timestamp + timedelta(seconds=detector_offset)
+                    else:
+                        estimated_time = datetime.now() + timedelta(seconds=detector_offset)
                     
                     status = "completed" if "✔️" in line else "no_findings"
                     
@@ -2030,7 +2039,6 @@ async def get_detector_timeline(
         })
         
     except Exception as e:
-        logger.error(f"Error parsing detector timeline: {e}")
         return JSONResponse({"timeline": [], "total": 0, "error": str(e)})
 
 
