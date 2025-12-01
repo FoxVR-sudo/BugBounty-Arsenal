@@ -1253,28 +1253,13 @@
                 
                 const progress = await response.json();
                 
-                // Stop polling if scan completed or failed or stopped
-                if (progress.status && progress.status !== 'running') {
-                    clearInterval(progressPollingInterval);
-                    progressPollingInterval = null;
-                    // Reload the modal ONCE to show completed state with findings
-                    const modal = document.getElementById('scanDetailsModal');
-                    if (modal.style.display === 'flex') {
-                        // Only reload if we haven't already shown completed state
-                        const statusTag = modal.querySelector('.status-completed, .status-failed, .status-stopped');
-                        if (!statusTag) {
-                            viewScanDetails(jobId);
-                        }
-                    }
-                    return;
-                }
-                
                 // Update progress bar and stats if modal is still open (without full reload)
                 const modal = document.getElementById('scanDetailsModal');
-                if (modal.style.display === 'flex') {
+                if (modal && modal.style.display === 'flex') {
                     // Update only progress elements, not the whole modal
                     updateProgressInModal(progress);
                 } else {
+                    // Stop polling if modal is closed
                     clearInterval(progressPollingInterval);
                     progressPollingInterval = null;
                 }
