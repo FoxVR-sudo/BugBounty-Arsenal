@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -224,7 +225,8 @@
             <div id="error-message" class="error-message"></div>
             <div id="success-message" class="success-message"></div>
             
-            <form id="signup-form">
+            <form id="signup-form" method="post">
+                {% csrf_token %}
                 <div class="form-group">
                     <label for="email">Email</label>
                     <input type="email" id="email" name="email" placeholder="you@example.com" required />
@@ -255,16 +257,19 @@
             </form>
             
             <p class="link">
-                Already have an account? <a href="/login">Sign in</a>
+                Already have an account? <a href="{% url 'login' %}">Sign in</a>
             </p>
         </div>
         
         <p class="back-link">
-            <a href="/">← Back to home</a>
+            <a href="{% url 'landing' %}">← Back to home</a>
         </p>
     </div>
     
     <script>
+        const signupApiUrl = '/api/auth/signup/';  // TODO: Create API endpoint
+        const dashboardUrl = '{% url "dashboard" %}';
+        
         const form = document.getElementById('signup-form');
         const submitBtn = document.getElementById('submit-btn');
         const errorDiv = document.getElementById('error-message');
@@ -301,23 +306,39 @@
             submitBtn.textContent = 'Creating account...';
             
             try {
-                const response = await fetch('/api/signup', {
+                const data = {
+                    email: formData.get('email'),
+                    full_name: formData.get('full_name'),
+                    password: formData.get('password')
+                };
+                
+                const response = await fetch(signupApiUrl, {
                     method: 'POST',
-                    body: formData
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify(data)
                 });
                 
-                const data = await response.json();
+                const result = await response.json();
                 
                 if (response.ok) {
                     successDiv.textContent = 'Account created successfully! Redirecting...';
                     successDiv.style.display = 'block';
                     
+                    // Store tokens if using JWT
+                    if (result.access) {
+                        localStorage.setItem('access_token', result.access);
+                        localStorage.setItem('refresh_token', result.refresh);
+                    }
+                    
                     // Redirect to dashboard after 2 seconds
                     setTimeout(() => {
-                        window.location.href = '/dashboard';
+                        window.location.href = dashboardUrl;
                     }, 2000);
                 } else {
-                    errorDiv.textContent = data.detail || 'Registration failed';
+                    errorDiv.textContent = result.detail || result.message || 'Registration failed';
                     errorDiv.style.display = 'block';
                     submitBtn.disabled = false;
                     submitBtn.textContent = 'Create Account';

@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: bugbounty-arsenal
+    ports:
+      - "5000:5000"
+    volumes:
+      # Persistent data
+      - ./bugbounty_arsenal.db:/app/bugbounty_arsenal.db
+      - ./recon_output:/app/recon_output
+      - ./scan_progress:/app/scan_progress
+      - ./screenshots:/app/screenshots
+      - ./bug_evidence:/app/bug_evidence
+      - ./reports:/app/reports
+      - ./recon_results:/app/recon_results
+      - ./raw_responses:/app/raw_responses
+      # Config files
+      - ./.env:/app/.env
+    environment:
+      - ENVIRONMENT=production
+      - DATABASE_URL=sqlite:///./bugbounty_arsenal.db
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-here}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    networks:
+      - bugbounty-network
+
+networks:
+  bugbounty-network:
+    driver: bridge

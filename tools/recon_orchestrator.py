@@ -81,6 +81,7 @@ class ReconOrchestrator:
     def check_prerequisites(self) -> bool:
         """
         Check if all required tools are installed.
+        Docker deployment includes all tools pre-installed.
         
         Returns:
             True if all tools are available, False otherwise
@@ -89,7 +90,8 @@ class ReconOrchestrator:
         
         if not all_installed:
             missing = [name for name, installed in self.tools_status.items() if not installed]
-            logger.error(f"Missing tools: {', '.join(missing)}")
+            logger.error(f"⚠️  Missing required tools: {', '.join(missing)}")
+            logger.error("Please ensure Docker container is running with all tools installed.")
             print_installation_instructions()
             return False
         
@@ -176,6 +178,12 @@ class ReconOrchestrator:
 
         if not subdomains:
             logger.warning(f"No subdomains found for {domain}")
+            # Ensure UI reflects completion instead of hanging at 0-25%
+            try:
+                # We treat this as an immediate completion with 0 findings
+                self._update_progress(1, 1, 0, 100)
+            except Exception:
+                pass
             return {"error": "No subdomains discovered"}
 
         subs_file = domain_output / f"{phase_index:02d}_subdomains.txt"
@@ -203,6 +211,11 @@ class ReconOrchestrator:
 
         if not live_hosts:
             logger.warning("No live hosts found")
+            # Mark progress as completed so UI doesn't stick at 25%
+            try:
+                self._update_progress(total_phases, 2, 0, 100)
+            except Exception:
+                pass
             return results
 
         live_file = domain_output / f"{phase_index:02d}_live_hosts.json"

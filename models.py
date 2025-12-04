@@ -54,6 +54,7 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
     is_superuser = Column(Boolean, default=False)  # Admin access
+    is_admin = Column(Boolean, default=False)  # Admin panel access
     verification_token = Column(String(255), nullable=True)
     reset_token = Column(String(255), nullable=True)
     reset_token_expires = Column(DateTime, nullable=True)
@@ -75,12 +76,48 @@ class User(Base):
         return f"<User {self.email}>"
 
 
+class Plan(Base):
+    """Subscription plan model (dynamic configuration)"""
+    __tablename__ = "plans"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(50), unique=True, nullable=False)  # FREE, PRO
+    display_name = Column(String(100), nullable=False)  # "Free Plan", "Pro Plan"
+    price_monthly = Column(Float, default=0.0, nullable=False)  # USD
+    price_yearly = Column(Float, default=0.0, nullable=False)  # USD
+    
+    # Limits (JSON stored as Text)
+    limits = Column(Text, nullable=False)  # {"scans_per_day": 5, "max_concurrent": 1, ...}
+    
+    # Features (JSON stored as Text)
+    features = Column(Text, nullable=False)  # ["XSS Detection", "SQL Injection", ...]
+    
+    # Status
+    is_active = Column(Boolean, default=True)
+    is_visible = Column(Boolean, default=True)  # Show on pricing page
+    
+    # Stripe
+    stripe_price_id_monthly = Column(String(255), nullable=True)
+    stripe_price_id_yearly = Column(String(255), nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    
+    # Relationships
+    subscriptions = relationship("Subscription", back_populates="plan")
+    
+    def __repr__(self):
+        return f"<Plan {self.name} ${self.price_monthly}/mo>"
+
+
 class Subscription(Base):
     """User subscription model"""
     __tablename__ = "subscriptions"
     
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
+    plan_id = Column(Integer, ForeignKey("plans.id"), nullable=False)
     
     # Tier & Status
     tier = Column(SQLEnum(SubscriptionTierEnum), default=SubscriptionTierEnum.FREE, nullable=False)
@@ -110,8 +147,9 @@ class Subscription(Base):
     extra_scans_purchased = Column(Integer, default=0)
     extra_scans_used = Column(Integer, default=0)
     
-    # Relationship
+    # Relationships
     user = relationship("User", back_populates="subscription")
+    plan = relationship("Plan", back_populates="subscriptions")
     
     def __repr__(self):
         return f"<Subscription user={self.user_id} tier={self.tier.value}>"

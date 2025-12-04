@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -203,7 +204,8 @@
         <div class="card">
             <h2>Welcome back</h2>
             
-            <form action="/api/login" method="post">
+            <form id="loginForm" method="post">
+                {% csrf_token %}
                 <div class="form-group">
                     <label for="email">Email</label>
                     <input type="email" id="email" name="email" placeholder="you@example.com" required />
@@ -236,34 +238,51 @@
             </button>
             
             <p class="link">
-                Don't have an account? <a href="/signup">Sign up</a>
+                Don't have an account? <a href="{% url 'signup' %}">Sign up</a>
             </p>
         </div>
         
         <p class="back-link">
-            <a href="/">← Back to home</a>
+            <a href="{% url 'landing' %}">← Back to home</a>
         </p>
     </div>
     
     <script>
-        const form = document.querySelector('form');
+        const loginApiUrl = '/api/auth/login/';  // TODO: Create API endpoint
+        const dashboardUrl = '{% url "dashboard" %}';
+        
+        const form = document.getElementById('loginForm');
         
         form.addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const formData = new FormData(this);
+            const data = {
+                email: formData.get('email'),
+                password: formData.get('password')
+            };
             
             try {
-                const response = await fetch('/api/login', {
+                const response = await fetch(loginApiUrl, {
                     method: 'POST',
-                    body: formData
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify(data)
                 });
                 
                 if (response.ok) {
-                    window.location.href = '/dashboard';
+                    const result = await response.json();
+                    // Store tokens if using JWT
+                    if (result.access) {
+                        localStorage.setItem('access_token', result.access);
+                        localStorage.setItem('refresh_token', result.refresh);
+                    }
+                    window.location.href = dashboardUrl;
                 } else {
                     const data = await response.json();
-                    alert('Error: ' + (data.detail || 'Login failed'));
+                    alert('Error: ' + (data.detail || data.message || 'Login failed'));
                 }
             } catch (error) {
                 alert('Error: ' + error.message);

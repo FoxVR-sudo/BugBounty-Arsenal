@@ -13,6 +13,7 @@ from fastapi import FastAPI, Request, Form, HTTPException, Depends, Cookie
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, StreamingResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.middleware.sessions import SessionMiddleware
 from sqlalchemy.orm import Session
 
 from subscription import (
@@ -41,6 +42,16 @@ LOGS_DIR = os.path.join(BASE_DIR, "scan_logs")
 os.makedirs(LOGS_DIR, exist_ok=True)
 
 app = FastAPI(title="BugBounty Arsenal UI")
+
+# Add session middleware for authentication
+app.add_middleware(
+    SessionMiddleware, 
+    secret_key=os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
+)
+
+# Include admin routes
+from admin_routes import router as admin_router
+app.include_router(admin_router)
 
 # Favicon endpoint to prevent 404 errors
 @app.get("/favicon.ico", include_in_schema=False)
@@ -291,7 +302,7 @@ async def dashboard(
             "tier_info": tier_info,
             "tier_limits": tier_limits,
             "user": user,
-            "is_superuser": user.is_superuser if user else False,
+            "is_superuser": user.is_admin if user else False,  # Using is_admin for admin panel access
             "scan_stats": scan_stats,
             "now": current_timestamp,
         },
@@ -368,6 +379,7 @@ async def signup(
 
 @app.post("/api/login")
 async def login(
+    request: Request,
     email: str = Form(...),
     password: str = Form(...),
     db: Session = Depends(get_db)
@@ -396,6 +408,9 @@ async def login(
     )
     db.add(audit)
     db.commit()
+    
+    # Store user_id in session for admin panel access
+    request.session["user_id"] = user.id
     
     # Create JWT token
     # Create access token with user_id
@@ -695,6 +710,13 @@ async def start_scan(
     db: Session = Depends(get_db)
 ):
     """Start a scan via subprocess using existing main.py CLI."""
+    
+    # ONLINE PLATFORM: Recon mode disabled (requires external tools: subfinder, httpx, nuclei)
+    if mode == "recon":
+        raise HTTPException(
+            status_code=403,
+            detail="Recon mode is only available for self-hosted deployments. Please use Standard mode with a scope file."
+        )
     
     # Check tier for scope file usage
     if user:
