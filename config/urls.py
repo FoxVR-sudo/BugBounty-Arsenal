@@ -28,7 +28,11 @@ from drf_spectacular.views import (
 )
 
 from users.views import UserViewSet
-from scans.views import ScanViewSet, AuditLogViewSet, ApiKeyViewSet
+from users.auth_views import login_view, signup_view, token_refresh_view
+from scans.views import (
+    ScanViewSet, AuditLogViewSet, ApiKeyViewSet,
+    scan_status_view, scan_start_view, scan_stop_view, validate_scope_view
+)
 from subscriptions.views import PlanViewSet, SubscriptionViewSet
 
 # DRF Router
@@ -46,7 +50,18 @@ urlpatterns = [
     # Web interface (templates)
     path('', include('web.urls')),
     
-    # API endpoints
+    # Authentication endpoints (must be before api/ include)
+    path('api/auth/login/', login_view, name='auth-login'),
+    path('api/auth/signup/', signup_view, name='auth-signup'),
+    path('api/auth/refresh/', token_refresh_view, name='auth-refresh'),
+    
+    # Scan endpoints (custom actions - must be before router)
+    path('api/scans/status/', scan_status_view, name='scan-status'),
+    path('api/scans/start/', scan_start_view, name='scan-start'),
+    path('api/scans/stop/<str:scan_id>/', scan_stop_view, name='scan-stop'),
+    path('api/scans/validate-scope/', validate_scope_view, name='validate-scope'),
+    
+    # API endpoints (router - more general patterns)
     path('api/', include((router.urls, 'api'), namespace='api')),
     
     # JWT Authentication

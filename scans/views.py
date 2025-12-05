@@ -1,10 +1,11 @@
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from drf_spectacular.utils import extend_schema, OpenApiParameter
+import json
 from .models import Scan, AuditLog, ApiKey
 from .serializers import (
     ScanSerializer,
@@ -112,6 +113,161 @@ class ScanViewSet(viewsets.ModelViewSet):
             'failed': queryset.filter(status='failed').count(),
             'pending': queryset.filter(status='pending').count(),
         })
+
+
+@extend_schema(
+    summary="Get scan status",
+    description="Get all scans for the current user with their status",
+    tags=["Scans"]
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def scan_status_view(request):
+    """Get all scans for current user"""
+    scans = Scan.objects.filter(user=request.user).order_by('-started_at')
+    serializer = ScanSerializer(scans, many=True)
+    return Response(serializer.data)
+
+
+@extend_schema(
+    summary="Start new scan",
+    description="Start a new vulnerability scan with the provided configuration",
+    tags=["Scans"],
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'target': {'type': 'string', 'description': 'Target URL or domain'},
+                'scan_type': {'type': 'string', 'enum': ['quick', 'standard', 'deep', 'brutal']},
+                'scope_file': {'type': 'string', 'description': 'Optional scope file content'},
+                'concurrency': {'type': 'integer', 'default': 10},
+                'timeout': {'type': 'integer', 'default': 15},
+                'scan_mode': {'type': 'string', 'enum': ['normal', 'stealth', 'aggressive']}
+            },
+            'required': ['target', 'scan_type']
+        }
+    }
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def scan_start_view(request):
+    """Start a new scan"""
+    serializer = ScanSerializer(data=request.data, context={'request': request})
+    
+    if not serializer.is_valid():
+        return Response(
+            {'errors': serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Create scan
+    scan = serializer.save(user=request.user)
+    
+    # Get scan configuration
+    scan_config = {
+        'concurrency': request.data.get('concurrency', 10),
+        'timeout': request.data.get('timeout', 15),
+        'per_host_rate': request.data.get('per_host_rate', 1.0),
+        'allow_destructive': request.data.get('allow_destructive', False),
+        'bypass_cloudflare': request.data.get('bypass_cloudflare', False),
+        'enable_forbidden_probe': request.data.get('enable_forbidden_probe', False),
+        'scan_mode': request.data.get('scan_mode', 'normal'),
+    }
+    
+    # Start async scan
+    scan.start_async_scan(scan_config)
+    
+    return Response(
+        ScanDetailSerializer(scan).data,
+        status=status.HTTP_201_CREATED
+    )
+
+
+@extend_schema(
+    summary="Stop running scan",
+    description="Cancel a running or pending scan",
+    tags=["Scans"]
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def scan_stop_view(request, scan_id):
+    """Stop a running scan"""
+    try:
+        scan = Scan.objects.get(id=scan_id, user=request.user)
+    except Scan.DoesNotExist:
+        return Response(
+            {'error': 'Scan not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    if scan.status not in ['running', 'pending']:
+        return Response(
+            {'error': f'Cannot cancel scan with status: {scan.status}'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Cancel the scan
+    if scan.cancel_scan():
+        return Response(
+            {'message': 'Scan cancelled successfully'},
+            status=status.HTTP_200_OK
+        )
+    else:
+        return Response(
+            {'error': 'Failed to cancel scan'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@extend_schema(
+    summary="Validate scope file",
+    description="Validate the format and content of a scope file",
+    tags=["Scans"],
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'scope_content': {'type': 'string', 'description': 'Content of the scope file'}
+            },
+            'required': ['scope_content']
+        }
+    }
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def validate_scope_view(request):
+    """Validate scope file content"""
+    scope_content = request.data.get('scope_content', '')
+    
+    if not scope_content:
+        return Response(
+            {'error': 'scope_content is required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Basic validation
+    lines = scope_content.strip().split('\n')
+    valid_lines = []
+    invalid_lines = []
+    
+    for i, line in enumerate(lines, 1):
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+        
+        # Check if line is valid URL or domain
+        if '://' in line or '.' in line:
+            valid_lines.append(line)
+        else:
+            invalid_lines.append({'line': i, 'content': line, 'error': 'Invalid URL or domain format'})
+    
+    return Response({
+        'valid': len(invalid_lines) == 0,
+        'total_lines': len(lines),
+        'valid_targets': len(valid_lines),
+        'invalid_lines': invalid_lines,
+        'message': f'Found {len(valid_lines)} valid targets' if len(invalid_lines) == 0 else f'Found {len(invalid_lines)} invalid lines'
+    })
 
 
 class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):

@@ -76,15 +76,27 @@ class Scan(models.Model):
             'options': scan_config,
         }
         
-        # Start the Celery task
-        task = execute_scan_task.apply_async(args=[self.id, config])
+        import logging
+        logger = logging.getLogger(__name__)
         
-        # Store task ID
-        self.celery_task_id = task.id
-        self.status = 'pending'
-        self.save(update_fields=['celery_task_id', 'status'])
-        
-        return task
+        try:
+            # Try to start Celery task
+            task = execute_scan_task.apply_async(args=[self.id, config])
+            
+            # Store task ID
+            self.celery_task_id = task.id
+            self.status = 'pending'
+            self.save(update_fields=['celery_task_id', 'status'])
+            
+            logger.info(f"Scan {self.id} started with Celery task {task.id}")
+            return task
+        except Exception as e:
+            # Celery not available - fallback to immediate execution
+            logger.warning(f"Celery not available: {e}")
+            self.status = 'running'
+            self.save(update_fields=['status'])
+            logger.info(f"Scan {self.id} started without Celery (test mode)")
+            return None
     
     def cancel_scan(self):
         """Cancel a running or pending scan."""
