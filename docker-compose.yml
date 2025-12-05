@@ -1,11 +1,30 @@
 version: '3.8'
 
 services:
+  # Redis for Celery message broker
+  redis:
+    image: redis:7-alpine
+    container_name: bugbounty-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bugbounty-network
+
+  # Django web application
   web:
     build: .
-    container_name: bugbounty-arsenal
+    container_name: bugbounty-web
     ports:
-      - "5000:5000"
+      - "8000:8000"
     volumes:
       # Persistent data
       - ./bugbounty_arsenal.db:/app/bugbounty_arsenal.db
@@ -16,23 +35,91 @@ services:
       - ./reports:/app/reports
       - ./recon_results:/app/recon_results
       - ./raw_responses:/app/raw_responses
-      # Config files
+      - ./media:/app/media
+      - ./staticfiles:/app/staticfiles
+      # Config files (optional)
       - ./.env:/app/.env
     environment:
+      - DJANGO_SETTINGS_MODULE=config.settings
       - ENVIRONMENT=production
       - DATABASE_URL=sqlite:///./bugbounty_arsenal.db
-      - SECRET_KEY=${SECRET_KEY:-your-secret-key-here}
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-2ooh6&ub7ohd-6j&#+4a#bd3^+h=l^mpenwml=alf0@3vzyo8q}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 5s
+      start_period: 40s
     networks:
       - bugbounty-network
+
+  # Celery worker for async tasks
+  celery:
+    build: .
+    container_name: bugbounty-celery
+    command: celery -A config worker --loglevel=info --concurrency=4
+    volumes:
+      # Same volumes as web for file access
+      - ./bugbounty_arsenal.db:/app/bugbounty_arsenal.db
+      - ./recon_output:/app/recon_output
+      - ./scan_progress:/app/scan_progress
+      - ./screenshots:/app/screenshots
+      - ./bug_evidence:/app/bug_evidence
+      - ./reports:/app/reports
+      - ./recon_results:/app/recon_results
+      - ./raw_responses:/app/raw_responses
+      - ./.env:/app/.env
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings
+      - ENVIRONMENT=production
+      - DATABASE_URL=sqlite:///./bugbounty_arsenal.db
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-2ooh6&ub7ohd-6j&#+4a#bd3^+h=l^mpenwml=alf0@3vzyo8q}
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - bugbounty-network
+
+  # Celery Beat for scheduled tasks (optional)
+  celery-beat:
+    build: .
+    container_name: bugbounty-celery-beat
+    command: celery -A config beat --loglevel=info
+    volumes:
+      - ./bugbounty_arsenal.db:/app/bugbounty_arsenal.db
+      - ./.env:/app/.env
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings
+      - ENVIRONMENT=production
+      - DATABASE_URL=sqlite:///./bugbounty_arsenal.db
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-2ooh6&ub7ohd-6j&#+4a#bd3^+h=l^mpenwml=alf0@3vzyo8q}
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - bugbounty-network
+
+volumes:
+  redis_data:
+    driver: local
 
 networks:
   bugbounty-network:
