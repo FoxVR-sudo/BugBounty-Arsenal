@@ -29,11 +29,19 @@ from drf_spectacular.views import (
 
 from users.views import UserViewSet
 from users.auth_views import login_view, signup_view, token_refresh_view
+from users.admin_views import (
+    admin_stats, admin_users_list, admin_user_activate, admin_user_deactivate,
+    admin_scans_list, admin_database_backup, admin_database_restore,
+    admin_system_health, admin_celery_status, admin_clear_cache
+)
 from scans.views import (
     ScanViewSet, AuditLogViewSet, ApiKeyViewSet,
     scan_status_view, scan_start_view, scan_stop_view, validate_scope_view
 )
 from subscriptions.views import PlanViewSet, SubscriptionViewSet
+from subscriptions.billing_views import (
+    create_checkout_session, billing_portal, buy_extra_scans, change_tier
+)
 
 # DRF Router
 router = routers.DefaultRouter()
@@ -60,6 +68,24 @@ urlpatterns = [
     path('api/scans/start/', scan_start_view, name='scan-start'),
     path('api/scans/stop/<str:scan_id>/', scan_stop_view, name='scan-stop'),
     path('api/scans/validate-scope/', validate_scope_view, name='validate-scope'),
+    
+    # Billing endpoints
+    path('api/billing/checkout/', create_checkout_session, name='billing-checkout'),
+    path('api/billing/portal/', billing_portal, name='billing-portal'),
+    path('api/billing/buy-scans/', buy_extra_scans, name='buy-extra-scans'),
+    path('api/subscriptions/change-tier/', change_tier, name='change-tier'),
+    
+    # Admin endpoints (requires admin/staff permissions)
+    path('api/admin/stats/', admin_stats, name='admin-stats'),
+    path('api/admin/users/', admin_users_list, name='admin-users-list'),
+    path('api/admin/users/<str:user_id>/activate/', admin_user_activate, name='admin-user-activate'),
+    path('api/admin/users/<str:user_id>/deactivate/', admin_user_deactivate, name='admin-user-deactivate'),
+    path('api/admin/scans/', admin_scans_list, name='admin-scans-list'),
+    path('api/admin/database/backup/', admin_database_backup, name='admin-database-backup'),
+    path('api/admin/database/restore/', admin_database_restore, name='admin-database-restore'),
+    path('api/admin/system-health/', admin_system_health, name='admin-system-health'),
+    path('api/admin/celery-status/', admin_celery_status, name='admin-celery-status'),
+    path('api/admin/clear-cache/', admin_clear_cache, name='admin-clear-cache'),
     
     # API endpoints (router - more general patterns)
     path('api/', include((router.urls, 'api'), namespace='api')),

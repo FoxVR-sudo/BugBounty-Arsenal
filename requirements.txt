@@ -36,6 +36,9 @@ redis==7.1.0
 gunicorn==23.0.0
 whitenoise==6.9.0
 
+# System monitoring
+psutil==6.1.1
+
 # External tools (install manually if not present):
 # subfinder
 # httpx
