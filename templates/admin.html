@@ -5,39 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Panel - BugBounty Arsenal</title>
-    <script>
-        // Django API URLs configuration for Admin Panel
-        window.ADMIN_API_URLS = {
-            stats: '/api/admin/stats/',
-            users: '/api/admin/users/',
-            plans: '/api/admin/plans/',
-            scans: '/api/admin/scans/',
-            auditLogs: '/api/admin/audit-logs/',
-            databaseTables: '/api/admin/database/tables/',
-            databaseInfo: '/api/admin/database/info/',
-            databaseQuery: '/api/admin/database/query/',
-            databaseTable: '/api/admin/database/table/',
-            databaseBackup: '/api/admin/database/backup/'
-        };
-        window.CSRF_TOKEN = '{{ csrf_token }}';
-        
-        // Helper function to get CSRF token
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
-                }
-            }
-            return cookieValue;
-        }
-        window.getCsrfToken = () => getCookie('csrftoken') || window.CSRF_TOKEN;
-    </script>
+    <script src="{% static 'js/api-client.js' %}"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -364,107 +332,78 @@
         }
         
         async function loadDashboard() {
-            const resp = await fetch(window.ADMIN_API_URLS.stats);
-            const data = await resp.json();
-            document.getElementById('stat-users').textContent = data.total_users || 0;
-            document.getElementById('stat-subs').textContent = data.active_subscriptions || 0;
-            document.getElementById('stat-scans').textContent = data.scans_today || 0;
-            document.getElementById('stat-revenue').textContent = '$' + (data.monthly_revenue || 0);
+            try {
+                const data = await window.api.getAdminStats();
+                document.getElementById('stat-users').textContent = data.users?.total || 0;
+                document.getElementById('stat-subs').textContent = data.subscriptions?.active || 0;
+                document.getElementById('stat-scans').textContent = data.scans?.this_month || 0;
+                document.getElementById('stat-revenue').textContent = '$' + (data.revenue?.monthly || 0);
+            } catch (error) {
+                console.error('Failed to load dashboard:', error);
+                alert('Error loading dashboard: ' + error.message);
+            }
         }
         
         async function loadUsers() {
-            const resp = await fetch(window.ADMIN_API_URLS.users);
-            const data = await resp.json();
-            let html = '<table class="data-table"><thead><tr><th>Email</th><th>Plan</th><th>Status</th><th>Created</th></tr></thead><tbody>';
-            data.users.forEach(u => {
-                html += `<tr>
-                    <td>${u.email}</td>
-                    <td><span class="badge ${u.subscription?.tier === 'pro' ? 'success' : 'info'}">${(u.subscription?.tier || 'free').toUpperCase()}</span></td>
-                    <td><span class="badge ${u.is_active ? 'success' : 'danger'}">${u.is_active ? 'Active' : 'Inactive'}</span></td>
-                    <td>${new Date(u.created_at).toLocaleDateString()}</td>
-                </tr>`;
-            });
-            html += '</tbody></table>';
-            document.getElementById('users-list').innerHTML = html;
+            try {
+                const data = await window.api.getAdminUsers();
+                let html = '<table class="data-table"><thead><tr><th>Email</th><th>Active</th><th>Staff</th><th>Scans</th><th>Created</th></tr></thead><tbody>';
+                data.results.forEach(u => {
+                    html += `<tr>
+                        <td>${u.email}</td>
+                        <td><span class="badge ${u.is_active ? 'success' : 'danger'}">${u.is_active ? 'Active' : 'Inactive'}</span></td>
+                        <td><span class="badge ${u.is_staff ? 'warning' : 'info'}">${u.is_staff ? 'Staff' : 'User'}</span></td>
+                        <td>${u.scan_count || 0}</td>
+                        <td>${new Date(u.date_joined).toLocaleDateString()}</td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+                document.getElementById('users-list').innerHTML = html;
+            } catch (error) {
+                console.error('Failed to load users:', error);
+                document.getElementById('users-list').innerHTML = '<p style="color: #dc2626;">Error loading users: ' + error.message + '</p>';
+            }
         }
         
         async function loadPlans() {
             const resp = await fetch(window.ADMIN_API_URLS.plans);
-            const data = await resp.json();
-            let html = '<table class="data-table"><thead><tr><th>Name</th><th>Price</th><th>Subscribers</th><th>Status</th></tr></thead><tbody>';
-            data.forEach(p => {
-                html += `<tr>
-                    <td><strong>${p.display_name}</strong></td>
-                    <td>$${p.price_monthly}/mo</td>
-                    <td>${p.subscribers}</td>
-                    <td><span class="badge ${p.is_active ? 'success' : 'danger'}">${p.is_active ? 'Active' : 'Inactive'}</span></td>
-                </tr>`;
-            });
-            html += '</tbody></table>';
-            document.getElementById('plans-list').innerHTML = html;
+        async function loadPlans() {
+            // TODO: Implement Plan management API endpoints
+            document.getElementById('plans-list').innerHTML = '<p style="color: #9ca3af;">Plan management API not yet implemented. Use Django admin panel for now.</p>';
         }
         
         async function loadScans() {
-            const resp = await fetch(window.ADMIN_API_URLS.scans);
-            const data = await resp.json();
-            let html = '<table class="data-table"><thead><tr><th>Job ID</th><th>User</th><th>Target</th><th>Status</th><th>Date</th></tr></thead><tbody>';
-            data.scans.forEach(s => {
-                html += `<tr>
-                    <td><code>${s.job_id.substr(0,8)}</code></td>
-                    <td>${s.user_email}</td>
-                    <td>${s.target}</td>
-                    <td><span class="badge ${s.status === 'completed' ? 'success' : 'info'}">${s.status}</span></td>
-                    <td>${new Date(s.created_at).toLocaleDateString()}</td>
-                </tr>`;
-            });
-            html += '</tbody></table>';
-            document.getElementById('scans-list').innerHTML = html;
+            try {
+                const data = await window.api.getAdminScans();
+                let html = '<table class="data-table"><thead><tr><th>ID</th><th>User</th><th>Target</th><th>Status</th><th>Type</th><th>Date</th></tr></thead><tbody>';
+                data.results.forEach(s => {
+                    html += `<tr>
+                        <td>${s.id}</td>
+                        <td>${s.user__email}</td>
+                        <td>${s.target}</td>
+                        <td><span class="badge ${s.status === 'completed' ? 'success' : s.status === 'running' ? 'warning' : 'info'}">${s.status}</span></td>
+                        <td>${s.scan_type || 'N/A'}</td>
+                        <td>${new Date(s.created_at).toLocaleDateString()}</td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+                document.getElementById('scans-list').innerHTML = html;
+            } catch (error) {
+                console.error('Failed to load scans:', error);
+                document.getElementById('scans-list').innerHTML = '<p style="color: #dc2626;">Error loading scans: ' + error.message + '</p>';
+            }
         }
         
         async function loadAudit() {
-            const resp = await fetch(window.ADMIN_API_URLS.auditLogs);
-            const data = await resp.json();
-            let html = '<table class="data-table"><thead><tr><th>Event</th><th>Description</th><th>IP</th><th>Date</th></tr></thead><tbody>';
-            data.logs.forEach(l => {
-                html += `<tr>
-                    <td><strong>${l.event_type}</strong></td>
-                    <td>${l.description || '-'}</td>
-                    <td>${l.ip_address || '-'}</td>
-                    <td>${new Date(l.created_at).toLocaleString()}</td>
-                </tr>`;
-            });
-            html += '</tbody></table>';
-            document.getElementById('audit-list').innerHTML = html;
+            // TODO: Implement Audit Log API endpoints
+            document.getElementById('audit-list').innerHTML = '<p style="color: #9ca3af;">Audit log API not yet implemented. Use Django admin panel for now.</p>';
         }
         
         async function loadDatabase() {
-            // Load tables overview
-            const respTables = await fetch(window.ADMIN_API_URLS.databaseTables);
-            const dataTables = await respTables.json();
-            
-            // Display tables with row counts
-            let tablesHtml = '<table class="data-table"><thead><tr><th>Table Name</th><th>Rows</th><th>Columns</th><th>Actions</th></tr></thead><tbody>';
-            dataTables.tables.forEach(t => {
-                tablesHtml += `<tr>
-                    <td><strong>${t.name}</strong></td>
-                    <td>${t.row_count.toLocaleString()}</td>
-                    <td>${t.columns.length}</td>
-                    <td><button class="btn-sm" onclick="viewTable('${t.name}')">View Data</button></td>
-                </tr>`;
-            });
-            tablesHtml += '</tbody></table>';
-            document.getElementById('tables-list').innerHTML = tablesHtml;
-            
-            // Populate table selector
-            const selector = document.getElementById('table-selector');
-            selector.innerHTML = '<option value="">Select a table...</option>';
-            dataTables.tables.forEach(t => {
-                selector.innerHTML += `<option value="${t.name}">${t.name} (${t.row_count} rows)</option>`;
-            });
-            
-            // Load database info
-            const respInfo = await fetch(window.ADMIN_API_URLS.databaseInfo);
-            const dataInfo = await respInfo.json();
+            // TODO: Implement Database management API endpoints
+            const html = '<p style="color: #9ca3af;">Database management API not yet implemented. Use Django admin panel or direct database access.</p>';
+            document.getElementById('tables-list').innerHTML = html;
+        }
             document.getElementById('db-info').innerHTML = `
                 <p><strong>Size:</strong> ${dataInfo.size_mb} MB</p>
                 <p><strong>Total Users:</strong> ${dataInfo.total_users}</p>

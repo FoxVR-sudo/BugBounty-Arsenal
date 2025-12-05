@@ -266,8 +266,8 @@
         </p>
     </div>
     
+    <script src="{% static 'js/api-client.js' %}"></script>
     <script>
-        const signupApiUrl = '/api/auth/signup/';  // TODO: Create API endpoint
         const dashboardUrl = '{% url "dashboard" %}';
         
         const form = document.getElementById('signup-form');
@@ -283,9 +283,10 @@
             successDiv.style.display = 'none';
             
             // Get form data
-            const formData = new FormData(form);
-            const password = formData.get('password');
-            const confirmPassword = formData.get('confirm_password');
+            const email = document.getElementById('email').value;
+            const fullName = document.getElementById('full_name').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm_password').value;
             
             // Validate passwords match
             if (password !== confirmPassword) {
@@ -306,45 +307,17 @@
             submitBtn.textContent = 'Creating account...';
             
             try {
-                const data = {
-                    email: formData.get('email'),
-                    full_name: formData.get('full_name'),
-                    password: formData.get('password')
-                };
+                await window.api.signup(email, password, fullName);
                 
-                const response = await fetch(signupApiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                    },
-                    body: JSON.stringify(data)
-                });
+                successDiv.textContent = 'Account created successfully! Redirecting...';
+                successDiv.style.display = 'block';
                 
-                const result = await response.json();
-                
-                if (response.ok) {
-                    successDiv.textContent = 'Account created successfully! Redirecting...';
-                    successDiv.style.display = 'block';
-                    
-                    // Store tokens if using JWT
-                    if (result.access) {
-                        localStorage.setItem('access_token', result.access);
-                        localStorage.setItem('refresh_token', result.refresh);
-                    }
-                    
-                    // Redirect to dashboard after 2 seconds
-                    setTimeout(() => {
-                        window.location.href = dashboardUrl;
-                    }, 2000);
-                } else {
-                    errorDiv.textContent = result.detail || result.message || 'Registration failed';
-                    errorDiv.style.display = 'block';
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Create Account';
-                }
+                // Redirect to dashboard after 1.5 seconds
+                setTimeout(() => {
+                    window.location.href = dashboardUrl;
+                }, 1500);
             } catch (error) {
-                errorDiv.textContent = 'Network error. Please try again.';
+                errorDiv.textContent = error.message;
                 errorDiv.style.display = 'block';
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Create Account';
