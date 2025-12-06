@@ -76,25 +76,42 @@ class BugBountyAPI {
      * Make authenticated API request with automatic token refresh
      */
     async request(url, options = {}) {
+        // Include CSRF token for session authentication
+        const csrfToken = this.getCsrfToken();
+        const headers = {
+            ...this.getHeaders(options.auth !== false),
+            ...options.headers,
+        };
+        
+        // Add CSRF token for non-GET requests
+        if (options.method && options.method !== 'GET' && csrfToken) {
+            headers['X-CSRFToken'] = csrfToken;
+        }
+        
         let response = await fetch(url, {
             ...options,
-            headers: {
-                ...this.getHeaders(options.auth !== false),
-                ...options.headers,
-            }
+            credentials: 'same-origin', // Include cookies for session auth
+            headers: headers
         });
 
         // If unauthorized, try to refresh token and retry
         if (response.status === 401 && this.refreshToken && options.auth !== false) {
             const refreshed = await this.refreshAccessToken();
             if (refreshed) {
+                // Update headers with new token
+                const retryHeaders = {
+                    ...this.getHeaders(true),
+                    ...options.headers,
+                };
+                if (options.method && options.method !== 'GET' && csrfToken) {
+                    retryHeaders['X-CSRFToken'] = csrfToken;
+                }
+                
                 // Retry request with new token
                 response = await fetch(url, {
                     ...options,
-                    headers: {
-                        ...this.getHeaders(true),
-                        ...options.headers,
-                    }
+                    credentials: 'same-origin',
+                    headers: retryHeaders
                 });
             }
         }

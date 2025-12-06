@@ -152,9 +152,14 @@ def scan_status_view(request):
 @permission_classes([IsAuthenticated])
 def scan_start_view(request):
     """Start a new scan"""
+    # DEBUG: Log incoming request data
+    print(f"🔍 DEBUG scan_start_view - request.data: {request.data}")
+    print(f"🔍 DEBUG scan_start_view - request.user: {request.user}")
+    
     serializer = ScanSerializer(data=request.data, context={'request': request})
     
     if not serializer.is_valid():
+        print(f"❌ DEBUG Serializer errors: {serializer.errors}")
         return Response(
             {'errors': serializer.errors},
             status=status.HTTP_400_BAD_REQUEST
@@ -327,3 +332,146 @@ class ApiKeyViewSet(viewsets.ModelViewSet):
         api_key.regenerate_key()
         serializer = self.get_serializer(api_key)
         return Response(serializer.data)
+
+
+# Export views
+@extend_schema(
+    summary="Export scan report",
+    description="Export scan report in specified format (html, pdf, json, csv)",
+    tags=["Scans"]
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def export_scan_report_view(request, scan_id):
+    """Export scan report in specified format"""
+    from django.http import FileResponse, HttpResponse
+    from scans.exporters import export_scan_report
+    import os
+    
+    # Get scan
+    try:
+        scan = Scan.objects.get(id=scan_id)
+    except Scan.DoesNotExist:
+        return Response(
+            {'error': 'Scan not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    # Check permissions
+    if not (request.user == scan.user or request.user.is_staff):
+        return Response(
+            {'error': 'Permission denied'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    # Check if scan is completed
+    if scan.status != 'completed':
+        return Response(
+            {'error': 'Scan is not completed yet'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    # Get format
+    export_format = request.query_params.get('format', 'html').lower()
+    if export_format not in ['html', 'pdf', 'json', 'csv']:
+        return Response(
+            {'error': 'Invalid format. Must be one of: html, pdf, json, csv'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    try:
+        # Generate report
+        file_path = export_scan_report(scan, export_format)
+        
+        # Update storage size
+        scan.update_storage_size()
+        
+        # Determine content type
+        content_types = {
+            'html': 'text/html',
+            'pdf': 'application/pdf',
+            'json': 'application/json',
+            'csv': 'text/csv',
+        }
+        
+        # Return file
+        file_name = f'scan_{scan.id}_report.{export_format}'
+        response = FileResponse(
+            open(file_path, 'rb'),
+            content_type=content_types[export_format]
+        )
+        response['Content-Disposition'] = f'attachment; filename="{file_name}"'
+        return response
+        
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Export error: {e}")
+        
+        return Response(
+            {'error': f'Failed to generate report: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+
+@extend_schema(
+    summary="Export all formats as ZIP",
+    description="Export scan report in all formats as a ZIP archive",
+    tags=["Scans"]
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def export_all_formats_view(request, scan_id):
+    """Export all report formats as ZIP"""
+    from django.http import HttpResponse
+    from scans.exporters import export_all_formats
+    import zipfile
+    import io
+    import os
+    
+    # Get scan
+    try:
+        scan = Scan.objects.get(id=scan_id)
+    except Scan.DoesNotExist:
+        return Response(
+            {'error': 'Scan not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    
+    # Check permissions
+    if not (request.user == scan.user or request.user.is_staff):
+        return Response(
+            {'error': 'Permission denied'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    try:
+        # Generate all formats
+        files = export_all_formats(scan)
+        
+        # Create ZIP in memory
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            for fmt, file_path in files.items():
+                if os.path.exists(file_path):
+                    arcname = f'scan_{scan.id}_report.{fmt}'
+                    zip_file.write(file_path, arcname)
+        
+        # Update storage size
+        scan.update_storage_size()
+        
+        # Return ZIP
+        zip_buffer.seek(0)
+        response = HttpResponse(zip_buffer.read(), content_type='application/zip')
+        response['Content-Disposition'] = f'attachment; filename="scan_{scan.id}_all_reports.zip"'
+        return response
+        
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Export all error: {e}")
+        
+        return Response(
+            {'error': f'Failed to generate reports: {str(e)}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

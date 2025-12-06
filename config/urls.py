@@ -37,7 +37,8 @@ from users.admin_views import (
 )
 from scans.views import (
     ScanViewSet, AuditLogViewSet, ApiKeyViewSet,
-    scan_status_view, scan_start_view, scan_stop_view, validate_scope_view
+    scan_status_view, scan_start_view, scan_stop_view, validate_scope_view,
+    export_scan_report_view, export_all_formats_view
 )
 from subscriptions.views import PlanViewSet, SubscriptionViewSet
 from subscriptions.billing_views import (
@@ -72,6 +73,8 @@ urlpatterns = [
     path('api/scans/start/', scan_start_view, name='scan-start'),
     path('api/scans/stop/<str:scan_id>/', scan_stop_view, name='scan-stop'),
     path('api/scans/validate-scope/', validate_scope_view, name='validate-scope'),
+    path('api/scans/<int:scan_id>/export/', export_scan_report_view, name='scan-export'),
+    path('api/scans/<int:scan_id>/export-all/', export_all_formats_view, name='scan-export-all'),
     
     # Billing endpoints
     path('api/billing/checkout/', create_checkout_session, name='billing-checkout'),

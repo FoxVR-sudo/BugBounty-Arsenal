@@ -15,6 +15,7 @@ urlpatterns = [
     
     # Dashboard
     path('dashboard/', views.dashboard, name='dashboard'),
+    path('dashboard/results/', views.results_page, name='results'),
     
     # Admin panel
     path('admin-panel/', views.admin_panel, name='admin-panel'),

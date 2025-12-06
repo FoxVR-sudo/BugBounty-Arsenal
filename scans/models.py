@@ -33,10 +33,19 @@ class Scan(models.Model):
     started_at = models.DateTimeField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
     
+    # Progress tracking
+    progress = models.IntegerField(default=0, help_text='Scan progress percentage (0-100)')
+    current_step = models.CharField(max_length=200, blank=True, help_text='Current scan step/phase')
+    
     # Results
     report_path = models.CharField(max_length=500, blank=True)
     vulnerabilities_found = models.IntegerField(default=0)
     severity_counts = models.JSONField(default=dict, blank=True)
+    raw_results = models.JSONField(default=dict, blank=True, help_text='Full scan results data')
+    
+    # Storage management
+    report_size_bytes = models.BigIntegerField(default=0, help_text='Total size of all report files in bytes')
+    expires_at = models.DateTimeField(null=True, blank=True, help_text='When this scan result will be auto-deleted')
     
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
@@ -129,6 +138,88 @@ class Scan(models.Model):
             'state': task.state,
             'info': task.info if task.info else {},
         }
+    
+    def calculate_expiration(self):
+        """Calculate when this scan should expire based on user tier."""
+        if not self.completed_at:
+            return None
+        
+        # Get user tier from subscription
+        try:
+            tier = self.user.subscription.plan.name.lower()
+        except:
+            tier = 'free'
+        
+        # Expiration periods by tier
+        retention_days = {
+            'free': 7,
+            'basic': 30,
+            'pro': 90,
+            'enterprise': 365,
+        }
+        
+        days = retention_days.get(tier, 7)
+        from datetime import timedelta
+        return self.completed_at + timedelta(days=days)
+    
+    def calculate_storage_size(self):
+        """Calculate total storage used by this scan's files."""
+        import os
+        total_size = 0
+        
+        if self.report_path and os.path.exists(self.report_path):
+            total_size += os.path.getsize(self.report_path)
+        
+        # Check for export files
+        report_dir = os.path.dirname(self.report_path) if self.report_path else 'reports'
+        scan_files = [
+            f'{report_dir}/scan_{self.id}.html',
+            f'{report_dir}/scan_{self.id}.pdf',
+            f'{report_dir}/scan_{self.id}.json',
+            f'{report_dir}/scan_{self.id}.csv',
+        ]
+        
+        for file_path in scan_files:
+            if os.path.exists(file_path):
+                total_size += os.path.getsize(file_path)
+        
+        return total_size
+    
+    def update_storage_size(self):
+        """Update the report_size_bytes field."""
+        self.report_size_bytes = self.calculate_storage_size()
+        self.save(update_fields=['report_size_bytes'])
+    
+    def is_expired(self):
+        """Check if this scan has expired."""
+        if not self.expires_at:
+            return False
+        return timezone.now() > self.expires_at
+    
+    def delete_files(self):
+        """Delete all files associated with this scan."""
+        import os
+        deleted_files = []
+        
+        if self.report_path and os.path.exists(self.report_path):
+            os.remove(self.report_path)
+            deleted_files.append(self.report_path)
+        
+        # Delete export files
+        report_dir = os.path.dirname(self.report_path) if self.report_path else 'reports'
+        scan_files = [
+            f'{report_dir}/scan_{self.id}.html',
+            f'{report_dir}/scan_{self.id}.pdf',
+            f'{report_dir}/scan_{self.id}.json',
+            f'{report_dir}/scan_{self.id}.csv',
+        ]
+        
+        for file_path in scan_files:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                deleted_files.append(file_path)
+        
+        return deleted_files
 
 
 class AuditLog(models.Model):

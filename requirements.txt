@@ -32,9 +32,18 @@ drf-spectacular==0.29.0
 celery==5.6.0
 redis==7.1.0
 
+# WebSocket support
+channels==4.2.0
+channels-redis==4.2.0
+daphne==4.2.0
+
 # Production server
 gunicorn==23.0.0
 whitenoise==6.9.0
+
+# Report generation
+weasyprint==60.1
+reportlab==4.0.7
 
 # System monitoring
 psutil==6.1.1

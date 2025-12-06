@@ -13,6 +13,7 @@ from datetime import datetime
 from typing import Dict, List, Any, Optional
 from celery import shared_task
 from django.utils import timezone
+from scans.websocket_utils import send_scan_update, send_scan_complete, send_scan_error
 
 # Add project root to path to import scanner module
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -48,7 +49,17 @@ def execute_scan_task(self, scan_id: int, scan_config: Dict[str, Any]) -> Dict[s
         # Update status to running
         scan.status = 'running'
         scan.started_at = timezone.now()
-        scan.save(update_fields=['status', 'started_at'])
+        scan.progress = 0
+        scan.current_step = 'Initializing scan...'
+        scan.save(update_fields=['status', 'started_at', 'progress', 'current_step'])
+        
+        # Send WebSocket update
+        send_scan_update(scan_id, {
+            'status': 'running',
+            'progress': 0,
+            'current_step': 'Initializing scan...',
+            'started_at': scan.started_at.isoformat()
+        })
         
         logger.info(f"Starting scan {scan_id} for target: {scan_config['target']}")
         
@@ -76,8 +87,26 @@ def execute_scan_task(self, scan_id: int, scan_config: Dict[str, Any]) -> Dict[s
         # Import scanner module
         import scanner
         
+        # Update progress
+        scan.progress = 10
+        scan.current_step = 'Preparing scan targets...'
+        scan.save(update_fields=['progress', 'current_step'])
+        send_scan_update(scan_id, {
+            'progress': 10,
+            'current_step': 'Preparing scan targets...'
+        })
+        
         # Prepare targets list
         targets = [target] if isinstance(target, str) else target
+        
+        # Update progress
+        scan.progress = 20
+        scan.current_step = 'Running security detectors...'
+        scan.save(update_fields=['progress', 'current_step'])
+        send_scan_update(scan_id, {
+            'progress': 20,
+            'current_step': 'Running security detectors...'
+        })
         
         # Execute the scan
         logger.info(f"Executing scan with context: {scan_context}")
@@ -95,6 +124,15 @@ def execute_scan_task(self, scan_id: int, scan_config: Dict[str, Any]) -> Dict[s
             user_tier=user_tier,
             extra_context={'celery_task_id': self.request.id},
         )
+        
+        # Update progress
+        scan.progress = 70
+        scan.current_step = 'Processing results...'
+        scan.save(update_fields=['progress', 'current_step'])
+        send_scan_update(scan_id, {
+            'progress': 70,
+            'current_step': 'Processing results...'
+        })
         
         # Process results
         vulnerabilities_found = 0
@@ -117,6 +155,17 @@ def execute_scan_task(self, scan_id: int, scan_config: Dict[str, Any]) -> Dict[s
                     severity_counts[severity] += 1
                 else:
                     severity_counts['info'] += 1
+        
+        # Update progress
+        scan.progress = 85
+        scan.current_step = 'Generating report...'
+        scan.save(update_fields=['progress', 'current_step'])
+        send_scan_update(scan_id, {
+            'progress': 85,
+            'current_step': 'Generating report...',
+            'vulnerabilities_found': vulnerabilities_found,
+            'severity_counts': severity_counts
+        })
         
         # Generate report
         report_path = f'reports/scan_{scan_id}/report.json'
@@ -143,10 +192,23 @@ def execute_scan_task(self, scan_id: int, scan_config: Dict[str, Any]) -> Dict[s
         scan.report_path = report_path
         scan.vulnerabilities_found = vulnerabilities_found
         scan.severity_counts = severity_counts
+        scan.progress = 100
+        scan.current_step = 'Scan completed'
         scan.save(update_fields=[
             'status', 'completed_at', 'report_path',
-            'vulnerabilities_found', 'severity_counts'
+            'vulnerabilities_found', 'severity_counts',
+            'progress', 'current_step'
         ])
+        
+        # Send completion update via WebSocket
+        send_scan_complete(scan_id, {
+            'status': 'completed',
+            'progress': 100,
+            'completed_at': scan.completed_at.isoformat(),
+            'vulnerabilities_found': vulnerabilities_found,
+            'severity_counts': severity_counts,
+            'report_path': report_path
+        })
         
         logger.info(f"Scan {scan_id} completed successfully. Found {vulnerabilities_found} vulnerabilities.")
         
@@ -172,7 +234,16 @@ def execute_scan_task(self, scan_id: int, scan_config: Dict[str, Any]) -> Dict[s
             scan = Scan.objects.get(id=scan_id)
             scan.status = 'failed'
             scan.completed_at = timezone.now()
-            scan.save(update_fields=['status', 'completed_at'])
+            scan.progress = 0
+            scan.current_step = f'Error: {str(e)}'
+            scan.save(update_fields=['status', 'completed_at', 'progress', 'current_step'])
+            
+            # Send error via WebSocket
+            send_scan_error(scan_id, {
+                'status': 'failed',
+                'error': str(e),
+                'completed_at': scan.completed_at.isoformat()
+            })
         except Exception as save_error:
             logger.error(f"Failed to update scan status: {save_error}")
         

@@ -337,50 +337,26 @@
         
         <form id="scanForm" method="post">
             {% csrf_token %}
-            <label for="mode">Mode</label>
-            <select id="mode" name="mode" disabled>
-                <option value="standard" selected>Standard (scope file) - Online Platform</option>
-                <option value="recon" disabled>Recon (self-hosted only)</option>
-            </select>
-            <div style="font-size: 0.7rem; color: #9ca3af; margin-top: -0.5rem; margin-bottom: 0.5rem;">
-                ℹ️ Recon mode (Subfinder + HTTPX + Nuclei) is only available for self-hosted deployments
-            </div>
-
-            <label for="recon_domain">Domain (for recon - self-hosted only)</label>
-            <input type="text" id="recon_domain" name="recon_domain" placeholder="example.com" disabled style="opacity: 0.5;" />
-
-            <label for="scope_file">Scope file (for standard) {% if not tier_limits.is_pro_or_enterprise %}<span style="color: #a855f7; font-size: 0.75rem;">🔒 PRO/ENTERPRISE only</span>{% endif %}</label>
-            <div style="display: flex; gap: 0.5rem; align-items: flex-start; margin-bottom: 1rem;">
-                <input type="text" id="scope_file" name="scope_file" value="targets.csv" {% if not tier_limits.is_pro_or_enterprise %}disabled{% endif %} style="flex: 1; margin-bottom: 0;" />
+            <label for="target">Target URL or Domain</label>
+            <input type="text" id="target" name="target" placeholder="https://example.com or example.com" required style="margin-bottom: 1rem;" />
+            
+            <label for="scan_intensity">Scan Intensity</label>
+            <select id="scan_intensity" name="scan_intensity" style="margin-bottom: 1rem;">
+                <option value="quick">⚡ Quick Scan (Fast, basic checks)</option>
+                <option value="standard" selected>🔍 Standard Scan (Balanced)</option>
+                <option value="deep">🔬 Deep Scan (Thorough, slower)</option>
                 {% if tier_limits.is_pro_or_enterprise %}
-                <button type="button" onclick="validateScope()" class="btn-log" style="padding: 0.5rem 0.8rem; white-space: nowrap;">✓ Validate</button>
+                <option value="brutal">💀 Brutal Scan (Maximum depth - PRO/ENTERPRISE)</option>
                 {% endif %}
-            </div>
-            {% if not tier_limits.is_pro_or_enterprise %}
-            <div style="font-size: 0.7rem; color: #ef4444; margin-top: -0.8rem; margin-bottom: 0.8rem;">
-                ⚠️ Scope file scanning requires PRO or ENTERPRISE tier
-            </div>
-            {% endif %}
-            <div id="scope-validation" style="display: none; background: rgba(34, 197, 94, 0.15); border-left: 3px solid #22c55e; padding: 0.75rem; margin-bottom: 1rem; border-radius: 0.5rem; font-size: 0.8rem;">
-                <div style="font-weight: 600; margin-bottom: 0.25rem;">📊 Scope Analysis:</div>
+            </select>
                 <div style="color: #9ca3af;">
                     • <span style="color: #22c55e;"><span id="in-scope-count">0</span> in-scope</span> domains<br>
                     • <span style="color: #ef4444;"><span id="out-scope-count">0</span> out-of-scope</span> domains
-                </div>
-            </div>
-
-            <label for="scan_intensity">Scan intensity (standard)</label>
-            <select id="scan_intensity" name="scan_intensity" {% if not tier_limits.is_pro_or_enterprise %}disabled{% endif %}>
-                <option value="safe">safe</option>
-                <option value="normal" selected>normal</option>
-                <option value="brute">brute</option>
-            </select>
 
             <button type="submit" class="btn-primary" id="start-scan-btn">Start Scan</button>
         </form>
         <p style="font-size: 0.75rem; color: #6b7280; margin-top: 0.75rem;">
-            The scan runs in the background with the same
-            <code>main.py</code> logic you use from the terminal.
+            The scan runs in the background with all 39 detectors (30 active + 9 passive)
         </p>
 
         <div style="margin-top: 1.5rem;">
@@ -392,23 +368,43 @@
             <div id="active-scans-list">
                 {% if active_scans %}
                     {% for scan in active_scans %}
-                    <div class="scan-item {% if scan.status == 'completed' %}completed{% endif %}">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <div>
+                    <div class="scan-item scan-card-{{scan.id}}" data-scan-id="{{scan.id}}">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <div style="flex: 1;">
                                 <strong>{{ scan.target }}</strong>
-                                <span class="tag {% if scan.status == 'running' %}status-running{% else %}status-completed{% endif %}">
+                                <span class="tag scan-status-{{scan.id}} {% if scan.status == 'running' %}status-running{% elif scan.status == 'completed' %}status-completed{% elif scan.status == 'failed' %}status-failed{% else %}status-pending{% endif %}">
                                     {{ scan.status }}
                                 </span>
                             </div>
                             <div>
-                                <a href="/scan-log/{{ scan.job_id }}" target="_blank" class="btn-log">view log</a>
+                                {% if scan.report_path %}
+                                <a href="/media/{{ scan.report_path }}" target="_blank" class="btn-log">view report</a>
+                                {% endif %}
                                 {% if scan.status == 'running' %}
-                                <button onclick="stopScan('{{ scan.job_id }}')" class="btn-stop">stop</button>
+                                <button onclick="stopScan('{{ scan.id }}')" class="btn-stop">stop</button>
                                 {% endif %}
                             </div>
                         </div>
-                        <div style="font-size: 0.7rem; color: #6b7280; margin-top: 0.25rem;">
-                            Started: {{ scan.created_at|date:"H:i:s" }}
+                        
+                        <!-- Progress Bar (only for running/pending scans) -->
+                        {% if scan.status in 'running,pending' %}
+                        <div class="progress-container" style="margin: 0.5rem 0;">
+                            <div class="progress-bar" style="background: rgba(15, 23, 42, 0.7); border-radius: 0.5rem; height: 24px; position: relative; overflow: hidden;">
+                                <div class="progress-fill scan-progress-{{scan.id}}" style="background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%); height: 100%; width: {{scan.progress|default:0}}%; transition: width 0.3s ease; display: flex; align-items: center; justify-content: center; border-radius: 0.5rem;">
+                                    <span class="progress-text scan-progress-text-{{scan.id}}" style="position: absolute; width: 100%; text-align: center; font-size: 0.75rem; font-weight: 600; color: #fff; z-index: 2;">{{scan.progress|default:0}}%</span>
+                                </div>
+                            </div>
+                            <div class="progress-step scan-step-{{scan.id}}" style="font-size: 0.7rem; color: #9ca3af; margin-top: 0.25rem;">
+                                {{scan.current_step|default:"Initializing..."}}
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <div style="font-size: 0.7rem; color: #6b7280; margin-top: 0.25rem; display: flex; justify-content: space-between;">
+                            <span>Started: {{ scan.started_at|date:"Y-m-d H:i:s"|default:"Not started" }}</span>
+                            {% if scan.vulnerabilities_found > 0 %}
+                            <span style="color: #ef4444; font-weight: 600;">🔴 {{scan.vulnerabilities_found}} vulnerabilities found</span>
+                            {% endif %}
                         </div>
                     </div>
                     {% endfor %}
@@ -633,37 +629,64 @@
     // Poll scan status via AJAX and update only the scan list (no full page reload)
     async function updateScanStatuses() {
         try {
-            const data = await window.api.getScanStatus();
+            const response = await fetch('/api/scans/status/', {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                }
+            });
             
-            // Check if any scan status changed
-            let statusChanged = false;
-            if (data.scans) {
-                for (const scan of data.scans) {
-                    const lastStatus = lastScanStatuses[scan.job_id];
-                    if (lastStatus && lastStatus !== scan.status) {
-                        statusChanged = true;
-                        console.log(`Scan ${scan.job_id} status changed: ${lastStatus} → ${scan.status}`);
-                        // Mark that we need reload to update reports list
-                        if (scan.status === 'completed' || scan.status === 'failed') {
-                            needsPageReload = true;
-                        }
-                    }
-                    lastScanStatuses[scan.job_id] = scan.status;
+            if (!response.ok) return;
+            
+            const scans = await response.json();
+            
+            // Update each scan's progress
+            for (const scan of scans) {
+                const scanCard = document.querySelector(`.scan-card-${scan.id}`);
+                if (!scanCard) continue;
+                
+                // Update status badge
+                const statusBadge = scanCard.querySelector(`.scan-status-${scan.id}`);
+                if (statusBadge) {
+                    statusBadge.textContent = scan.status;
+                    statusBadge.className = `tag scan-status-${scan.id}`;
+                    if (scan.status === 'running') statusBadge.classList.add('status-running');
+                    else if (scan.status === 'completed') statusBadge.classList.add('status-completed');
+                    else if (scan.status === 'failed') statusBadge.classList.add('status-failed');
+                    else statusBadge.classList.add('status-pending');
                 }
                 
-                // Reload page if status changed to completed/failed (to update reports list)
-                if (statusChanged && needsPageReload) {
-                    console.log('Scan completed - reloading page to update reports...');
-                    window.location.reload();
+                // Update progress bar for running scans
+                if (scan.status === 'running' || scan.status === 'pending') {
+                    const progressFill = scanCard.querySelector(`.scan-progress-${scan.id}`);
+                    const progressText = scanCard.querySelector(`.scan-progress-text-${scan.id}`);
+                    const stepText = scanCard.querySelector(`.scan-step-${scan.id}`);
+                    
+                    if (progressFill) {
+                        progressFill.style.width = `${scan.progress || 0}%`;
+                    }
+                    if (progressText) {
+                        progressText.textContent = `${scan.progress || 0}%`;
+                    }
+                    if (stepText && scan.current_step) {
+                        stepText.textContent = scan.current_step;
+                    }
                 }
+                
+                // Reload page if scan completed (to show reports)
+                const lastStatus = lastScanStatuses[scan.id];
+                if (lastStatus === 'running' && (scan.status === 'completed' || scan.status === 'failed')) {
+                    console.log(`Scan ${scan.id} completed - reloading page...`);
+                    setTimeout(() => window.location.reload(), 1000);
+                }
+                lastScanStatuses[scan.id] = scan.status;
             }
         } catch (error) {
             console.error('Failed to update scan statuses:', error);
         }
     }
 
-    // Poll every 10 seconds (less aggressive than before)
-    setInterval(updateScanStatuses, 10000);
+    // Poll every 3 seconds for active progress
+    setInterval(updateScanStatuses, 3000);
     
     // Update progress bars for running scans
     async function updateProgressBars() {
@@ -737,9 +760,16 @@
     document.querySelector('form').addEventListener('submit', async function(e) {
         e.preventDefault();
         
-        const formData = new FormData(this);
-        const target = formData.get('target');
-        const scanType = formData.get('scan_type') || 'web_security';
+        // Get target from the new simple field
+        const targetInput = document.getElementById('target');
+        const target = targetInput ? targetInput.value.trim() : '';
+        
+        if (!target) {
+            alert('⚠️ Please enter a target domain or URL');
+            return;
+        }
+        
+        const scanType = 'web_security'; // Always web_security for now
         
         try {
             await window.api.startScan(target, scanType);
@@ -1425,6 +1455,136 @@
         if (e.target === this) {
             closeModal();
         }
+    });
+    
+    // WebSocket support for real-time scan progress
+    const activeWebSockets = new Map();
+    
+    function connectToScan(scanId) {
+        // Skip if already connected
+        if (activeWebSockets.has(scanId)) {
+            return;
+        }
+        
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/scan/${scanId}/`;
+        
+        console.log(`Connecting to WebSocket: ${wsUrl}`);
+        
+        const ws = new WebSocket(wsUrl);
+        activeWebSockets.set(scanId, ws);
+        
+        ws.onopen = () => {
+            console.log(`WebSocket connected for scan ${scanId}`);
+        };
+        
+        ws.onmessage = (event) => {
+            try {
+                const message = JSON.parse(event.data);
+                console.log('WebSocket message:', message);
+                
+                if (message.type === 'scan_update') {
+                    updateScanProgress(scanId, message.data);
+                } else if (message.type === 'scan_complete') {
+                    handleScanComplete(scanId, message.data);
+                } else if (message.type === 'scan_error') {
+                    handleScanError(scanId, message.data);
+                }
+            } catch (error) {
+                console.error('WebSocket message error:', error);
+            }
+        };
+        
+        ws.onerror = (error) => {
+            console.error(`WebSocket error for scan ${scanId}:`, error);
+        };
+        
+        ws.onclose = () => {
+            console.log(`WebSocket closed for scan ${scanId}`);
+            activeWebSockets.delete(scanId);
+        };
+    }
+    
+    function updateScanProgress(scanId, data) {
+        // Update progress bar in scan row
+        const row = document.querySelector(`tr[data-scan-id="${scanId}"]`);
+        if (!row) return;
+        
+        const progressBar = row.querySelector('.scan-progress-bar');
+        const progressText = row.querySelector('.scan-progress-text');
+        
+        if (progressBar && data.progress !== undefined) {
+            progressBar.style.width = `${data.progress}%`;
+        }
+        
+        if (progressText && data.current_step) {
+            progressText.textContent = `${data.progress || 0}% • ${data.current_step}`;
+        }
+        
+        // Update modal if open
+        if (document.getElementById('scanDetailsModal').style.display === 'flex') {
+            updateProgressInModal(data);
+        }
+    }
+    
+    function handleScanComplete(scanId, data) {
+        console.log(`Scan ${scanId} completed:`, data);
+        
+        // Show notification
+        const notification = document.createElement('div');
+        notification.innerHTML = `✅ Scan completed! Found ${data.vulnerabilities_found || 0} vulnerabilities.`;
+        notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #22c55e; color: white; padding: 1rem 1.5rem; border-radius: 0.5rem; z-index: 9999; box-shadow: 0 10px 25px rgba(34, 197, 94, 0.5);';
+        document.body.appendChild(notification);
+        
+        // Close WebSocket
+        const ws = activeWebSockets.get(scanId);
+        if (ws) {
+            ws.close();
+            activeWebSockets.delete(scanId);
+        }
+        
+        // Reload page after 2 seconds to show updated results
+        setTimeout(() => {
+            window.location.reload();
+        }, 2000);
+    }
+    
+    function handleScanError(scanId, data) {
+        console.error(`Scan ${scanId} error:`, data);
+        
+        // Show error notification
+        const notification = document.createElement('div');
+        notification.innerHTML = `❌ Scan failed: ${data.error || 'Unknown error'}`;
+        notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #ef4444; color: white; padding: 1rem 1.5rem; border-radius: 0.5rem; z-index: 9999; box-shadow: 0 10px 25px rgba(239, 68, 68, 0.5);';
+        document.body.appendChild(notification);
+        
+        // Close WebSocket
+        const ws = activeWebSockets.get(scanId);
+        if (ws) {
+            ws.close();
+            activeWebSockets.delete(scanId);
+        }
+        
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 5000);
+    }
+    
+    // Connect to all running scans on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        const runningScans = document.querySelectorAll('tr[data-scan-status="running"]');
+        runningScans.forEach(row => {
+            const scanId = row.dataset.scanId;
+            if (scanId) {
+                connectToScan(scanId);
+            }
+        });
+    });
+    
+    // Cleanup WebSockets on page unload
+    window.addEventListener('beforeunload', () => {
+        activeWebSockets.forEach(ws => ws.close());
+        activeWebSockets.clear();
     });
 </script>
 </body>

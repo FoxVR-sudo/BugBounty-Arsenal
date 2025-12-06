@@ -32,6 +32,9 @@ ALLOWED_HOSTS = ['*']  # Configure properly in production
 # Application definition
 
 INSTALLED_APPS = [
+    # Django Channels must be before django.contrib.staticfiles
+    'daphne',
+    
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -45,6 +48,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_filters',
     'drf_spectacular',
+    'channels',
     
     # Local apps
     'users',
@@ -208,3 +212,16 @@ CELERY_TIMEZONE = 'UTC'
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/'
+
+# ASGI Configuration
+ASGI_APPLICATION = 'config.asgi.application'
+
+# Channels Configuration
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [(os.getenv('REDIS_HOST', 'localhost'), int(os.getenv('REDIS_PORT', 6379)))],
+        },
+    },
+}

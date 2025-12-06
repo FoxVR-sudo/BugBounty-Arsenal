@@ -9,9 +9,9 @@ class ScanSerializer(serializers.ModelSerializer):
     class Meta:
         model = Scan
         fields = ['id', 'user', 'user_email', 'target', 'scan_type', 
-                  'status', 'severity_counts', 'vulnerabilities_found', 
+                  'status', 'progress', 'current_step', 'severity_counts', 'vulnerabilities_found', 
                   'started_at', 'completed_at', 'report_path', 'celery_task_id', 'created_at']
-        read_only_fields = ['id', 'user', 'status', 'severity_counts', 
+        read_only_fields = ['id', 'user', 'status', 'progress', 'current_step', 'severity_counts', 
                            'vulnerabilities_found', 'started_at', 'completed_at', 
                            'report_path', 'celery_task_id', 'created_at']
 

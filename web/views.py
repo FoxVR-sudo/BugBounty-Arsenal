@@ -179,3 +179,49 @@ def health_check(request):
         'status': 'healthy',
         'timestamp': timezone.now().isoformat(),
     })
+
+
+@login_required
+@require_http_methods(["GET"])
+def results_page(request):
+    """
+    Scan results page with filtering and export options
+    """
+    user = request.user
+    
+    # Get user's subscription/tier for storage limits
+    try:
+        subscription = user.subscription
+        tier = subscription.plan.name.lower()
+        
+        # Storage limits by tier (in bytes)
+        storage_limits = {
+            'free': 100 * 1024 * 1024,      # 100 MB
+            'basic': 500 * 1024 * 1024,     # 500 MB
+            'pro': 2 * 1024 * 1024 * 1024,  # 2 GB
+            'enterprise': 10 * 1024 * 1024 * 1024,  # 10 GB
+        }
+        
+        storage_limit = storage_limits.get(tier, storage_limits['free'])
+    except:
+        tier = 'free'
+        storage_limit = 100 * 1024 * 1024
+    
+    # Calculate total storage used
+    user_scans = Scan.objects.filter(user=user)
+    total_storage_used = sum(scan.report_size_bytes for scan in user_scans)
+    
+    storage_info = {
+        'used': total_storage_used,
+        'limit': storage_limit,
+        'used_mb': total_storage_used / (1024 * 1024),
+        'limit_mb': storage_limit / (1024 * 1024),
+        'percentage': (total_storage_used / storage_limit * 100) if storage_limit > 0 else 0,
+    }
+    
+    context = {
+        'storage_info': storage_info,
+        'tier': tier.upper(),
+    }
+    
+    return render(request, 'results.html', context)
