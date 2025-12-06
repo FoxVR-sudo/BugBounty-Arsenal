@@ -393,3 +393,8 @@ tmp_dom_results/
 .vscode/
 .idea/
 
+
+# Django static files
+staticfiles/
+test_login.html
+*.db
