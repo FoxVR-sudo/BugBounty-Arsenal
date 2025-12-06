@@ -16,6 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.views.generic import RedirectView
 from rest_framework import routers
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -54,6 +55,9 @@ router.register(r'subscriptions', SubscriptionViewSet, basename='subscription')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    
+    # Favicon redirect
+    path('favicon.ico', RedirectView.as_view(url='/static/favicon.ico', permanent=True)),
     
     # Web interface (templates)
     path('', include('web.urls')),

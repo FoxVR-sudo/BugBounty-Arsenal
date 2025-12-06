@@ -6,7 +6,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, login as django_login
 from drf_spectacular.utils import extend_schema, OpenApiExample
 from .serializers import UserCreateSerializer, UserSerializer
 
@@ -83,6 +83,9 @@ def login_view(request):
             status=status.HTTP_403_FORBIDDEN
         )
     
+    # Create Django session for template views
+    django_login(request, user)
+    
     # Generate JWT tokens
     refresh = RefreshToken.for_user(user)
     
@@ -148,6 +151,9 @@ def signup_view(request):
     
     # Create user
     user = serializer.save()
+    
+    # Create Django session for template views
+    django_login(request, user)
     
     # Generate JWT tokens
     refresh = RefreshToken.for_user(user)
