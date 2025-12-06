@@ -17,119 +17,391 @@
         };
     </script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Permanent+Marker&family=Comic+Neue:wght@700&display=swap');
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            background: #050816;
-            color: #e5e7eb;
-            margin: 0;
-            padding: 0;
+            font-family: 'Comic Neue', 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #d4a5d4 0%, #d4c5a5 25%, #a5c5d4 50%, #c5d4a5 75%, #d4a5d4 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 20s ease infinite;
+            color: #2d2d2d;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
         }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                radial-gradient(circle, #ff6b9d 1px, transparent 1px),
+                radial-gradient(circle, #6eb5ff 1px, transparent 1px);
+            background-size: 30px 30px, 40px 40px;
+            background-position: 0 0, 15px 15px;
+            opacity: 0.25;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
         header {
             padding: 1.5rem 2rem;
-            background: linear-gradient(90deg, #0f172a, #111827);
-            border-bottom: 1px solid #1f2937;
+            background: linear-gradient(135deg, #ff6b9d, #ffd93d, #6eb5ff);
+            border-bottom: 6px solid #2d2d2d;
+            box-shadow: 0 8px 0 #2d2d2d, 0 12px 24px rgba(0, 0, 0, 0.3);
+            flex-shrink: 0;
+            position: relative;
+            z-index: 10;
         }
+        
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 10px,
+                rgba(255, 255, 255, 0.1) 10px,
+                rgba(255, 255, 255, 0.1) 20px
+            );
+            pointer-events: none;
+        }
+        
         h1 {
             margin: 0;
-            font-size: 1.6rem;
+            font-size: 2.5rem;
+            font-family: 'Bangers', cursive;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            color: #fff;
+            text-shadow: 
+                4px 4px 0 #2d2d2d,
+                8px 8px 0 #ff6b9d,
+                12px 12px 20px rgba(0, 0, 0, 0.4);
+            transform: rotate(-2deg);
+            position: relative;
+            z-index: 2;
         }
-        main {
+        
+        .dashboard-container {
             display: flex;
-            gap: 2rem;
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+            z-index: 2;
+        }
+        
+        /* Sidebar Styles */
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(180deg, #fff9e5, #ffe5f9);
+            border-right: 6px solid #2d2d2d;
+            box-shadow: 6px 0 0 #ff6b9d, 12px 0 24px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            flex-shrink: 0;
+            position: relative;
+        }
+        
+        .sidebar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                repeating-linear-gradient(90deg, transparent, transparent 20px, rgba(255, 107, 157, 0.05) 20px, rgba(255, 107, 157, 0.05) 40px),
+                repeating-linear-gradient(0deg, transparent, transparent 20px, rgba(110, 181, 255, 0.05) 20px, rgba(110, 181, 255, 0.05) 40px);
+            pointer-events: none;
+        }
+        
+        .sidebar-section {
+            padding: 1.5rem 1rem;
+            border-bottom: 4px dashed #ff6b9d;
+            position: relative;
+        }
+        
+        .sidebar-section-title {
+            font-size: 1rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #2d2d2d;
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            background: #ffd93d;
+            border: 4px solid #2d2d2d;
+            border-radius: 8px;
+            text-align: center;
+            font-family: 'Bangers', cursive;
+            text-shadow: 3px 3px 0 #fff, 4px 4px 0 #ff6b9d;
+            transform: skew(-2deg);
+            box-shadow: 4px 4px 0 #2d2d2d;
+        }
+        
+        .sidebar-menu {
+            list-style: none;
+        }
+        
+        .sidebar-menu-item {
+            margin-bottom: 0.75rem;
+            transform: rotate(0deg);
+            transition: transform 0.2s, margin-left 0.2s;
+        }
+        
+        .sidebar-menu-item:hover {
+            transform: rotate(-1deg) scale(1.05);
+            margin-left: 8px;
+        }
+        
+        .sidebar-menu-item a {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            border-radius: 12px;
+            text-decoration: none;
+            color: #2d2d2d;
+            transition: all 0.2s;
+            font-size: 1rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #ffd93d, #ffb3d9);
+            border: 4px solid #2d2d2d;
+            box-shadow: 5px 5px 0 #2d2d2d;
+            position: relative;
+            overflow: hidden;
+            font-family: 'Comic Neue', cursive;
+        }
+        
+        .sidebar-menu-item a::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.3) 20%, transparent 20%);
+            background-size: 10px 10px;
+            opacity: 0;
+            transition: all 0.3s;
+        }
+        
+        .sidebar-menu-item a:hover::before {
+            opacity: 1;
+            animation: dots-move 0.5s linear infinite;
+        }
+        
+        @keyframes dots-move {
+            0% { background-position: 0 0; }
+            100% { background-position: 10px 10px; }
+        }
+        
+        .sidebar-menu-item a:hover {
+            border-color: #ff6b9d;
+            background: linear-gradient(135deg, #6eb5ff, #b4f8c8);
+            box-shadow: 7px 7px 0 #2d2d2d, 0 0 20px rgba(110, 181, 255, 0.5);
+            transform: translate(-2px, -2px);
+        }
+        
+        .sidebar-menu-item a.active {
+            background: linear-gradient(135deg, #ff6b9d, #ffd93d);
+            border-color: #2d2d2d;
+            color: #fff;
+            box-shadow: 6px 6px 0 #2d2d2d, 0 0 30px rgba(255, 107, 157, 0.6);
+            animation: pulse 2s infinite;
+            text-shadow: 2px 2px 0 #2d2d2d;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { box-shadow: 6px 6px 0 #2d2d2d, 0 0 30px rgba(255, 107, 157, 0.6); }
+            50% { box-shadow: 8px 8px 0 #2d2d2d, 0 0 40px rgba(255, 107, 157, 0.8); }
+        }
+        
+        .sidebar-menu-item .icon {
+            font-size: 1.5rem;
+            width: 32px;
+            text-align: center;
+            filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.8));
+        }
+        
+        /* Main Content */
+        main {
+            flex: 1;
+            overflow-y: auto;
             padding: 2rem;
+            position: relative;
+            z-index: 2;
         }
+        
         .card {
-            background: #0b1120;
-            border-radius: 0.75rem;
-            border: 1px solid #1f2937;
-            padding: 1.5rem;
-            box-shadow: 0 10px 25px rgba(15, 23, 42, 0.8);
+            background: linear-gradient(135deg, #fff, #fffaf0);
+            border-radius: 16px;
+            border: 5px solid #2d2d2d;
+            padding: 2rem;
+            box-shadow: 8px 8px 0 #2d2d2d, 12px 12px 24px rgba(0, 0, 0, 0.15);
+            margin-bottom: 2rem;
+            position: relative;
+            transform: rotate(-0.5deg);
+            transition: all 0.3s;
         }
+        
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            bottom: 10px;
+            border: 2px dashed rgba(255, 107, 157, 0.3);
+            border-radius: 12px;
+            pointer-events: none;
+        }
+        
+        .card:hover {
+            transform: rotate(0deg) translateY(-4px);
+            box-shadow: 10px 10px 0 #2d2d2d, 14px 14px 28px rgba(0, 0, 0, 0.2);
+        }
+        
         .card h2 {
             margin-top: 0;
-            font-size: 1.2rem;
-            margin-bottom: 1rem;
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            font-family: 'Bangers', cursive;
+            color: #2d2d2d;
+            text-shadow: 3px 3px 0 #ffd93d;
+            letter-spacing: 2px;
+            text-transform: uppercase;
         }
+        
         form label {
             display: block;
-            font-size: 0.85rem;
-            margin-bottom: 0.25rem;
-            color: #9ca3af;
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            color: #2d2d2d;
+            font-weight: 700;
+            font-family: 'Comic Neue', cursive;
         }
+        
         form input[type="text"],
         form select {
             width: 100%;
-            padding: 0.4rem 0.6rem;
-            border-radius: 0.4rem;
-            border: 1px solid #374151;
-            background: #020617;
-            color: #e5e7eb;
-            margin-bottom: 0.75rem;
+            padding: 0.8rem 1rem;
+            border-radius: 8px;
+            border: 4px solid #2d2d2d;
+            background: #fff;
+            color: #2d2d2d;
+            margin-bottom: 1rem;
+            font-size: 1rem;
+            font-family: 'Comic Neue', cursive;
+            box-shadow: 4px 4px 0 #ff6b9d;
+            transition: all 0.2s;
         }
+        
         form input[type="text"]:focus,
         form select:focus {
             outline: none;
-            border-color: #38bdf8;
-            box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.6);
+            border-color: #6eb5ff;
+            box-shadow: 6px 6px 0 #6eb5ff, 0 0 20px rgba(110, 181, 255, 0.4);
+            transform: translate(-2px, -2px);
         }
+        
         .btn-primary {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            padding: 0.5rem 1.2rem;
-            border-radius: 0.5rem;
-            border: none;
-            background: linear-gradient(135deg, #22c55e, #16a34a);
-            color: white;
-            font-weight: 600;
-            font-size: 0.9rem;
+            padding: 0.8rem 2rem;
+            border-radius: 12px;
+            border: 4px solid #2d2d2d;
+            background: linear-gradient(135deg, #b4f8c8, #6eb5ff);
+            color: #2d2d2d;
+            font-weight: 900;
+            font-size: 1.1rem;
             cursor: pointer;
-            box-shadow: 0 10px 25px rgba(34, 197, 94, 0.35);
+            font-family: 'Bangers', cursive;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            box-shadow: 6px 6px 0 #2d2d2d;
+            transition: all 0.2s;
         }
         .btn-primary:hover {
-            background: linear-gradient(135deg, #4ade80, #22c55e);
+            background: linear-gradient(135deg, #ffd93d, #ff6b9d);
+            box-shadow: 8px 8px 0 #2d2d2d, 0 0 25px rgba(255, 107, 157, 0.5);
+            transform: translate(-2px, -2px);
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.9rem;
+            font-size: 1rem;
+            font-family: 'Comic Neue', cursive;
         }
         th, td {
-            padding: 0.5rem 0.75rem;
-            border-bottom: 1px solid #111827;
+            padding: 1rem;
+            border-bottom: 3px solid #2d2d2d;
+            background: #fff;
         }
         th {
             text-align: left;
-            color: #9ca3af;
-            font-weight: 500;
+            color: #fff;
+            font-weight: 900;
+            background: linear-gradient(135deg, #ff6b9d, #ffd93d);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border: 4px solid #2d2d2d;
+            text-shadow: 2px 2px 0 #2d2d2d;
         }
         tr:hover td {
-            background: rgba(15, 23, 42, 0.7);
+            background: #fffaf0;
         }
         a.report-link {
-            color: #38bdf8;
+            color: #ff6b9d;
             text-decoration: none;
+            font-weight: 700;
+            border-bottom: 2px solid #ff6b9d;
+            transition: all 0.2s;
         }
         a.report-link:hover {
-            text-decoration: underline;
+            color: #6eb5ff;
+            border-bottom-color: #6eb5ff;
         }
         .tag {
             display: inline-flex;
             align-items: center;
-            border-radius: 999px;
-            padding: 0.1rem 0.5rem;
-            font-size: 0.7rem;
+            border-radius: 20px;
+            padding: 0.3rem 0.8rem;
+            font-size: 0.8rem;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            background: rgba(59, 130, 246, 0.15);
-            color: #93c5fd;
+            background: #ffd93d;
+            color: #2d2d2d;
+            border: 3px solid #2d2d2d;
+            font-weight: 900;
+            box-shadow: 3px 3px 0 #2d2d2d;
         }
         .status-running {
-            background: rgba(34, 197, 94, 0.15);
-            color: #86efac;
+            background: #b4f8c8;
+            color: #2d2d2d;
         }
         .status-completed {
-            background: rgba(100, 116, 139, 0.15);
+            background: #ff6b9d;
             color: #94a3b8;
         }
         .scan-item {
@@ -245,6 +517,12 @@
             </div>
             
             <div style="display: flex; gap: 0.5rem; justify-content: flex-end; margin-bottom: 0.5rem;">
+                <!-- Results Page Link -->
+                <button onclick="window.location.href='/dashboard/results/'" 
+                        style="padding: 0.4rem 0.8rem; font-size: 0.75rem; border-radius: 0.4rem; border: 1px solid #3b82f6; background: transparent; color: #60a5fa; cursor: pointer; font-weight: 600;">
+                    📊 View Results
+                </button>
+                
                 {% if is_superuser %}
                 <!-- Admin Panel Button (Superuser Only) -->
                 <button onclick="window.location.href=window.URLS.adminPanel" 
@@ -277,6 +555,70 @@
         </div>
     </div>
 </header>
+
+<div class="dashboard-container">
+    <aside class="sidebar">
+        <!-- Scan Types Menu -->
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">🔥 Scan Types 🔥</div>
+            <ul class="sidebar-menu">
+                <li class="sidebar-menu-item">
+                    <a href="/dashboard/" class="active">
+                        <span class="icon">🌐</span>
+                        <span>Web Security</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item">
+                    <a href="/dashboard/api-scan/">
+                        <span class="icon">🔌</span>
+                        <span>API Security</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item">
+                    <a href="/dashboard/vulnerability-scan/">
+                        <span class="icon">🐛</span>
+                        <span>Vulnerability Scan</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item">
+                    <a href="/dashboard/mobile-scan/">
+                        <span class="icon">📱</span>
+                        <span>Mobile Security</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item">
+                    <a href="/dashboard/passive-scan/">
+                        <span class="icon">🔵</span>
+                        <span>Passive Testing</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item">
+                    <a href="/dashboard/custom-scan/">
+                        <span class="icon">⚙️</span>
+                        <span>Custom Scan</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">💎 Quick Access 💎</div>
+            <ul class="sidebar-menu">
+                <li class="sidebar-menu-item">
+                    <a href="/dashboard/results/">
+                        <span class="icon">📊</span>
+                        <span>Results</span>
+                    </a>
+                </li>
+                <li class="sidebar-menu-item">
+                    <a href="/admin-panel/">
+                        <span class="icon">👑</span>
+                        <span>Admin Panel</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </aside>
 
 <main>
     <section class="card" style="flex: 0 0 320px;">
@@ -345,9 +687,7 @@
                 <option value="quick">⚡ Quick Scan (Fast, basic checks)</option>
                 <option value="standard" selected>🔍 Standard Scan (Balanced)</option>
                 <option value="deep">🔬 Deep Scan (Thorough, slower)</option>
-                {% if tier_limits.is_pro_or_enterprise %}
-                <option value="brutal">💀 Brutal Scan (Maximum depth - PRO/ENTERPRISE)</option>
-                {% endif %}
+                <option value="brutal">💀 Brutal Scan (Maximum depth - All tiers)</option>
             </select>
                 <div style="color: #9ca3af;">
                     • <span style="color: #22c55e;"><span id="in-scope-count">0</span> in-scope</span> domains<br>
@@ -526,6 +866,7 @@
         {% endif %}
     </section>
 </main>
+</div> <!-- end dashboard-container -->
 
 <!-- Scan Details Modal -->
 <div id="scanDetailsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 1000; align-items: center; justify-content: center;">

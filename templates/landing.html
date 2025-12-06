@@ -7,6 +7,8 @@
     <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}" />
     <title>BugBounty Arsenal - Automated Security Scanner</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:wght@700&display=swap');
+        
         * {
             margin: 0;
             padding: 0;
@@ -14,10 +16,19 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
-            background: #0a0a0f;
-            color: #e5e7eb;
+            font-family: 'Comic Neue', 'Comic Sans MS', cursive;
+            background: linear-gradient(135deg, #d4a5d4 0%, #d4c5a5 25%, #a5c5d4 50%, #c5d4a5 75%, #d4a5d4 100%);
+            background-size: 400% 400%;
+            animation: gradientShift 20s ease infinite;
+            color: #2d2d2d;
             overflow-x: hidden;
+            position: relative;
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
         
         /* Animated gradient background */
@@ -27,8 +38,13 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: radial-gradient(ellipse at top, rgba(124, 58, 237, 0.15), transparent 50%),
-                        radial-gradient(ellipse at bottom, rgba(14, 165, 233, 0.15), transparent 50%);
+            background-image: 
+                radial-gradient(circle, #ff6b9d 1.5px, transparent 1.5px),
+                radial-gradient(circle, #6eb5ff 1.5px, transparent 1.5px);
+            background-size: 30px 30px, 40px 40px;
+            background-position: 0 0, 15px 15px;
+            opacity: 0.25;
+            pointer-events: none;
             z-index: -1;
         }
         
@@ -38,21 +54,22 @@
             justify-content: space-between;
             align-items: center;
             padding: 1.5rem 5%;
-            background: rgba(10, 10, 15, 0.8);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            background: linear-gradient(135deg, #ff6b9d, #ffd93d, #6eb5ff);
+            border-bottom: 6px solid #2d2d2d;
+            box-shadow: 0 8px 0 #2d2d2d, 0 12px 24px rgba(0, 0, 0, 0.3);
             position: sticky;
             top: 0;
             z-index: 100;
         }
         
         .logo {
-            font-size: 1.5rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, #7c3aed, #0ea5e9);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            font-size: 2rem;
+            font-weight: 900;
+            font-family: 'Bangers', cursive;
+            color: #fff;
+            text-shadow: 4px 4px 0 #2d2d2d;
+            letter-spacing: 2px;
+            transform: rotate(-2deg);
         }
         
         .nav-links {
@@ -62,48 +79,57 @@
         }
         
         .nav-links a {
-            color: #9ca3af;
+            color: #2d2d2d;
             text-decoration: none;
-            font-size: 0.95rem;
-            transition: color 0.3s;
+            font-size: 1.1rem;
+            transition: all 0.2s;
+            font-weight: 700;
+            text-shadow: 1px 1px 0 #fff;
         }
         
         .nav-links a:hover {
             color: #fff;
+            text-shadow: 2px 2px 0 #2d2d2d;
+            transform: translateY(-2px);
         }
         
         .btn {
-            padding: 0.6rem 1.5rem;
-            border-radius: 0.5rem;
-            font-weight: 600;
-            font-size: 0.95rem;
+            padding: 0.8rem 2rem;
+            border-radius: 12px;
+            font-weight: 900;
+            font-size: 1.1rem;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.2s;
             text-decoration: none;
             display: inline-block;
-            border: none;
+            border: 4px solid #2d2d2d;
+            font-family: 'Bangers', cursive;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            box-shadow: 6px 6px 0 #2d2d2d;
         }
         
         .btn-primary {
-            background: linear-gradient(135deg, #7c3aed, #0ea5e9);
-            color: white;
-            box-shadow: 0 10px 30px rgba(124, 58, 237, 0.3);
+            background: linear-gradient(135deg, #b4f8c8, #6eb5ff);
+            color: #2d2d2d;
         }
         
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 15px 40px rgba(124, 58, 237, 0.4);
+            transform: translate(-2px, -2px);
+            background: linear-gradient(135deg, #ffd93d, #ff6b9d);
+            box-shadow: 8px 8px 0 #2d2d2d, 0 0 25px rgba(255, 107, 157, 0.5);
         }
         
         .btn-secondary {
-            background: rgba(255, 255, 255, 0.05);
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: #fff;
+            color: #2d2d2d;
+            border: 4px solid #2d2d2d;
         }
         
         .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.2);
+            background: #ffd93d;
+            box-shadow: 8px 8px 0 #2d2d2d;
+            transform: translate(-2px, -2px);
         }
         
         /* Hero Section */
@@ -112,27 +138,36 @@
             padding: 8rem 5% 6rem;
             max-width: 1200px;
             margin: 0 auto;
+            position: relative;
+            z-index: 2;
         }
         
         .hero h1 {
-            font-size: 4rem;
-            font-weight: 800;
+            font-size: 4.5rem;
+            font-weight: 900;
             margin-bottom: 1.5rem;
-            background: linear-gradient(135deg, #fff, #7c3aed);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            line-height: 1.2;
+            font-family: 'Bangers', cursive;
+            color: #fff;
+            text-shadow: 
+                5px 5px 0 #2d2d2d,
+                10px 10px 0 #ff6b9d,
+                15px 15px 30px rgba(0, 0, 0, 0.3);
+            line-height: 1.1;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            transform: rotate(-2deg);
         }
         
         .hero p {
-            font-size: 1.3rem;
-            color: #9ca3af;
+            font-size: 1.4rem;
+            color: #2d2d2d;
+            font-weight: 700;
             margin-bottom: 3rem;
             max-width: 700px;
             margin-left: auto;
             margin-right: auto;
             line-height: 1.6;
+            text-shadow: 2px 2px 0 #fff;
         }
         
         .hero-buttons {

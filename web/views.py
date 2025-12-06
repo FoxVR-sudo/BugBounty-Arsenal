@@ -5,6 +5,7 @@ Renders HTML templates for landing page, authentication, dashboard, and admin pa
 
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth import logout as auth_logout
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from datetime import datetime
@@ -44,6 +45,14 @@ def signup_view(request):
         return redirect('dashboard')
     
     return render(request, 'signup.html')
+
+
+def logout_view(request):
+    """
+    Logout view - clears session and redirects to login
+    """
+    auth_logout(request)
+    return redirect('login')
 
 
 @login_required
@@ -225,3 +234,48 @@ def results_page(request):
     }
     
     return render(request, 'results.html', context)
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_scan_page(request):
+    """
+    API Security Scan page with API-specific settings
+    """
+    return render(request, 'api_scan.html')
+
+
+@login_required
+@require_http_methods(["GET"])
+def vulnerability_scan_page(request):
+    """
+    Vulnerability Assessment page with CVE scanning
+    """
+    return render(request, 'vulnerability_scan.html')
+
+
+@login_required
+@require_http_methods(["GET"])
+def mobile_scan_page(request):
+    """
+    Mobile App Security page with APK/IPA upload
+    """
+    return render(request, 'mobile_scan.html')
+
+
+@login_required
+@require_http_methods(["GET"])
+def custom_scan_page(request):
+    """
+    Custom Scan page with manual detector selection
+    """
+    return render(request, 'custom_scan.html')
+
+
+@login_required
+@require_http_methods(["GET"])
+def passive_scan_page(request):
+    """
+    Passive Testing page with passive detector selection
+    """
+    return render(request, 'passive_scan.html')
