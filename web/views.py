@@ -17,10 +17,13 @@ from users.models import User
 
 def landing(request):
     """
-    Landing page with pricing and features
+    Landing page with pricing and features - shows all 4 plans from database
     """
+    # Get all active plans ordered by price
+    plans = Plan.objects.filter(is_active=True).order_by('price')
+    
     context = {
-        'plans': Plan.objects.all().order_by('price'),
+        'plans': plans,
     }
     return render(request, 'landing.html', context)
 
@@ -81,31 +84,107 @@ def dashboard(request):
             'detectors': '15 detectors',
         }
     
-    # Get user's scans
-    scans = Scan.objects.filter(user=user).order_by('-created_at')
-    active_scans = scans.filter(status__in=['queued', 'running'])
-    completed_scans = scans.filter(status='completed')
-    
-    # Scan statistics (for daily limits)
+    # Get current date/time for filtering
     today = timezone.now().date()
-    daily_scans = scans.filter(created_at__date=today).count()
+    current_month = timezone.now().month
+    current_year = timezone.now().year
+    
+    # Get user's scans
+    all_scans_queryset = Scan.objects.filter(user=user).order_by('-created_at')
+    
+    # Get all monthly scans (for results table)
+    monthly_scans = all_scans_queryset.filter(
+        created_at__month=current_month,
+        created_at__year=current_year
+    )
+    
+    # Format scans for template with severity counts
+    all_scans = []
+    for scan in monthly_scans:
+        # Parse vulnerabilities from severity_counts JSON field
+        critical_count = 0
+        high_count = 0
+        medium_count = 0
+        low_count = 0
+        
+        # Try to get severity counts from the severity_counts field
+        if hasattr(scan, 'severity_counts') and scan.severity_counts:
+            try:
+                counts = scan.severity_counts
+                if isinstance(counts, dict):
+                    critical_count = counts.get('critical', 0)
+                    high_count = counts.get('high', 0)
+                    medium_count = counts.get('medium', 0)
+                    low_count = counts.get('low', 0)
+            except:
+                pass
+        
+        # Calculate duration
+        duration = "N/A"
+        if scan.completed_at and scan.created_at:
+            delta = scan.completed_at - scan.created_at
+            minutes = int(delta.total_seconds() / 60)
+            seconds = int(delta.total_seconds() % 60)
+            if minutes > 0:
+                duration = f"{minutes}m {seconds}s"
+            else:
+                duration = f"{seconds}s"
+        
+        all_scans.append({
+            'id': scan.id,
+            'target': scan.target,
+            'scan_type': scan.scan_type or 'web',
+            'status': scan.status,
+            'critical': critical_count,
+            'high': high_count,
+            'medium': medium_count,
+            'low': low_count,
+            'started_at': scan.created_at,
+            'completed_at': scan.completed_at,
+            'duration': duration,
+        })
+    
+    # Scan statistics
+    scans_today = all_scans_queryset.filter(created_at__date=today).count()
+    scans_month = monthly_scans.count()
+    
+    # Daily/monthly limits
     daily_limit = 5 if tier == 'free' else (20 if tier == 'pro' else 999999)
+    monthly_limit = 100 if tier == 'free' else (500 if tier == 'pro' else 999999)
+    
+    remaining_today = max(0, daily_limit - scans_today)
+    remaining_month = max(0, monthly_limit - scans_month)
+    
+    # Storage calculation
+    total_storage_bytes = sum(scan.report_size_bytes for scan in all_scans_queryset if scan.report_size_bytes)
+    storage_used_mb = round(total_storage_bytes / (1024 * 1024), 2)
+    
+    storage_limits_mb = {
+        'free': 100,
+        'basic': 500,
+        'pro': 2048,
+        'enterprise': 10240,
+    }
+    storage_limit_mb = storage_limits_mb.get(tier, 100)
+    storage_remaining_mb = max(0, storage_limit_mb - storage_used_mb)
+    
+    # Active scans for legacy template compatibility
+    active_scans = all_scans_queryset.filter(status__in=['queued', 'running'])
+    completed_scans = all_scans_queryset.filter(status='completed')
     
     # Calculate percentage for progress bar
-    daily_percentage = (daily_scans / daily_limit * 100) if daily_limit > 0 else 0
+    daily_percentage = (scans_today / daily_limit * 100) if daily_limit > 0 else 0
     
     scan_stats = {
-        'daily_used': daily_scans,
+        'daily_used': scans_today,
         'daily_limit': daily_limit,
         'daily_percentage': daily_percentage,
-        'extra_scans_available': 0,  # TODO: Implement extra scans feature
+        'extra_scans_available': 0,
     }
     
     # Tier limits
     is_pro_or_enterprise = tier in ['pro', 'enterprise']
-    
-    # TODO: Get actual allowed detectors from registry and format them
-    allowed_detectors_formatted = []  # Format: ["SQL Injection", "XSS", "CSRF", ...]
+    allowed_detectors_formatted = []
     
     tier_limits = {
         'max_concurrent_scans': tier_info['concurrent_scans'],
@@ -114,7 +193,7 @@ def dashboard(request):
         'is_pro_or_enterprise': is_pro_or_enterprise,
     }
     
-    # Get recent reports (from completed scans with report_path)
+    # Get recent reports
     reports = []
     for scan in completed_scans.filter(report_path__isnull=False)[:10]:
         reports.append({
@@ -130,10 +209,21 @@ def dashboard(request):
         'tier_limits': tier_limits,
         'scan_stats': scan_stats,
         'active_scans': active_scans,
-        'scans': scans[:20],  # Last 20 scans
+        'scans': all_scans_queryset[:20],  # Last 20 scans (legacy)
         'reports': reports,
         'now': datetime.now().timestamp(),
         'is_superuser': user.is_superuser,
+        # NEW: Data for dashboard_new.html template
+        'all_scans': all_scans,  # All monthly scans with severity counts
+        'total_scans': scans_month,  # Total scans this month
+        'scans_today': scans_today,
+        'daily_limit': daily_limit,
+        'remaining_today': remaining_today,
+        'scans_month': scans_month,
+        'monthly_limit': monthly_limit,
+        'remaining_month': remaining_month,
+        'storage_used_mb': storage_used_mb,
+        'storage_remaining_mb': storage_remaining_mb,
     }
     
     return render(request, 'dashboard.html', context)
@@ -238,6 +328,15 @@ def results_page(request):
 
 @login_required
 @require_http_methods(["GET"])
+def web_scan_page(request):
+    """
+    Web Security Scan page with all detectors
+    """
+    return render(request, 'web_scan.html')
+
+
+@login_required
+@require_http_methods(["GET"])
 def api_scan_page(request):
     """
     API Security Scan page with API-specific settings
@@ -279,3 +378,198 @@ def passive_scan_page(request):
     Passive Testing page with passive detector selection
     """
     return render(request, 'passive_scan.html')
+
+
+# Scanner pages - 5 main categories
+@login_required
+def reconnaissance_scan(request):
+    """Reconnaissance Scanner - subdomain, directory, secrets, CVE"""
+    context = {
+        'scanner_name': 'Reconnaissance Scanner',
+        'scanner_icon': '🔍',
+        'scanner_description': 'Discover subdomains, directories, secrets, and known vulnerabilities'
+    }
+    return render(request, 'scans/reconnaissance.html', context)
+
+
+@login_required
+def web_scan(request):
+    """Web Application Scanner - XSS, SQLi, CSRF, LFI, XXE, SSTI, etc"""
+    context = {
+        'scanner_name': 'Web Application Scanner',
+        'scanner_icon': '🌐',
+        'scanner_description': 'Comprehensive web vulnerability testing with 15+ detectors'
+    }
+    return render(request, 'scans/web.html', context)
+
+
+@login_required
+def api_scan(request):
+    """API Security Scanner - JWT, GraphQL, OAuth, NoSQL, Rate Limiting"""
+    context = {
+        'scanner_name': 'API Security Scanner',
+        'scanner_icon': '🔌',
+        'scanner_description': 'API security testing including JWT, GraphQL, and OAuth'
+    }
+    return render(request, 'scans/api.html', context)
+
+
+@login_required
+def mobile_scan(request):
+    """Mobile App Scanner - Android/iOS security testing"""
+    context = {
+        'scanner_name': 'Mobile App Scanner',
+        'scanner_icon': '📱',
+        'scanner_description': 'Mobile application security analysis for Android and iOS'
+    }
+    return render(request, 'scans/mobile.html', context)
+
+
+@login_required
+def comprehensive_scan(request):
+    """Comprehensive Scanner - All 40+ detectors"""
+    context = {
+        'scanner_name': 'Comprehensive Security Scan',
+        'scanner_icon': '🛡️',
+        'scanner_description': 'Run all 40+ security detectors for complete coverage'
+    }
+    return render(request, 'scans/comprehensive.html', context)
+
+
+@login_required
+def pricing_page(request):
+    """Pricing page with plan comparison"""
+    plans = Plan.objects.filter(is_active=True).order_by('price')
+    return render(request, 'pricing.html', {'plans': plans})
+
+
+@login_required
+def xss_scan(request):
+    """XSS Scanner page"""
+    context = {
+        'scanner_name': 'XSS Scanner',
+        'scanner_icon': '🔍',
+        'scanner_description': 'Cross-Site Scripting detection with advanced payloads'
+    }
+    return render(request, 'scans/xss.html', context)
+
+
+@login_required
+def sqli_scan(request):
+    """SQL Injection Scanner page"""
+    context = {
+        'scanner_name': 'SQL Injection Scanner',
+        'scanner_icon': '💉',
+        'scanner_description': 'Detect SQL injection vulnerabilities with multiple techniques'
+    }
+    return render(request, 'scans/sqli.html', context)
+
+
+@login_required
+def ssrf_scan(request):
+    """SSRF Scanner page"""
+    context = {
+        'scanner_name': 'SSRF Scanner',
+        'scanner_icon': '🌐',
+        'scanner_description': 'Server-Side Request Forgery detection with OOB callbacks'
+    }
+    return render(request, 'scans/ssrf.html', context)
+
+
+@login_required
+def jwt_scan(request):
+    """JWT Analyzer page"""
+    context = {
+        'scanner_name': 'JWT Analyzer',
+        'scanner_icon': '🔐',
+        'scanner_description': 'JWT token security and algorithm confusion testing'
+    }
+    return render(request, 'scans/jwt.html', context)
+
+
+@login_required
+def lfi_scan(request):
+    """LFI/RFI Scanner page"""
+    context = {
+        'scanner_name': 'LFI/RFI Scanner',
+        'scanner_icon': '📂',
+        'scanner_description': 'Local and remote file inclusion vulnerability detection'
+    }
+    return render(request, 'scans/lfi.html', context)
+
+
+@login_required
+def idor_scan(request):
+    """IDOR Scanner page"""
+    context = {
+        'scanner_name': 'IDOR Scanner',
+        'scanner_icon': '🔑',
+        'scanner_description': 'Insecure Direct Object Reference testing with fuzzing'
+    }
+    return render(request, 'scans/idor.html', context)
+
+
+@login_required
+def cmdi_scan(request):
+    """Command Injection Scanner page"""
+    context = {
+        'scanner_name': 'Command Injection Scanner',
+        'scanner_icon': '⚡',
+        'scanner_description': 'OS command injection detection with multiple techniques'
+    }
+    return render(request, 'scans/cmdi.html', context)
+
+
+@login_required
+def csrf_scan(request):
+    """CSRF Scanner page"""
+    context = {
+        'scanner_name': 'CSRF Scanner',
+        'scanner_icon': '🔄',
+        'scanner_description': 'Cross-Site Request Forgery token validation testing'
+    }
+    return render(request, 'scans/csrf.html', context)
+
+
+@login_required
+def graphql_scan(request):
+    """GraphQL Scanner page"""
+    context = {
+        'scanner_name': 'GraphQL Scanner',
+        'scanner_icon': '🚀',
+        'scanner_description': 'GraphQL introspection, injection, and authorization testing'
+    }
+    return render(request, 'scans/graphql.html', context)
+
+
+@login_required
+def xxe_scan(request):
+    """XXE Scanner page"""
+    context = {
+        'scanner_name': 'XXE Scanner',
+        'scanner_icon': '📄',
+        'scanner_description': 'XML External Entity injection detection'
+    }
+    return render(request, 'scans/xxe.html', context)
+
+
+@login_required
+def ssti_scan(request):
+    """SSTI Scanner page"""
+    context = {
+        'scanner_name': 'SSTI Scanner',
+        'scanner_icon': '🎭',
+        'scanner_description': 'Server-Side Template Injection testing for multiple engines'
+    }
+    return render(request, 'scans/ssti.html', context)
+
+
+@login_required
+def headers_scan(request):
+    """Security Headers Scanner page"""
+    context = {
+        'scanner_name': 'Security Headers Scanner',
+        'scanner_icon': '🛡️',
+        'scanner_description': 'HTTP security header analysis and recommendations'
+    }
+    return render(request, 'scans/headers.html', context)

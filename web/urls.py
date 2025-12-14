@@ -16,7 +16,18 @@ urlpatterns = [
     
     # Dashboard
     path('dashboard/', views.dashboard, name='dashboard'),
+    path('pricing/', views.pricing_page, name='pricing'),
+    
+    # Scanner pages - 5 comprehensive scanners
+    path('scan/reconnaissance/', views.reconnaissance_scan, name='reconnaissance-scan'),
+    path('scan/web/', views.web_scan, name='web-scan'),
+    path('scan/api/', views.api_scan, name='api-scan'),
+    path('scan/mobile/', views.mobile_scan, name='mobile-scan'),
+    path('scan/comprehensive/', views.comprehensive_scan, name='comprehensive-scan'),
+    
+    # Old dashboard pages (keep for backward compatibility)
     path('dashboard/results/', views.results_page, name='results-page'),
+    path('dashboard/web-scan/', views.web_scan_page, name='web-scan'),
     path('dashboard/api-scan/', views.api_scan_page, name='api-scan'),
     path('dashboard/vulnerability-scan/', views.vulnerability_scan_page, name='vulnerability-scan'),
     path('dashboard/mobile-scan/', views.mobile_scan_page, name='mobile-scan'),

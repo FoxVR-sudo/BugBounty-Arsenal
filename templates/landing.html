@@ -1,679 +1,127 @@
+{% extends 'base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}" />
-    <title>BugBounty Arsenal - Automated Security Scanner</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Bangers&family=Comic+Neue:wght@700&display=swap');
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Comic Neue', 'Comic Sans MS', cursive;
-            background: linear-gradient(135deg, #d4a5d4 0%, #d4c5a5 25%, #a5c5d4 50%, #c5d4a5 75%, #d4a5d4 100%);
-            background-size: 400% 400%;
-            animation: gradientShift 20s ease infinite;
-            color: #2d2d2d;
-            overflow-x: hidden;
-            position: relative;
-        }
-        
-        @keyframes gradientShift {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-        
-        /* Animated gradient background */
-        .bg-gradient {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-image: 
-                radial-gradient(circle, #ff6b9d 1.5px, transparent 1.5px),
-                radial-gradient(circle, #6eb5ff 1.5px, transparent 1.5px);
-            background-size: 30px 30px, 40px 40px;
-            background-position: 0 0, 15px 15px;
-            opacity: 0.25;
-            pointer-events: none;
-            z-index: -1;
-        }
-        
-        /* Navigation */
-        nav {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1.5rem 5%;
-            background: linear-gradient(135deg, #ff6b9d, #ffd93d, #6eb5ff);
-            border-bottom: 6px solid #2d2d2d;
-            box-shadow: 0 8px 0 #2d2d2d, 0 12px 24px rgba(0, 0, 0, 0.3);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-        
-        .logo {
-            font-size: 2rem;
-            font-weight: 900;
-            font-family: 'Bangers', cursive;
-            color: #fff;
-            text-shadow: 4px 4px 0 #2d2d2d;
-            letter-spacing: 2px;
-            transform: rotate(-2deg);
-        }
-        
-        .nav-links {
-            display: flex;
-            gap: 2rem;
-            align-items: center;
-        }
-        
-        .nav-links a {
-            color: #2d2d2d;
-            text-decoration: none;
-            font-size: 1.1rem;
-            transition: all 0.2s;
-            font-weight: 700;
-            text-shadow: 1px 1px 0 #fff;
-        }
-        
-        .nav-links a:hover {
-            color: #fff;
-            text-shadow: 2px 2px 0 #2d2d2d;
-            transform: translateY(-2px);
-        }
-        
-        .btn {
-            padding: 0.8rem 2rem;
-            border-radius: 12px;
-            font-weight: 900;
-            font-size: 1.1rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-decoration: none;
-            display: inline-block;
-            border: 4px solid #2d2d2d;
-            font-family: 'Bangers', cursive;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            box-shadow: 6px 6px 0 #2d2d2d;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(135deg, #b4f8c8, #6eb5ff);
-            color: #2d2d2d;
-        }
-        
-        .btn-primary:hover {
-            transform: translate(-2px, -2px);
-            background: linear-gradient(135deg, #ffd93d, #ff6b9d);
-            box-shadow: 8px 8px 0 #2d2d2d, 0 0 25px rgba(255, 107, 157, 0.5);
-        }
-        
-        .btn-secondary {
-            background: #fff;
-            color: #2d2d2d;
-            border: 4px solid #2d2d2d;
-        }
-        
-        .btn-secondary:hover {
-            background: #ffd93d;
-            box-shadow: 8px 8px 0 #2d2d2d;
-            transform: translate(-2px, -2px);
-        }
-        
-        /* Hero Section */
-        .hero {
-            text-align: center;
-            padding: 8rem 5% 6rem;
-            max-width: 1200px;
-            margin: 0 auto;
-            position: relative;
-            z-index: 2;
-        }
-        
-        .hero h1 {
-            font-size: 4.5rem;
-            font-weight: 900;
-            margin-bottom: 1.5rem;
-            font-family: 'Bangers', cursive;
-            color: #fff;
-            text-shadow: 
-                5px 5px 0 #2d2d2d,
-                10px 10px 0 #ff6b9d,
-                15px 15px 30px rgba(0, 0, 0, 0.3);
-            line-height: 1.1;
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            transform: rotate(-2deg);
-        }
-        
-        .hero p {
-            font-size: 1.4rem;
-            color: #2d2d2d;
-            font-weight: 700;
-            margin-bottom: 3rem;
-            max-width: 700px;
-            margin-left: auto;
-            margin-right: auto;
-            line-height: 1.6;
-            text-shadow: 2px 2px 0 #fff;
-        }
-        
-        .hero-buttons {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        .stats {
-            display: flex;
-            justify-content: center;
-            gap: 4rem;
-            margin-top: 4rem;
-        }
-        
-        .stat-item {
-            text-align: center;
-        }
-        
-        .stat-number {
-            font-size: 2.5rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, #7c3aed, #0ea5e9);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        
-        .stat-label {
-            font-size: 0.9rem;
-            color: #6b7280;
-            margin-top: 0.5rem;
-        }
-        
-        /* Features Section */
-        .features {
-            padding: 6rem 5%;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-        
-        .section-title {
-            text-align: center;
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 3rem;
-        }
-        
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-            margin-top: 3rem;
-        }
-        
-        .feature-card {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 1rem;
-            padding: 2rem;
-            transition: all 0.3s;
-        }
-        
-        .feature-card:hover {
-            background: rgba(255, 255, 255, 0.05);
-            border-color: rgba(124, 58, 237, 0.3);
-            transform: translateY(-5px);
-        }
-        
-        .feature-icon {
-            font-size: 2.5rem;
-            margin-bottom: 1rem;
-        }
-        
-        .feature-title {
-            font-size: 1.3rem;
-            font-weight: 600;
-            margin-bottom: 0.75rem;
-        }
-        
-        .feature-desc {
-            color: #9ca3af;
-            line-height: 1.6;
-            font-size: 0.95rem;
-        }
-        
-        /* Pricing Section */
-        .pricing {
-            padding: 6rem 5%;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-        
-        .pricing-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 2rem;
-            margin-top: 3rem;
-        }
-        
-        .pricing-card {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 1rem;
-            padding: 2.5rem;
-            position: relative;
-            transition: all 0.3s;
-        }
-        
-        .pricing-card.featured {
-            background: rgba(124, 58, 237, 0.1);
-            border-color: rgba(124, 58, 237, 0.3);
-            transform: scale(1.05);
-        }
-        
-        .pricing-card:hover {
-            transform: translateY(-5px) scale(1.02);
-            border-color: rgba(124, 58, 237, 0.5);
-        }
-        
-        .pricing-card.featured:hover {
-            transform: translateY(-5px) scale(1.07);
-        }
-        
-        .pricing-badge {
-            position: absolute;
-            top: -12px;
-            right: 20px;
-            background: linear-gradient(135deg, #7c3aed, #0ea5e9);
-            color: white;
-            padding: 0.3rem 1rem;
-            border-radius: 999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        
-        .pricing-tier {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-        }
-        
-        .pricing-price {
-            font-size: 3rem;
-            font-weight: 800;
-            margin-bottom: 0.5rem;
-        }
-        
-        .pricing-price span {
-            font-size: 1.2rem;
-            color: #6b7280;
-            font-weight: 400;
-        }
-        
-        .pricing-desc {
-            color: #9ca3af;
-            margin-bottom: 2rem;
-            font-size: 0.95rem;
-        }
-        
-        .pricing-features {
-            list-style: none;
-            margin-bottom: 2rem;
-        }
-        
-        .pricing-features li {
-            padding: 0.75rem 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .pricing-features li::before {
-            content: '✓';
-            color: #22c55e;
-            font-weight: 700;
-        }
-        
-        .pricing-features li.disabled {
-            color: #6b7280;
-        }
-        
-        .pricing-features li.disabled::before {
-            content: '✗';
-            color: #6b7280;
-        }
-        
-        /* Footer */
-        footer {
-            text-align: center;
-            padding: 3rem 5%;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-            color: #6b7280;
-            font-size: 0.9rem;
-        }
-        
-        @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 2.5rem;
-            }
-            
-            .hero p {
-                font-size: 1.1rem;
-            }
-            
-            .stats {
-                flex-direction: column;
-                gap: 2rem;
-            }
-            
-            .hero-buttons {
-                flex-direction: column;
-            }
-            
-            .nav-links {
-                display: none;
-            }
-            
-            .pricing-card.featured {
-                transform: scale(1);
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="bg-gradient"></div>
-    
-    <nav>
-        <div class="logo">⚡ BugBounty Arsenal</div>
-        <div class="nav-links">
-            <a href="#features">Features</a>
-            <a href="#pricing">Pricing</a>
-            <a href="#docs">Docs</a>
-            <a href="{% url 'login' %}" class="btn btn-secondary">Login</a>
-            <a href="{% url 'dashboard' %}" class="btn btn-primary">Get Started</a>
+
+{% block title %}BugBounty Arsenal - Advanced Security Scanner{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-container">
+        <h1 class="hero-title">Advanced Bug Bounty Scanner</h1>
+        <p class="hero-subtitle">Automated vulnerability detection with 30+ security checks</p>
+        <div class="hero-actions">
+            <a href="/signup/" class="btn-hero-primary">Start Free Scan</a>
+            <a href="#features" class="btn-hero-secondary">View Features</a>
         </div>
-    </nav>
-    
-    <section class="hero">
-        <h1>Automated Security<br>Scanner for Bug Bounty</h1>
-        <p>
-            Discover vulnerabilities faster with 28+ advanced detectors, recon pipeline, 
-            and real-time scanning. Built for bug bounty hunters and security researchers.
-        </p>
-        <div class="hero-buttons">
-            <a href="{% url 'dashboard' %}" class="btn btn-primary">Start Free Scan</a>
-            <a href="#pricing" class="btn btn-secondary">View Pricing</a>
-        </div>
-        
-        <div class="stats">
-            <div class="stat-item">
-                <div class="stat-number">28+</div>
-                <div class="stat-label">Vulnerability Detectors</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number">10k+</div>
-                <div class="stat-label">Scans Completed</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number">99.9%</div>
-                <div class="stat-label">Uptime SLA</div>
-            </div>
-        </div>
-    </section>
-    
-    <section id="features" class="features">
-        <h2 class="section-title">Powerful Features</h2>
+    </div>
+</section>
+
+<section id="features" class="features-section">
+    <div class="features-container">
+        <h2>Comprehensive Security Testing</h2>
         <div class="features-grid">
             <div class="feature-card">
                 <div class="feature-icon">🔍</div>
-                <h3 class="feature-title">Recon Pipeline</h3>
-                <p class="feature-desc">
-                    Automated subdomain enumeration with Subfinder, live host detection with HTTPX, 
-                    and intelligent scope expansion.
-                </p>
+                <h3>XSS Detection</h3>
+                <p>Advanced pattern matching for reflected, stored, and DOM-based XSS vulnerabilities</p>
             </div>
-            
             <div class="feature-card">
-                <div class="feature-icon">🛡️</div>
-                <h3 class="feature-title">28+ Detectors</h3>
-                <p class="feature-desc">
-                    XSS, SQLi, SSRF, IDOR, XXE, SSTI, JWT, NoSQL, GraphQL, Prototype Pollution, 
-                    Race Conditions, and more.
-                </p>
+                <div class="feature-icon">💉</div>
+                <h3>SQL Injection</h3>
+                <p>Detect SQL injection flaws with advanced payloads and error-based detection</p>
             </div>
-            
             <div class="feature-card">
-                <div class="feature-icon">⚡</div>
-                <h3 class="feature-title">Async Scanning</h3>
-                <p class="feature-desc">
-                    Lightning-fast concurrent scanning with intelligent rate limiting. 
-                    Scan hundreds of URLs in minutes.
-                </p>
+                <div class="feature-icon">🌐</div>
+                <h3>SSRF Testing</h3>
+                <p>Server-Side Request Forgery detection with OOB callbacks</p>
             </div>
-            
-            <div class="feature-card">
-                <div class="feature-icon">🎯</div>
-                <h3 class="feature-title">Smart Detection</h3>
-                <p class="feature-desc">
-                    Out-of-band SSRF detection, blind XSS with Interactsh, 
-                    context-aware payload generation.
-                </p>
-            </div>
-            
-            <div class="feature-card">
-                <div class="feature-icon">📊</div>
-                <h3 class="feature-title">Rich Reports</h3>
-                <p class="feature-desc">
-                    Beautiful HTML reports with PoC code, severity ratings, 
-                    remediation steps. Export to JSON/Markdown/PDF.
-                </p>
-            </div>
-            
             <div class="feature-card">
                 <div class="feature-icon">🔐</div>
-                <h3 class="feature-title">CVE Scanner</h3>
-                <p class="feature-desc">
-                    Integrated Nuclei templates for known CVEs. Detect outdated 
-                    software and misconfigurations automatically.
-                </p>
+                <h3>JWT Analysis</h3>
+                <p>Token security testing including algorithm confusion and key leaks</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📂</div>
+                <h3>LFI/RFI Scanner</h3>
+                <p>Local and remote file inclusion vulnerability detection</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔑</div>
+                <h3>IDOR Detection</h3>
+                <p>Insecure Direct Object Reference testing with fuzzing</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">⚡</div>
+                <h3>Command Injection</h3>
+                <p>OS command injection with multiple payload techniques</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔄</div>
+                <h3>CSRF Analysis</h3>
+                <p>Cross-Site Request Forgery token validation testing</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🚀</div>
+                <h3>GraphQL Security</h3>
+                <p>Introspection, injection, and authorization testing</p>
             </div>
         </div>
-    </section>
-    
-    <section id="pricing" class="pricing">
-        <h2 class="section-title" style="font-size: 1.8rem;">Simple, Transparent Pricing</h2>
-        <p style="text-align: center; color: #9ca3af; margin-top: -0.5rem; margin-bottom: 2rem;">No hidden fees. Cancel anytime.</p>
-        
-        <div class="pricing-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; max-width: 1200px; margin: 0 auto;">
-            <div class="pricing-card" style="padding: 1.25rem;">
-                <div class="pricing-tier" style="font-size: 1rem;">FREE</div>
-                <div class="pricing-price" style="font-size: 2rem;">€0<span style="font-size: 0.9rem;">/month</span></div>
-                <p class="pricing-desc" style="font-size: 0.8rem; min-height: 36px;">For hobbyists</p>
-                
-                <ul class="pricing-features" style="font-size: 0.8rem;">
-                    <li>1 concurrent scan</li>
-                    <li>5 URLs/scan</li>
-                    <li>3 scans/day</li>
-                    <li>10 subdomains</li>
-                    <li>5 basic detectors</li>
-                    <li class="disabled">Export</li>
-                </ul>
-                
-                <a href="{% url 'signup' %}" class="btn btn-secondary" style="width: 100%; text-align: center; padding: 0.5rem; font-size: 0.85rem;">Start Free</a>
-            </div>
-            
-            <div class="pricing-card" style="padding: 1.25rem;">
-                <div class="pricing-tier" style="font-size: 1rem;">BASIC</div>
-                <div class="pricing-price" style="font-size: 2rem;">€4.99<span style="font-size: 0.9rem;">/month</span></div>
-                <p class="pricing-desc" style="font-size: 0.8rem; min-height: 36px;">For beginners</p>
-                
-                <ul class="pricing-features" style="font-size: 0.8rem;">
-                    <li>2 concurrent scans</li>
-                    <li>20 URLs/scan</li>
-                    <li>10 scans/day</li>
-                    <li>25 subdomains</li>
-                    <li>10 detectors</li>
-                    <li>JSON/MD export</li>
-                </ul>
-                
-                <button onclick="upgradeTier('BASIC')" class="btn btn-secondary" style="width: 100%; text-align: center; padding: 0.5rem; font-size: 0.85rem;">Get Basic</button>
-            </div>
-            
-            <div class="pricing-card featured" style="padding: 1.25rem; position: relative;">
-                <div class="pricing-badge" style="font-size: 0.65rem; padding: 0.25rem 0.6rem;">Most Popular</div>
-                <div class="pricing-tier" style="font-size: 1rem;">PRO</div>
-                <div class="pricing-price" style="font-size: 2rem;">€9.99<span style="font-size: 0.9rem;">/month</span></div>
-                <p class="pricing-desc" style="font-size: 0.8rem; min-height: 36px;">For hunters</p>
-                
-                <ul class="pricing-features" style="font-size: 0.8rem;">
-                    <li>3 concurrent scans</li>
-                    <li>100 URLs/scan</li>
-                    <li>50 scans/day</li>
-                    <li>100 subdomains</li>
-                    <li>19 detectors</li>
-                    <li>All exports</li>
-                    <li>Team (3 seats)</li>
-                </ul>
-                
-                <button onclick="upgradeTier('PRO')" class="btn btn-primary" style="width: 100%; text-align: center; padding: 0.5rem; font-size: 0.85rem;">Get Pro</button>
-            </div>
-            
-            <div class="pricing-card" style="padding: 1.25rem;">
-                <div class="pricing-tier" style="font-size: 1rem;">ENTERPRISE</div>
-                <div class="pricing-price" style="font-size: 2rem;">€49.99<span style="font-size: 0.9rem;">/month</span></div>
-                <p class="pricing-desc" style="font-size: 0.8rem; min-height: 36px;">For teams</p>
-                
-                <ul class="pricing-features" style="font-size: 0.8rem;">
-                    <li>10 concurrent scans</li>
-                    <li>Unlimited URLs</li>
-                    <li>Unlimited scans</li>
-                    <li>28+ detectors</li>
-                    <li>Nuclei CVE (3000+)</li>
-                    <li>Mobile scanner</li>
-                    <li>API access</li>
-                    <li>Priority support</li>
-                </ul>
-                
-                <button onclick="upgradeTier('ENTERPRISE')" class="btn btn-primary" style="width: 100%; text-align: center; padding: 0.5rem; font-size: 0.85rem;">Get Enterprise</button>
-            </div>
-        </div>
-        
-        <!-- Payment Methods & Security -->
-        <div style="margin-top: 3rem; text-align: center;">
-            <div style="display: inline-flex; align-items: center; gap: 1.5rem; padding: 1rem 2rem; background: rgba(15, 23, 42, 0.5); border-radius: 0.75rem; border: 1px solid #1f2937;">
-                <div style="color: #9ca3af; font-size: 0.85rem; font-weight: 500;">SECURE PAYMENTS</div>
-                <div style="display: flex; gap: 1rem; align-items: center;">
-                    <span style="font-size: 1.5rem;">💳</span>
-                    <span style="color: #6b7280; font-size: 0.8rem;">Visa</span>
-                    <span style="color: #6b7280; font-size: 0.8rem;">•</span>
-                    <span style="color: #6b7280; font-size: 0.8rem;">Mastercard</span>
-                    <span style="color: #6b7280; font-size: 0.8rem;">•</span>
-                    <span style="color: #6b7280; font-size: 0.8rem;">Amex</span>
-                    <span style="color: #6b7280; font-size: 0.8rem;">•</span>
-                    <span style="color: #6b7280; font-size: 0.8rem;">PayPal</span>
+    </div>
+</section>
+
+<section id="pricing" class="pricing-section">
+    <div class="pricing-container">
+        <h2>Choose Your Plan</h2>
+        <div class="pricing-grid">
+            <div class="pricing-card">
+                <div class="plan-header">
+                    <h3>Free</h3>
+                    <div class="plan-price">
+                        <span class="price">$0</span>
+                        <span class="period">/month</span>
+                    </div>
                 </div>
-                <div style="color: #9ca3af; font-size: 0.85rem;">Powered by <strong style="color: #635bff;">Stripe</strong></div>
+                <ul class="plan-features">
+                    <li>✓ 10 scans per day</li>
+                    <li>✓ Basic vulnerability checks</li>
+                    <li>✓ XSS, SQLi, SSRF detection</li>
+                    <li>✓ HTML reports</li>
+                    <li>✗ Advanced detectors</li>
+                    <li>✗ API access</li>
+                    <li>✗ Priority support</li>
+                </ul>
+                <a href="/signup/" class="btn-plan">Get Started</a>
+            </div>
+
+            <div class="pricing-card featured">
+                <div class="featured-badge">Most Popular</div>
+                <div class="plan-header">
+                    <h3>Pro</h3>
+                    <div class="plan-price">
+                        <span class="price">$29</span>
+                        <span class="period">/month</span>
+                    </div>
+                </div>
+                <ul class="plan-features">
+                    <li>✓ Unlimited scans</li>
+                    <li>✓ All vulnerability checks (30+)</li>
+                    <li>✓ Advanced SSRF with OOB</li>
+                    <li>✓ JWT security testing</li>
+                    <li>✓ GraphQL analysis</li>
+                    <li>✓ REST API access</li>
+                    <li>✓ Priority support</li>
+                    <li>✓ Custom detectors</li>
+                </ul>
+                <a href="/signup/?plan=pro" class="btn-plan-featured">Upgrade to Pro</a>
             </div>
         </div>
-        
-        <!-- Security & Data Protection -->
-        <div style="margin-top: 2rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; max-width: 900px; margin: 2rem auto 0;">
-            <div style="text-align: center; padding: 1rem;">
-                <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔒</div>
-                <div style="font-weight: 600; color: #e5e7eb; margin-bottom: 0.25rem; font-size: 0.9rem;">Bank-Grade Encryption</div>
-                <div style="color: #9ca3af; font-size: 0.75rem;">All data encrypted at rest and in transit with AES-256</div>
-            </div>
-            <div style="text-align: center; padding: 1rem;">
-                <div style="font-size: 2rem; margin-bottom: 0.5rem;">🛡️</div>
-                <div style="font-weight: 600; color: #e5e7eb; margin-bottom: 0.25rem; font-size: 0.9rem;">GDPR Compliant</div>
-                <div style="color: #9ca3af; font-size: 0.75rem;">Your data stays yours. Delete anytime, no questions asked</div>
-            </div>
-            <div style="text-align: center; padding: 1rem;">
-                <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚡</div>
-                <div style="font-weight: 600; color: #e5e7eb; margin-bottom: 0.25rem; font-size: 0.9rem;">99.9% Uptime SLA</div>
-                <div style="color: #9ca3af; font-size: 0.75rem;">Infrastructure monitored 24/7. Enterprise gets priority</div>
-            </div>
-        </div>
-    </section>
-    
-    <footer>
-        <p>&copy; 2025 BugBounty Arsenal. Built with ❤️ for the security community.</p>
-        <p style="margin-top: 0.5rem; font-size: 0.8rem;">
-            <a href="#" style="color: #6b7280; margin: 0 1rem;">Privacy Policy</a>
-            <a href="#" style="color: #6b7280; margin: 0 1rem;">Terms of Service</a>
-            <a href="#" style="color: #6b7280; margin: 0 1rem;">Contact</a>
-        </p>
-    </footer>
-    
-    <script>
-    const checkoutApiUrl = '/api/billing/checkout/';  // TODO: Create API endpoint
-    const signupUrl = '{% url "signup" %}';
-    
-    async function upgradeTier(tier) {
-        try {
-            const data = { tier: tier };
-            
-            const response = await fetch(checkoutApiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify(data)
-            });
-            
-            const result = await response.json();
-            
-            if (response.ok) {
-                // Redirect to Stripe Checkout
-                window.location.href = result.url;
-            } else {
-                if (response.status === 401) {
-                    // Not logged in, redirect to signup
-                    alert('Please sign up or log in to upgrade your plan');
-                    window.location.href = signupUrl;
-                } else {
-                    alert(result.detail || result.message || 'Failed to create checkout session');
-                }
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            alert('Network error. Please try again.');
-        }
-    }
-    
-    // Helper function to get CSRF token from cookies
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-    </script>
-</body>
-</html>
+    </div>
+</section>
+
+<section class="cta-section">
+    <div class="cta-container">
+        <h2>Ready to find vulnerabilities?</h2>
+        <p>Start scanning in seconds. No credit card required.</p>
+        <a href="/signup/" class="btn-cta">Start Free Trial</a>
+    </div>
+</section>
+{% endblock %}

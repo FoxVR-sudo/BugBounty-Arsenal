@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Pricing - BugBounty Arsenal{% endblock %}
+
+{% block content %}
+<div class="pricing-page">
+    <div class="pricing-header">
+        <h1>Simple, Transparent Pricing</h1>
+        <p>Choose the plan that fits your security testing needs</p>
+    </div>
+
+    <div class="pricing-comparison">
+        <div class="pricing-card">
+            <div class="plan-header">
+                <h3>Free</h3>
+                <div class="plan-price">
+                    <span class="price">$0</span>
+                    <span class="period">/month</span>
+                </div>
+                <p class="plan-description">Perfect for getting started</p>
+            </div>
+            
+            <ul class="plan-features">
+                <li><span class="check">✓</span> 10 scans per day</li>
+                <li><span class="check">✓</span> Basic vulnerability checks</li>
+                <li><span class="check">✓</span> XSS Detection</li>
+                <li><span class="check">✓</span> SQL Injection</li>
+                <li><span class="check">✓</span> SSRF (Basic)</li>
+                <li><span class="check">✓</span> LFI/RFI Scanner</li>
+                <li><span class="check">✓</span> IDOR Detection</li>
+                <li><span class="check">✓</span> Command Injection</li>
+                <li><span class="check">✓</span> CSRF Analysis</li>
+                <li><span class="check">✓</span> XXE Scanner</li>
+                <li><span class="check">✓</span> SSTI Detection</li>
+                <li><span class="check">✓</span> Security Headers</li>
+                <li><span class="check">✓</span> HTML Reports</li>
+                <li><span class="cross">✗</span> Advanced OOB SSRF</li>
+                <li><span class="cross">✗</span> JWT Analysis</li>
+                <li><span class="cross">✗</span> GraphQL Testing</li>
+                <li><span class="cross">✗</span> API Access</li>
+                <li><span class="cross">✗</span> Priority Support</li>
+            </ul>
+            
+            <a href="/signup/" class="btn-plan">Get Started</a>
+        </div>
+
+        <div class="pricing-card featured">
+            <div class="featured-badge">Recommended</div>
+            <div class="plan-header">
+                <h3>Pro</h3>
+                <div class="plan-price">
+                    <span class="price">$29</span>
+                    <span class="period">/month</span>
+                </div>
+                <p class="plan-description">For serious bug bounty hunters</p>
+            </div>
+            
+            <ul class="plan-features">
+                <li><span class="check">✓</span> Unlimited scans</li>
+                <li><span class="check">✓</span> All vulnerability checks (30+)</li>
+                <li><span class="check">✓</span> XSS Detection (Advanced)</li>
+                <li><span class="check">✓</span> SQL Injection (Advanced)</li>
+                <li><span class="check">✓</span> SSRF with OOB Callbacks</li>
+                <li><span class="check">✓</span> JWT Security Testing</li>
+                <li><span class="check">✓</span> GraphQL Analysis</li>
+                <li><span class="check">✓</span> OAuth Security Testing</li>
+                <li><span class="check">✓</span> Prototype Pollution</li>
+                <li><span class="check">✓</span> Race Condition Testing</li>
+                <li><span class="check">✓</span> NoSQL Injection</li>
+                <li><span class="check">✓</span> API Security Testing</li>
+                <li><span class="check">✓</span> CVE Database Matching</li>
+                <li><span class="check">✓</span> Subdomain Takeover</li>
+                <li><span class="check">✓</span> REST API Access</li>
+                <li><span class="check">✓</span> Custom Detectors</li>
+                <li><span class="check">✓</span> Priority Support</li>
+                <li><span class="check">✓</span> Advanced Reporting</li>
+            </ul>
+            
+            <a href="/signup/?plan=pro" class="btn-plan-featured">Upgrade to Pro</a>
+        </div>
+    </div>
+
+    <div class="faq-section">
+        <h2>Frequently Asked Questions</h2>
+        <div class="faq-grid">
+            <div class="faq-item">
+                <h3>Can I upgrade or downgrade anytime?</h3>
+                <p>Yes, you can change your plan at any time. Changes take effect immediately.</p>
+            </div>
+            <div class="faq-item">
+                <h3>What payment methods do you accept?</h3>
+                <p>We accept all major credit cards, PayPal, and cryptocurrency payments.</p>
+            </div>
+            <div class="faq-item">
+                <h3>Is there a free trial for Pro?</h3>
+                <p>Yes! New users get 7 days of Pro features for free. No credit card required.</p>
+            </div>
+            <div class="faq-item">
+                <h3>Do you offer refunds?</h3>
+                <p>We offer a 30-day money-back guarantee if you're not satisfied.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

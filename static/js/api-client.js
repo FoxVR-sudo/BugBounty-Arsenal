@@ -148,16 +148,17 @@ class BugBountyAPI {
     /**
      * Signup new user
      */
-    async signup(email, password, fullName) {
+    async signup(username, email, password, passwordConfirm) {
         const response = await fetch(`${this.baseURL}/api/auth/signup/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({ 
+                username,
                 email, 
                 password,
-                full_name: fullName 
+                password_confirm: passwordConfirm
             })
         });
 
@@ -171,7 +172,7 @@ class BugBountyAPI {
             return data;
         } else {
             const error = await response.json();
-            throw new Error(error.detail || error.error || 'Signup failed');
+            throw new Error(error.detail || error.errors || error.error || 'Signup failed');
         }
     }
 
@@ -202,6 +203,14 @@ class BugBountyAPI {
             return await response.json();
         }
         throw new Error('Failed to fetch scan status');
+    }
+
+    async getScanDetails(scanId) {
+        const response = await this.request(`${this.baseURL}/api/scans/${scanId}/`);
+        if (response.ok) {
+            return await response.json();
+        }
+        throw new Error('Failed to fetch scan details');
     }
 
     async startScan(target, scanType = 'web_security', options = {}) {

@@ -5,21 +5,42 @@ from django.conf import settings
 class Plan(models.Model):
     """Subscription plan model"""
     
-    name = models.CharField(max_length=50, unique=True)  # FREE, PRO
+    name = models.CharField(max_length=50, unique=True)  # FREE, BASIC, PRO, ENTERPRISE
     display_name = models.CharField(max_length=100)
-    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    description = models.TextField(blank=True, help_text='Plan description for landing page')
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text='Monthly price in USD')
     
-    # Dynamic limits stored as JSON
-    limits = models.JSONField(default=dict)  # {"scans_per_day": 5, "concurrent_scans": 1, ...}
-    features = models.JSONField(default=list)  # ["Basic scanning", "Email reports", ...]
+    # Scan limits
+    scans_per_day = models.IntegerField(default=3, help_text='Daily scan limit (-1 = unlimited)')
+    scans_per_month = models.IntegerField(default=100, help_text='Monthly scan limit (-1 = unlimited)')
+    concurrent_scans = models.IntegerField(default=1, help_text='Number of concurrent scans allowed')
+    max_urls_per_scan = models.IntegerField(default=10, help_text='Maximum URLs per scan')
     
+    # Storage limits
+    storage_limit_mb = models.IntegerField(default=100, help_text='Storage limit in MB for scan results')
+    retention_days = models.IntegerField(default=7, help_text='How many days to keep scan results')
+    
+    # Detector limits
+    max_detectors = models.IntegerField(default=15, help_text='Maximum detectors available (-1 = all)')
+    allowed_scan_types = models.JSONField(default=list, help_text='Allowed scan types: web, api, mobile, etc.')
+    
+    # Features
+    features = models.JSONField(default=list, help_text='List of feature names for display')
+    
+    # Legacy support
+    limits = models.JSONField(default=dict, help_text='Legacy limits field (deprecated)')
+    
+    # Status
     is_active = models.BooleanField(default=True)
+    is_popular = models.BooleanField(default=False, help_text='Show "Most Popular" badge')
+    order = models.IntegerField(default=0, help_text='Display order on pricing page')
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
         db_table = 'plans'
-        ordering = ['price']
+        ordering = ['order', 'price']
     
     def __str__(self):
         return self.display_name

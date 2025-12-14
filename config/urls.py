@@ -58,7 +58,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     
     # Favicon redirect
-    path('favicon.ico', RedirectView.as_view(url='/static/favicon.ico', permanent=True)),
+    path('favicon.ico', RedirectView.as_view(url='/static/favicon.svg', permanent=True)),
     
     # Web interface (templates)
     path('', include('web.urls')),
