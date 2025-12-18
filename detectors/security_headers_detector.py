@@ -14,6 +14,7 @@ async def security_headers_detector(session, url, context):
         return findings
 
     per_host_rate = context.get("per_host_rate", None)
+    
     try:
         parsed_host = url.split("/")[2] if "//" in url else None
         host = parsed_host or ""

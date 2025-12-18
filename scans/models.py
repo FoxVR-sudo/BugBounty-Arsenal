@@ -67,7 +67,9 @@ class Scan(models.Model):
         Start the scan asynchronously using Celery.
         
         Args:
-            scan_config: Optional configuration dict for the scan
+            scan_config: Optional configuration dict containing:
+                - enabled_detectors: List of detector names to run
+                - options: Scan options (concurrency, timeout, etc.)
             
         Returns:
             Celery task result
@@ -82,6 +84,7 @@ class Scan(models.Model):
             'target': self.target,
             'scan_type': self.scan_type,
             'user_tier': getattr(self.user, 'subscription', {}).get('plan', {}).get('name', 'free'),
+                        'enabled_detectors': scan_config.get('enabled_detectors', []),
             'options': scan_config,
         }
         
@@ -220,6 +223,83 @@ class Scan(models.Model):
                 deleted_files.append(file_path)
         
         return deleted_files
+    
+    def parse_and_store_findings(self):
+        """Parse raw_results and create Vulnerability records."""
+        if not self.raw_results:
+            return 0
+        
+        findings = self.raw_results.get('findings', [])
+        count = 0
+        
+        # Clear existing vulnerabilities first
+        self.vulnerabilities.all().delete()
+        
+        for finding in findings:
+            try:
+                vuln = Vulnerability.objects.create(
+                    scan=self,
+                    title=finding.get('type', 'Unknown'),
+                    description=finding.get('description', ''),
+                    severity=finding.get('severity', 'low').lower(),
+                    detector=finding.get('detector', 'unknown'),
+                    url=finding.get('url', ''),
+                    payload=finding.get('payload', ''),
+                    evidence=finding.get('evidence', ''),
+                    request_headers=finding.get('request_headers', {}),
+                    response_headers=finding.get('response_headers', {}),
+                    status_code=finding.get('status', None),
+                    response_time=finding.get('response_time', None),
+                    raw_data=finding,
+                )
+                count += 1
+            except Exception as e:
+                import logging
+                logging.error(f"Error storing vulnerability: {e}")
+                continue
+        
+        return count
+
+
+class Vulnerability(models.Model):
+    """Individual vulnerability finding from a scan"""
+    
+    SEVERITY_CHOICES = [
+        ('critical', 'Critical'),
+        ('high', 'High'),
+        ('medium', 'Medium'),
+        ('low', 'Low'),
+        ('info', 'Info'),
+    ]
+    
+    scan = models.ForeignKey(Scan, on_delete=models.CASCADE, related_name='vulnerabilities')
+    title = models.CharField(max_length=500, help_text='Vulnerability type/title')
+    description = models.TextField(blank=True, help_text='Detailed description')
+    severity = models.CharField(max_length=20, choices=SEVERITY_CHOICES, default='low')
+    detector = models.CharField(max_length=100, blank=True, help_text='Which detector found this')
+    url = models.TextField(blank=True, help_text='Vulnerable URL')
+    payload = models.TextField(blank=True, help_text='Payload used for exploitation')
+    evidence = models.TextField(blank=True, help_text='Evidence of the vulnerability')
+    request_headers = models.JSONField(default=dict, blank=True)
+    response_headers = models.JSONField(default=dict, blank=True)
+    status_code = models.IntegerField(null=True, blank=True)
+    response_time = models.FloatField(null=True, blank=True, help_text='Response time in seconds')
+    raw_data = models.JSONField(default=dict, blank=True, help_text='Full raw finding data')
+    is_verified = models.BooleanField(default=False, help_text='User verified this finding')
+    notes = models.TextField(blank=True, help_text='User notes')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'vulnerabilities'
+        ordering = ['-severity', '-created_at']
+        indexes = [
+            models.Index(fields=['scan', 'severity']),
+            models.Index(fields=['detector']),
+        ]
+    
+    def __str__(self):
+        return f"{self.title} - {self.severity} ({self.scan_id})"
 
 
 class AuditLog(models.Model):

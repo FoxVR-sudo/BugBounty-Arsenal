@@ -52,6 +52,7 @@ class ScanViewSet(viewsets.ModelViewSet):
             'bypass_cloudflare': self.request.data.get('bypass_cloudflare', False),
             'enable_forbidden_probe': self.request.data.get('enable_forbidden_probe', False),
             'scan_mode': self.request.data.get('scan_mode', 'normal'),
+            'enabled_detectors': self.request.data.get('enabled_detectors', []),
         }
         
         # Start async scan
@@ -114,6 +115,95 @@ class ScanViewSet(viewsets.ModelViewSet):
             'pending': queryset.filter(status='pending').count(),
         })
 
+    @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated])
+    def export(self, request, pk=None):
+        """Export scan results in various formats (json, csv, pdf)"""
+        from django.http import HttpResponse
+        import csv
+        
+        scan = self.get_object()
+        format_type = request.query_params.get('format', 'json').lower()
+        
+        # Get vulnerabilities
+        vulnerabilities = scan.vulnerabilities.all()
+        
+        if format_type == 'json':
+            # JSON export
+            data = {
+                'scan': {
+                    'id': scan.id,
+                    'target': scan.target,
+                    'scan_type': scan.scan_type,
+                    'status': scan.status,
+                    'started_at': scan.started_at.isoformat() if scan.started_at else None,
+                    'completed_at': scan.completed_at.isoformat() if scan.completed_at else None,
+                    'duration': scan.duration,
+                    'vulnerabilities_found': scan.vulnerabilities_found,
+                },
+                'vulnerabilities': [
+                    {
+                        'title': v.title,
+                        'description': v.description,
+                        'severity': v.severity,
+                        'detector': v.detector,
+                        'url': v.url,
+                        'payload': v.payload,
+                        'evidence': v.evidence,
+                        'status_code': v.status_code,
+                    }
+                    for v in vulnerabilities
+                ]
+            }
+            response = HttpResponse(
+                json.dumps(data, indent=2),
+                content_type='application/json'
+            )
+            response['Content-Disposition'] = f'attachment; filename="scan-{scan.id}-report.json"'
+            
+        elif format_type == 'csv':
+            # CSV export
+            response = HttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = f'attachment; filename="scan-{scan.id}-report.csv"'
+            
+            writer = csv.writer(response)
+            writer.writerow(['Title', 'Severity', 'Detector', 'URL', 'Description', 'Evidence'])
+            
+            for v in vulnerabilities:
+                writer.writerow([
+                    v.title,
+                    v.severity,
+                    v.detector,
+                    v.url or '',
+                    v.description or '',
+                    v.evidence or ''
+                ])
+        
+        else:
+            # Unsupported format
+            return Response(
+                {'error': f'Unsupported format: {format_type}. Use json or csv.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        return response
+
+    @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated])
+    def vulnerabilities(self, request, pk=None):
+        """Get vulnerabilities for this scan"""
+        from .serializers import VulnerabilitySerializer
+        from rest_framework.pagination import PageNumberPagination
+        
+        scan = self.get_object()
+        vulnerabilities = scan.vulnerabilities.all().order_by('-severity', '-created_at')
+        
+        # Apply pagination
+        paginator = PageNumberPagination()
+        paginator.page_size = 50
+        result_page = paginator.paginate_queryset(vulnerabilities, request)
+        
+        serializer = VulnerabilitySerializer(result_page, many=True)
+        return paginator.get_paginated_response(serializer.data)
+
 
 @extend_schema(
     summary="Get scan status",
@@ -165,7 +255,7 @@ def scan_start_view(request):
             status=status.HTTP_400_BAD_REQUEST
         )
     
-    # Create scan
+    # Create scan - let serializer handle raw_results default
     scan = serializer.save(user=request.user)
     
     # Get scan configuration
@@ -177,6 +267,7 @@ def scan_start_view(request):
         'bypass_cloudflare': request.data.get('bypass_cloudflare', False),
         'enable_forbidden_probe': request.data.get('enable_forbidden_probe', False),
         'scan_mode': request.data.get('scan_mode', 'normal'),
+        'enabled_detectors': request.data.get('enabled_detectors', []),
     }
     
     # Start async scan

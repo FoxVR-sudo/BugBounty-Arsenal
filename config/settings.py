@@ -11,57 +11,39 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import os
+from datetime import timedelta
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-2ooh6&ub7ohd-6j&#+4a#bd3^+h=l^mpenwml=alf0@3vzyo8q'
-
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-
-ALLOWED_HOSTS = ['*']  # Configure properly in production
-
-
-
-# Application definition
+ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
-    # Django Channels must be before django.contrib.staticfiles
     'daphne',
-    
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
-    # Third party apps
     'rest_framework',
     'rest_framework_simplejwt',
-    'corsheaders',
     'django_filters',
     'drf_spectacular',
     'channels',
-    
-    # Local apps
+    'corsheaders',
     'users',
     'scans',
     'subscriptions',
-    'web',  # Web interface templates
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # Static files
-    'corsheaders.middleware.CorsMiddleware',  # CORS
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -74,7 +56,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],  # Add templates directory
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -88,21 +70,14 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'config.wsgi.application'
-
-
-# Database
-# https://docs.djangoproject.com/en/6.0/ref/settings/#databases
+ASGI_APPLICATION = 'config.asgi.application'
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'bugbounty_arsenal.db',  # Use existing DB
+        'NAME': BASE_DIR / 'bugbounty_arsenal.db',
     }
 }
-
-
-# Password validation
-# https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -119,37 +94,22 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
-# Internationalization
-# https://docs.djangoproject.com/en/6.0/topics/i18n/
-
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_TZ = True
-
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 
-# Media files
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Custom User Model
 AUTH_USER_MODEL = 'users.User'
 
-# Django REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -168,9 +128,6 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
-# JWT Settings
-from datetime import timedelta
-
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(days=7),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
@@ -178,11 +135,9 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
 }
 
-# CORS Settings
-CORS_ALLOW_ALL_ORIGINS = True  # For development
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
-# DRF Spectacular (API Documentation)
 SPECTACULAR_SETTINGS = {
     'TITLE': 'BugBounty Arsenal API',
     'DESCRIPTION': 'Comprehensive Bug Bounty Security Scanner with automated vulnerability detection',
@@ -199,29 +154,116 @@ SPECTACULAR_SETTINGS = {
     'REDOC_DIST': 'SIDECAR',
 }
 
-# Celery Configuration
-import os
-CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+_redis_host = os.getenv('REDIS_HOST', 'redis')
+_redis_port = os.getenv('REDIS_PORT', '6379')
+
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', f'redis://{_redis_host}:{_redis_port}/0')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', f'redis://{_redis_host}:{_redis_port}/0')
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
 
-# Authentication URLs
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/'
 
-# ASGI Configuration
-ASGI_APPLICATION = 'config.asgi.application'
-
-# Channels Configuration
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            "hosts": [(os.getenv('REDIS_HOST', 'localhost'), int(os.getenv('REDIS_PORT', 6379)))],
+            'hosts': [(os.getenv('REDIS_HOST', _redis_host), int(os.getenv('REDIS_PORT', _redis_port)))],
         },
     },
 }
+
+SCANNER_DETECTOR_MAPPING = {
+    'reconnaissance': [
+        'subdomain_takeover_detector',
+        'dir_listing_detector',
+        'security_headers_detector',
+        'secret_detector',
+        'reflection_detector',
+        'cors_detector',
+        'graphql_detector',
+        'api_security_detector',
+    ],
+    'web_security': [
+        'xss_pattern_detector',
+        'sql_pattern_detector',
+        'lfi_detector',
+        'open_redirect_detector',
+        'csrf_detector',
+        'header_injection_detector',
+        'command_injection_detector',
+        'xxe_detector',
+        'ssti_detector',
+        'prototype_pollution_detector',
+        'nosql_injection_detector',
+        'cache_poisoning_detector',
+        'idor_detector',
+        'auth_bypass_detector',
+        'fuzz_detector',
+        'file_upload_detector',
+    ],
+    'api_security': [
+        'api_security_detector',
+        'graphql_detector',
+        'graphql_injection_detector',
+        'jwt_detector',
+        'jwt_vulnerability_scanner',
+        'oauth_detector',
+        'cors_detector',
+        'rate_limit_bypass_detector',
+        'idor_detector',
+        'nosql_injection_detector',
+    ],
+    'mobile': [
+        'api_security_detector',
+        'jwt_detector',
+        'oauth_detector',
+        'secret_detector',
+        'idor_detector',
+        'rate_limit_bypass_detector',
+    ],
+    'comprehensive': [
+        'subdomain_takeover_detector',
+        'dir_listing_detector',
+        'security_headers_detector',
+        'secret_detector',
+        'reflection_detector',
+        'cors_detector',
+        'graphql_detector',
+        'api_security_detector',
+        'xss_pattern_detector',
+        'sql_pattern_detector',
+        'lfi_detector',
+        'open_redirect_detector',
+        'csrf_detector',
+        'header_injection_detector',
+        'command_injection_detector',
+        'xxe_detector',
+        'ssti_detector',
+        'prototype_pollution_detector',
+        'nosql_injection_detector',
+        'cache_poisoning_detector',
+        'idor_detector',
+        'auth_bypass_detector',
+        'fuzz_detector',
+        'file_upload_detector',
+        'ssrf_detector',
+        'advanced_ssrf_detector',
+        'ssrf_oob_detector',
+        'jwt_detector',
+        'jwt_vulnerability_scanner',
+        'oauth_detector',
+        'race_condition_detector',
+        'graphql_injection_detector',
+        'brute_force_detector',
+        'rate_limit_bypass_detector',
+        'injector',
+        'cve_database_detector',
+    ],
+}
+
+# Note: mobile placeholders removed to avoid missing modules

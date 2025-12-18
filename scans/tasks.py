@@ -34,13 +34,13 @@ def execute_scan_task(self, scan_id: int, scan_config: Dict[str, Any]) -> Dict[s
             - target: Target URL or domain
             - scan_type: Type of scan to perform
             - user_tier: User's subscription tier
+            - enabled_detectors: List of detector names to run
             - options: Additional scan options
     
     Returns:
         Dictionary with scan results and metadata
     """
     from scans.models import Scan
-    from report_generator import generate_scan_report
     
     try:
         # Get the scan instance
@@ -50,14 +50,14 @@ def execute_scan_task(self, scan_id: int, scan_config: Dict[str, Any]) -> Dict[s
         scan.status = 'running'
         scan.started_at = timezone.now()
         scan.progress = 0
-        scan.current_step = 'Initializing scan...'
+        scan.current_step = 'Initializing scanner...'
         scan.save(update_fields=['status', 'started_at', 'progress', 'current_step'])
         
         # Send WebSocket update
         send_scan_update(scan_id, {
             'status': 'running',
             'progress': 0,
-            'current_step': 'Initializing scan...',
+            'current_step': 'Initializing scanner...',
             'started_at': scan.started_at.isoformat()
         })
         
@@ -67,7 +67,17 @@ def execute_scan_task(self, scan_id: int, scan_config: Dict[str, Any]) -> Dict[s
         target = scan_config['target']
         scan_type = scan_config.get('scan_type', 'web_security')
         user_tier = scan_config.get('user_tier', 'free')
+        enabled_detectors = scan_config.get('enabled_detectors', [])
         options = scan_config.get('options', {})
+        
+        # If no specific detectors selected, use all based on scan type
+        if not enabled_detectors:
+            # Import detector mappings
+            from django.conf import settings
+            enabled_detectors = settings.SCANNER_DETECTOR_MAPPING.get(scan_type, [])
+        
+        logger.info(f"Scan {scan_id} will run {len(enabled_detectors)} detectors: {enabled_detectors}")
+
         
         # Prepare scan context
         scan_context = {
@@ -82,6 +92,7 @@ def execute_scan_task(self, scan_id: int, scan_config: Dict[str, Any]) -> Dict[s
             'allow_destructive': options.get('allow_destructive', False),
             'bypass_cloudflare': options.get('bypass_cloudflare', False),
             'enable_forbidden_probe': options.get('enable_forbidden_probe', False),
+            'enabled_detectors': enabled_detectors,
         }
         
         # Import scanner module
@@ -89,11 +100,11 @@ def execute_scan_task(self, scan_id: int, scan_config: Dict[str, Any]) -> Dict[s
         
         # Update progress
         scan.progress = 10
-        scan.current_step = 'Preparing scan targets...'
+        scan.current_step = f'Preparing scan targets... ({len(enabled_detectors)} detectors)'
         scan.save(update_fields=['progress', 'current_step'])
         send_scan_update(scan_id, {
             'progress': 10,
-            'current_step': 'Preparing scan targets...'
+            'current_step': f'Preparing scan targets... ({len(enabled_detectors)} detectors)'
         })
         
         # Prepare targets list
@@ -101,11 +112,12 @@ def execute_scan_task(self, scan_id: int, scan_config: Dict[str, Any]) -> Dict[s
         
         # Update progress
         scan.progress = 20
-        scan.current_step = 'Running security detectors...'
+        scan.current_step = f'Starting {len(enabled_detectors)} detectors...'
         scan.save(update_fields=['progress', 'current_step'])
         send_scan_update(scan_id, {
             'progress': 20,
-            'current_step': 'Running security detectors...'
+            'current_step': f'Starting {len(enabled_detectors)} detectors...',
+            'total_detectors': len(enabled_detectors)
         })
         
         # Execute the scan
@@ -122,7 +134,10 @@ def execute_scan_task(self, scan_id: int, scan_config: Dict[str, Any]) -> Dict[s
             enable_forbidden_probe=scan_context['enable_forbidden_probe'],
             scan_mode=scan_context['scan_mode'],
             user_tier=user_tier,
-            extra_context={'celery_task_id': self.request.id},
+            extra_context={
+                'celery_task_id': self.request.id,
+                'enabled_detectors': enabled_detectors,
+            },
         )
         
         # Update progress
@@ -179,9 +194,28 @@ def execute_scan_task(self, scan_id: int, scan_config: Dict[str, Any]) -> Dict[s
             'completed_at': timezone.now().isoformat(),
             'vulnerabilities_found': vulnerabilities_found,
             'severity_counts': severity_counts,
+            'findings': [],
             'results': results,
             'metadata': metadata,
         }
+        
+        # Extract and flatten findings from results
+        for result in results:
+            for issue in result.get('issues', []):
+                finding = {
+                    'type': issue.get('type', 'Unknown'),
+                    'severity': issue.get('severity', 'low'),
+                    'url': issue.get('url', result.get('url', '')),
+                    'detector': issue.get('detector', 'unknown'),
+                    'description': issue.get('description', ''),
+                    'evidence': issue.get('evidence', ''),
+                    'payload': issue.get('payload', ''),
+                    'status': issue.get('status', None),
+                    'response_time': issue.get('response_time', None),
+                    'request_headers': issue.get('request_headers', {}),
+                    'response_headers': issue.get('response_headers', {}),
+                }
+                report_data['findings'].append(finding)
         
         with open(report_path, 'w') as f:
             json.dump(report_data, f, indent=2)
@@ -190,15 +224,25 @@ def execute_scan_task(self, scan_id: int, scan_config: Dict[str, Any]) -> Dict[s
         scan.status = 'completed'
         scan.completed_at = timezone.now()
         scan.report_path = report_path
+        scan.raw_results = report_data
         scan.vulnerabilities_found = vulnerabilities_found
         scan.severity_counts = severity_counts
-        scan.progress = 100
-        scan.current_step = 'Scan completed'
+        scan.progress = 95
+        scan.current_step = 'Storing findings...'
         scan.save(update_fields=[
-            'status', 'completed_at', 'report_path',
+            'status', 'completed_at', 'report_path', 'raw_results',
             'vulnerabilities_found', 'severity_counts',
             'progress', 'current_step'
         ])
+        
+        # Parse and store individual findings in database
+        findings_count = scan.parse_and_store_findings()
+        logger.info(f"Stored {findings_count} findings in database for scan {scan_id}")
+        
+        # Update progress to completed
+        scan.progress = 100
+        scan.current_step = 'Scan completed'
+        scan.save(update_fields=['progress', 'current_step'])
         
         # Send completion update via WebSocket
         send_scan_complete(scan_id, {
