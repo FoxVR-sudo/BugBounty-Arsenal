@@ -160,12 +160,23 @@ def execute_scan_task(self, scan_id: int, scan_config: Dict[str, Any]) -> Dict[s
         }
         
         # Count vulnerabilities by severity
+        # Each result is already a single vulnerability finding
         for result in results:
+            # Check if result has issues array (old format) or is direct finding (new format)
             issues = result.get('issues', [])
-            vulnerabilities_found += len(issues)
-            
-            for issue in issues:
-                severity = issue.get('severity', 'info').lower()
+            if issues:
+                # Old format with issues array
+                vulnerabilities_found += len(issues)
+                for issue in issues:
+                    severity = issue.get('severity', 'info').lower()
+                    if severity in severity_counts:
+                        severity_counts[severity] += 1
+                    else:
+                        severity_counts['info'] += 1
+            else:
+                # New format - result is direct finding
+                vulnerabilities_found += 1
+                severity = result.get('severity', 'info').lower()
                 if severity in severity_counts:
                     severity_counts[severity] += 1
                 else:
@@ -201,19 +212,39 @@ def execute_scan_task(self, scan_id: int, scan_config: Dict[str, Any]) -> Dict[s
         
         # Extract and flatten findings from results
         for result in results:
-            for issue in result.get('issues', []):
+            # Check if result has issues array (old format) or is direct finding (new format)
+            issues = result.get('issues', [])
+            if issues:
+                # Old format with issues array
+                for issue in issues:
+                    finding = {
+                        'type': issue.get('type', 'Unknown'),
+                        'severity': issue.get('severity', 'low'),
+                        'url': issue.get('url', result.get('url', '')),
+                        'detector': issue.get('detector', 'unknown'),
+                        'description': issue.get('description', ''),
+                        'evidence': issue.get('evidence', ''),
+                        'payload': issue.get('payload', ''),
+                        'status': issue.get('status', None),
+                        'response_time': issue.get('response_time', None),
+                        'request_headers': issue.get('request_headers', {}),
+                        'response_headers': issue.get('response_headers', {}),
+                    }
+                    report_data['findings'].append(finding)
+            else:
+                # New format - result is direct finding
                 finding = {
-                    'type': issue.get('type', 'Unknown'),
-                    'severity': issue.get('severity', 'low'),
-                    'url': issue.get('url', result.get('url', '')),
-                    'detector': issue.get('detector', 'unknown'),
-                    'description': issue.get('description', ''),
-                    'evidence': issue.get('evidence', ''),
-                    'payload': issue.get('payload', ''),
-                    'status': issue.get('status', None),
-                    'response_time': issue.get('response_time', None),
-                    'request_headers': issue.get('request_headers', {}),
-                    'response_headers': issue.get('response_headers', {}),
+                    'type': result.get('type', 'Unknown'),
+                    'severity': result.get('severity', 'low'),
+                    'url': result.get('url', ''),
+                    'detector': result.get('detector', 'unknown'),
+                    'description': result.get('description', ''),
+                    'evidence': result.get('evidence', ''),
+                    'payload': result.get('payload', ''),
+                    'status': result.get('status', None),
+                    'response_time': result.get('response_time', None),
+                    'request_headers': result.get('request_headers', {}),
+                    'response_headers': result.get('response_headers', {}),
                 }
                 report_data['findings'].append(finding)
         

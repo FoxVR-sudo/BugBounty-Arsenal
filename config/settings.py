@@ -154,7 +154,7 @@ SPECTACULAR_SETTINGS = {
     'REDOC_DIST': 'SIDECAR',
 }
 
-_redis_host = os.getenv('REDIS_HOST', 'redis')
+_redis_host = os.getenv('REDIS_HOST', 'localhost')
 _redis_port = os.getenv('REDIS_PORT', '6379')
 
 CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', f'redis://{_redis_host}:{_redis_port}/0')
@@ -172,7 +172,7 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            'hosts': [(os.getenv('REDIS_HOST', _redis_host), int(os.getenv('REDIS_PORT', _redis_port)))],
+            'hosts': [(os.getenv('REDIS_HOST', 'localhost'), int(os.getenv('REDIS_PORT', _redis_port)))],
         },
     },
 }

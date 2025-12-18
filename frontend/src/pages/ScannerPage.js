@@ -163,20 +163,68 @@ const ScannerPage = () => {
 
   const info = scannerInfo[type] || {};
 
+  // Map scanner type to backend scan_type
+  const getScanType = (scannerType) => {
+    const typeMap = {
+      'xss': 'web_security',
+      'sql': 'web_security',
+      'ssrf': 'web_security',
+      'lfi': 'web_security',
+      'auth': 'web_security',
+      'jwt': 'web_security',
+      'cors': 'web_security',
+      'csrf': 'web_security',
+      'xxe': 'web_security',
+      'idor': 'web_security',
+      'graphql': 'api_security',
+      'api': 'api_security'
+    };
+    return typeMap[scannerType] || 'web_security';
+  };
+
+  // Map scanner type to detector name
+  const getDetectorName = (scannerType) => {
+    const detectorMap = {
+      'xss': 'xss_pattern_detector',
+      'sql': 'sql_pattern_detector',
+      'ssrf': 'ssrf_detector',
+      'lfi': 'lfi_detector',
+      'auth': 'auth_bypass_detector',
+      'jwt': 'jwt_detector',
+      'cors': 'cors_detector',
+      'csrf': 'csrf_detector',
+      'xxe': 'xxe_detector',
+      'idor': 'idor_detector',
+      'graphql': 'graphql_detector',
+      'api': 'api_security_detector'
+    };
+    return detectorMap[scannerType];
+  };
+
+  const backendScanType = getScanType(type);
+  const detectorName = getDetectorName(type);
+
   // Fetch recent scans for this scanner type
   const { data: recentScans, refetch } = useQuery(
     ['scans', type],
-    () => scanService.getAll({ scan_type: type }).then(res => res.data.results)
+    () => scanService.getAll({ scan_type: backendScanType }).then(res => res.data.results)
   );
 
   const handleScan = async (e) => {
     e.preventDefault();
     try {
-      await scanService.create({
+      const scanData = {
         target,
-        scan_type: type,
-        options
-      });
+        scan_type: backendScanType,
+        timeout: options.timeout
+      };
+      
+      // Only add enabled_detectors if we have a specific detector
+      if (detectorName) {
+        scanData.enabled_detectors = [detectorName];
+      }
+      
+      await scanService.create(scanData);
       setTarget('');
       refetch();
       alert('Scan started successfully!');

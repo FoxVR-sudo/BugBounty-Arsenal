@@ -80,11 +80,21 @@ class Scan(models.Model):
             scan_config = {}
         
         # Prepare scan configuration
+        # Get user tier from subscription model
+        user_tier = 'free'
+        try:
+            if hasattr(self.user, 'subscription') and self.user.subscription:
+                subscription = self.user.subscription
+                if hasattr(subscription, 'plan') and subscription.plan:
+                    user_tier = subscription.plan.name
+        except Exception:
+            pass  # Default to 'free' if any error
+        
         config = {
             'target': self.target,
             'scan_type': self.scan_type,
-            'user_tier': getattr(self.user, 'subscription', {}).get('plan', {}).get('name', 'free'),
-                        'enabled_detectors': scan_config.get('enabled_detectors', []),
+            'user_tier': user_tier,
+            'enabled_detectors': scan_config.get('enabled_detectors', []),
             'options': scan_config,
         }
         
@@ -278,7 +288,7 @@ class Vulnerability(models.Model):
     severity = models.CharField(max_length=20, choices=SEVERITY_CHOICES, default='low')
     detector = models.CharField(max_length=100, blank=True, help_text='Which detector found this')
     url = models.TextField(blank=True, help_text='Vulnerable URL')
-    payload = models.TextField(blank=True, help_text='Payload used for exploitation')
+    payload = models.TextField(blank=True, null=True, help_text='Payload used for exploitation')
     evidence = models.TextField(blank=True, help_text='Evidence of the vulnerability')
     request_headers = models.JSONField(default=dict, blank=True)
     response_headers = models.JSONField(default=dict, blank=True)
