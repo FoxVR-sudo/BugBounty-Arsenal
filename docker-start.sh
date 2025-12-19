@@ -9,9 +9,9 @@ pkill -f "runserver" 2>/dev/null
 pkill -f "celery.*worker" 2>/dev/null
 pkill -f "node.*react-scripts" 2>/dev/null
 
-# Start Docker Compose
+# Start Docker Compose (v2 syntax)
 echo "🚀 Starting Docker containers..."
-docker-compose up -d
+sudo docker compose up -d
 
 # Wait for services to be ready
 echo "⏳ Waiting for services to start..."
@@ -20,7 +20,7 @@ sleep 5
 # Check status
 echo ""
 echo "✅ Services status:"
-docker-compose ps
+sudo docker compose ps
 
 echo ""
 echo "📊 Service URLs:"
@@ -29,8 +29,8 @@ echo "  Backend:   http://127.0.0.1:8001"
 echo "  API Docs:  http://127.0.0.1:8001/api/docs/"
 echo ""
 echo "📝 Useful commands:"
-echo "  View logs:       docker-compose logs -f"
-echo "  Stop services:   docker-compose down"
-echo "  Restart:         docker-compose restart"
-echo "  Shell (backend): docker-compose exec backend bash"
+echo "  View logs:       sudo docker compose logs -f"
+echo "  Stop services:   sudo docker compose down (or ./docker-stop.sh)"
+echo "  Restart:         sudo docker compose restart"
+echo "  Shell (backend): sudo docker compose exec backend bash"
 echo ""
