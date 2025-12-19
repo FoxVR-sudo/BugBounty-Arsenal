@@ -178,10 +178,171 @@ class ScanViewSet(viewsets.ModelViewSet):
                     v.evidence or ''
                 ])
         
+        elif format_type == 'pdf':
+            # PDF export
+            from reportlab.lib import colors
+            from reportlab.lib.pagesizes import letter, A4
+            from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+            from reportlab.lib.units import inch
+            from reportlab.lib.enums import TA_CENTER, TA_LEFT
+            from io import BytesIO
+            
+            buffer = BytesIO()
+            doc = SimpleDocTemplate(buffer, pagesize=A4, rightMargin=30, leftMargin=30, topMargin=30, bottomMargin=18)
+            elements = []
+            
+            styles = getSampleStyleSheet()
+            
+            # Custom styles
+            title_style = ParagraphStyle(
+                'CustomTitle',
+                parent=styles['Heading1'],
+                fontSize=24,
+                textColor=colors.HexColor('#1f2937'),
+                spaceAfter=30,
+                alignment=TA_CENTER
+            )
+            
+            heading_style = ParagraphStyle(
+                'CustomHeading',
+                parent=styles['Heading2'],
+                fontSize=14,
+                textColor=colors.HexColor('#3b82f6'),
+                spaceAfter=12,
+                spaceBefore=12
+            )
+            
+            # Title
+            elements.append(Paragraph("Security Scan Report", title_style))
+            elements.append(Spacer(1, 0.2*inch))
+            
+            # Scan Info
+            elements.append(Paragraph("Scan Information", heading_style))
+            scan_info_data = [
+                ['Scan ID:', str(scan.id)],
+                ['Target:', scan.target],
+                ['Scan Type:', scan.get_scan_type_display() if hasattr(scan, 'get_scan_type_display') else scan.scan_type],
+                ['Status:', scan.status.upper()],
+                ['Started:', scan.started_at.strftime('%Y-%m-%d %H:%M:%S') if scan.started_at else 'N/A'],
+                ['Completed:', scan.completed_at.strftime('%Y-%m-%d %H:%M:%S') if scan.completed_at else 'N/A'],
+                ['Duration:', scan.duration or 'N/A'],
+                ['Vulnerabilities Found:', str(scan.vulnerabilities_found)],
+            ]
+            
+            scan_info_table = Table(scan_info_data, colWidths=[2*inch, 4.5*inch])
+            scan_info_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f3f4f6')),
+                ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+                ('TOPPADDING', (0, 0), (-1, -1), 8),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ]))
+            elements.append(scan_info_table)
+            elements.append(Spacer(1, 0.3*inch))
+            
+            # Severity Summary
+            if scan.severity_counts:
+                elements.append(Paragraph("Severity Summary", heading_style))
+                severity_data = [['Severity', 'Count']]
+                severity_colors = {
+                    'critical': colors.HexColor('#dc2626'),
+                    'high': colors.HexColor('#ea580c'),
+                    'medium': colors.HexColor('#f59e0b'),
+                    'low': colors.HexColor('#3b82f6'),
+                    'info': colors.HexColor('#6b7280')
+                }
+                
+                for severity in ['critical', 'high', 'medium', 'low', 'info']:
+                    count = scan.severity_counts.get(severity, 0)
+                    if count > 0:
+                        severity_data.append([severity.capitalize(), str(count)])
+                
+                if len(severity_data) > 1:
+                    severity_table = Table(severity_data, colWidths=[3*inch, 3.5*inch])
+                    severity_table.setStyle(TableStyle([
+                        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3b82f6')),
+                        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                        ('FONTSIZE', (0, 0), (-1, 0), 12),
+                        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+                    ]))
+                    elements.append(severity_table)
+                    elements.append(Spacer(1, 0.3*inch))
+            
+            # Vulnerabilities Details
+            if vulnerabilities.exists():
+                elements.append(Paragraph("Vulnerability Details", heading_style))
+                elements.append(Spacer(1, 0.1*inch))
+                
+                for idx, vuln in enumerate(vulnerabilities, 1):
+                    # Vulnerability header
+                    vuln_title = f"{idx}. {vuln.title} [{vuln.severity.upper()}]"
+                    vuln_style = ParagraphStyle(
+                        'VulnTitle',
+                        parent=styles['Heading3'],
+                        fontSize=12,
+                        textColor=severity_colors.get(vuln.severity, colors.black),
+                        spaceAfter=6
+                    )
+                    elements.append(Paragraph(vuln_title, vuln_style))
+                    
+                    # Vulnerability details
+                    vuln_details = [
+                        ['Detector:', vuln.detector],
+                        ['URL:', vuln.url[:100] + '...' if len(vuln.url) > 100 else vuln.url] if vuln.url else ['URL:', 'N/A'],
+                    ]
+                    
+                    if vuln.description:
+                        desc = vuln.description[:200] + '...' if len(vuln.description) > 200 else vuln.description
+                        vuln_details.append(['Description:', desc])
+                    
+                    if vuln.payload:
+                        payload = vuln.payload[:150] + '...' if len(vuln.payload) > 150 else vuln.payload
+                        vuln_details.append(['Payload:', payload])
+                    
+                    if vuln.status_code:
+                        vuln_details.append(['Status Code:', str(vuln.status_code)])
+                    
+                    vuln_table = Table(vuln_details, colWidths=[1.5*inch, 5*inch])
+                    vuln_table.setStyle(TableStyle([
+                        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f9fafb')),
+                        ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+                        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+                        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+                        ('FONTSIZE', (0, 0), (-1, -1), 9),
+                        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                        ('TOPPADDING', (0, 0), (-1, -1), 6),
+                        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                    ]))
+                    elements.append(vuln_table)
+                    elements.append(Spacer(1, 0.15*inch))
+                    
+                    # Page break every 3 vulnerabilities to avoid cramping
+                    if idx % 3 == 0 and idx < vulnerabilities.count():
+                        elements.append(PageBreak())
+            else:
+                elements.append(Paragraph("No vulnerabilities found.", styles['Normal']))
+            
+            # Build PDF
+            doc.build(elements)
+            pdf = buffer.getvalue()
+            buffer.close()
+            
+            response = HttpResponse(pdf, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="scan-{scan.id}-report.pdf"'
+        
         else:
             # Unsupported format
             return Response(
-                {'error': f'Unsupported format: {format_type}. Use json or csv.'},
+                {'error': f'Unsupported format: {format_type}. Use json, csv, or pdf.'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         

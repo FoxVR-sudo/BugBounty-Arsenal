@@ -82,6 +82,9 @@ urlpatterns = [
     path('api/billing/buy-scans/', buy_extra_scans, name='buy-extra-scans'),
     path('api/subscriptions/change-tier/', change_tier, name='change-tier'),
     
+    # Stripe webhook
+    path('api/webhooks/stripe/', include('subscriptions.urls')),
+    
     # Admin endpoints (requires admin/staff permissions)
     path('api/admin/stats/', admin_stats, name='admin-stats'),
     path('api/admin/users/', admin_users_list, name='admin-users-list'),

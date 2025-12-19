@@ -107,3 +107,43 @@ class Subscription(models.Model):
         """Increment scan counter"""
         self.scans_used_today += 1
         self.save()
+
+
+class Payment(models.Model):
+    """Payment transaction model"""
+    
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('succeeded', 'Succeeded'),
+        ('failed', 'Failed'),
+        ('refunded', 'Refunded'),
+    ]
+    
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='payments')
+    subscription = models.ForeignKey(Subscription, on_delete=models.SET_NULL, null=True, blank=True, related_name='payments')
+    
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(max_length=3, default='usd')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    
+    # Stripe IDs
+    stripe_payment_intent_id = models.CharField(max_length=100, blank=True, null=True)
+    stripe_invoice_id = models.CharField(max_length=100, blank=True, null=True)
+    
+    # Metadata
+    description = models.TextField(blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'payments'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['stripe_payment_intent_id']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.email} - ${self.amount} ({self.status})"

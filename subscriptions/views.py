@@ -4,12 +4,14 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import OrderingFilter
+from django.conf import settings
 from .models import Plan, Subscription
 from .serializers import (
     PlanSerializer,
     SubscriptionSerializer,
     SubscriptionUsageSerializer
 )
+from .stripe_utils import create_checkout_session, cancel_subscription, create_portal_session
 
 
 class PlanViewSet(viewsets.ModelViewSet):
@@ -126,3 +128,94 @@ class SubscriptionViewSet(viewsets.ModelViewSet):
             {'message': 'Usage reset successfully'},
             status=status.HTTP_200_OK
         )
+
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def create_checkout(self, request):
+        """Create Stripe checkout session for plan purchase"""
+        plan_id = request.data.get('plan_id')
+        
+        if not plan_id:
+            return Response(
+                {'error': 'plan_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            plan = Plan.objects.get(id=plan_id, is_active=True)
+        except Plan.DoesNotExist:
+            return Response(
+                {'error': 'Plan not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Check if user already has active subscription
+        if Subscription.objects.filter(user=request.user, status='active').exists():
+            return Response(
+                {'error': 'You already have an active subscription'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Create checkout session
+        success_url = request.build_absolute_uri('/dashboard?payment=success')
+        cancel_url = request.build_absolute_uri('/pricing?payment=canceled')
+        
+        try:
+            session = create_checkout_session(
+                user=request.user,
+                plan=plan,
+                success_url=success_url,
+                cancel_url=cancel_url
+            )
+            
+            return Response({
+                'checkout_url': session.url,
+                'session_id': session.id
+            })
+        
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
+    def cancel_stripe(self, request, pk=None):
+        """Cancel subscription in Stripe"""
+        subscription = self.get_object()
+        
+        try:
+            cancel_subscription(subscription)
+            return Response(
+                {'message': 'Subscription canceled successfully'},
+                status=status.HTTP_200_OK
+            )
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=False, methods=['post'], permission_classes=[IsAuthenticated])
+    def customer_portal(self, request):
+        """Create Stripe Customer Portal session"""
+        if not request.user.stripe_customer_id:
+            return Response(
+                {'error': 'No Stripe customer ID found'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        return_url = request.build_absolute_uri('/dashboard')
+        
+        try:
+            portal_url = create_portal_session(
+                customer_id=request.user.stripe_customer_id,
+                return_url=return_url
+            )
+            
+            return Response({'portal_url': portal_url})
+        
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
