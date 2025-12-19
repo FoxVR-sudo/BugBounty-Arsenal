@@ -129,6 +129,11 @@ class ScanViewSet(viewsets.ModelViewSet):
         
         if format_type == 'json':
             # JSON export
+            # Calculate duration
+            duration_seconds = None
+            if scan.started_at and scan.completed_at:
+                duration_seconds = (scan.completed_at - scan.started_at).total_seconds()
+            
             data = {
                 'scan': {
                     'id': scan.id,
@@ -137,7 +142,7 @@ class ScanViewSet(viewsets.ModelViewSet):
                     'status': scan.status,
                     'started_at': scan.started_at.isoformat() if scan.started_at else None,
                     'completed_at': scan.completed_at.isoformat() if scan.completed_at else None,
-                    'duration': scan.duration,
+                    'duration': f"{duration_seconds:.2f}s" if duration_seconds else None,
                     'vulnerabilities_found': scan.vulnerabilities_found,
                 },
                 'vulnerabilities': [

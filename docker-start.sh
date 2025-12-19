@@ -1,0 +1,36 @@
+#!/bin/bash
+# Quick start script for Docker Compose
+
+echo "🐳 Starting BugBounty Arsenal with Docker Compose..."
+
+# Stop any running local servers
+echo "📛 Stopping local servers..."
+pkill -f "runserver" 2>/dev/null
+pkill -f "celery.*worker" 2>/dev/null
+pkill -f "node.*react-scripts" 2>/dev/null
+
+# Start Docker Compose
+echo "🚀 Starting Docker containers..."
+docker-compose up -d
+
+# Wait for services to be ready
+echo "⏳ Waiting for services to start..."
+sleep 5
+
+# Check status
+echo ""
+echo "✅ Services status:"
+docker-compose ps
+
+echo ""
+echo "📊 Service URLs:"
+echo "  Frontend:  http://localhost:3000"
+echo "  Backend:   http://127.0.0.1:8001"
+echo "  API Docs:  http://127.0.0.1:8001/api/docs/"
+echo ""
+echo "📝 Useful commands:"
+echo "  View logs:       docker-compose logs -f"
+echo "  Stop services:   docker-compose down"
+echo "  Restart:         docker-compose restart"
+echo "  Shell (backend): docker-compose exec backend bash"
+echo ""
