@@ -1,5 +1,0 @@
-# XXE curl output (2025-11-23)
-
----
-
-$(cat /tmp/xxe_curl_output.txt)

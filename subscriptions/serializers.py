@@ -4,11 +4,17 @@ from .models import Plan, Subscription
 
 class PlanSerializer(serializers.ModelSerializer):
     """Serializer for Plan model"""
+    daily_scan_limit = serializers.IntegerField(source='scans_per_day', read_only=True)
+    monthly_scan_limit = serializers.IntegerField(source='scans_per_month', read_only=True)
     
     class Meta:
         model = Plan
-        fields = ['id', 'name', 'display_name', 'price', 
-                  'limits', 'features', 'is_active', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'display_name', 'price', 'description',
+                  'daily_scan_limit', 'monthly_scan_limit', 'concurrent_scans',
+                  'storage_limit_mb', 'retention_days', 
+                  'allow_dangerous_tools', 'allow_teams', 'max_team_members',
+                  'allow_integrations', 'max_integrations',
+                  'features', 'is_active', 'is_popular', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 
@@ -34,16 +40,17 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 class SubscriptionUsageSerializer(serializers.ModelSerializer):
     """Serializer for subscription usage information"""
     plan_name = serializers.CharField(source='plan.display_name', read_only=True)
-    plan_limits = serializers.JSONField(source='plan.limits', read_only=True)
+    daily_scan_limit = serializers.IntegerField(source='plan.scans_per_day', read_only=True)
+    monthly_scan_limit = serializers.IntegerField(source='plan.scans_per_month', read_only=True)
     can_scan = serializers.SerializerMethodField()
     
     class Meta:
         model = Subscription
-        fields = ['id', 'plan_name', 'plan_limits', 'status',
-                  'scans_used_today', 'can_scan', 
+        fields = ['id', 'plan_name', 'daily_scan_limit', 'monthly_scan_limit', 'status',
+                  'scans_used_today', 'scans_used_this_month', 'can_scan', 
                   'current_period_end', 'cancel_at_period_end']
-        read_only_fields = ['id', 'plan_name', 'plan_limits', 'status',
-                           'scans_used_today', 'can_scan', 
+        read_only_fields = ['id', 'plan_name', 'daily_scan_limit', 'monthly_scan_limit', 'status',
+                           'scans_used_today', 'scans_used_this_month', 'can_scan', 
                            'current_period_end', 'cancel_at_period_end']
 
     def get_can_scan(self, obj):

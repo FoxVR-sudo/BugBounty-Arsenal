@@ -1,24 +1,18 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
-  FiHome, FiActivity, FiShield, FiDatabase, FiLock, 
-  FiGlobe, FiCode, FiAlertTriangle, FiList, FiBarChart2, 
-  FiUser, FiLogOut 
+  FiHome, FiList, FiBarChart2, 
+  FiUser, FiLogOut, FiUsers, FiZap
 } from 'react-icons/fi';
 
-const scanners = [
-  { id: 'xss', name: 'XSS Scanner', icon: <FiCode />, path: '/scanner/xss' },
-  { id: 'sql', name: 'SQL Injection', icon: <FiDatabase />, path: '/scanner/sql' },
-  { id: 'ssrf', name: 'SSRF Scanner', icon: <FiGlobe />, path: '/scanner/ssrf' },
-  { id: 'lfi', name: 'LFI Scanner', icon: <FiAlertTriangle />, path: '/scanner/lfi' },
-  { id: 'auth', name: 'Auth Bypass', icon: <FiLock />, path: '/scanner/auth' },
-  { id: 'jwt', name: 'JWT Scanner', icon: <FiShield />, path: '/scanner/jwt' },
-  { id: 'cors', name: 'CORS Scanner', icon: <FiActivity />, path: '/scanner/cors' },
-  { id: 'csrf', name: 'CSRF Scanner', icon: <FiShield />, path: '/scanner/csrf' },
-  { id: 'xxe', name: 'XXE Scanner', icon: <FiCode />, path: '/scanner/xxe' },
-  { id: 'idor', name: 'IDOR Scanner', icon: <FiAlertTriangle />, path: '/scanner/idor' },
-  { id: 'graphql', name: 'GraphQL Scanner', icon: <FiDatabase />, path: '/scanner/graphql' },
-  { id: 'api', name: 'API Security', icon: <FiActivity />, path: '/scanner/api' },
+// V3.0: Scan categories (real scanner pages)
+const scanCategories = [
+  { id: 'recon', name: 'Reconnaissance', plan: 'free', emoji: '🔍' },
+  { id: 'web', name: 'Web Security', plan: 'free', emoji: '🌐' },
+  { id: 'api', name: 'API Security', plan: 'pro', emoji: '🔌' },
+  { id: 'vuln', name: 'Vulnerabilities', plan: 'pro', emoji: '🛡️' },
+  { id: 'mobile', name: 'Mobile Security', plan: 'pro', emoji: '📱' },
+  { id: 'custom', name: 'Custom Scan', plan: 'enterprise', emoji: '⚡' },
 ];
 
 const Sidebar = () => {
@@ -55,24 +49,29 @@ const Sidebar = () => {
           </Link>
         </div>
 
-        {/* Scanners Section */}
+        {/* V3.0: Category-based Scanners */}
         <div className="px-4 mb-6">
           <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-            Scanners
+            Scan Categories
           </h3>
           <div className="space-y-1">
-            {scanners.map((scanner) => (
+            {scanCategories.map((category) => (
               <Link
-                key={scanner.id}
-                to={scanner.path}
+                key={category.id}
+                to={`/scan/${category.id}`}
                 className={`flex items-center gap-3 px-4 py-2 rounded-lg transition ${
-                  isActive(scanner.path)
+                  isActive(`/scan/${category.id}`)
                     ? 'bg-primary text-white'
                     : 'text-gray-300 hover:bg-gray-800'
                 }`}
               >
-                {scanner.icon}
-                <span className="text-sm">{scanner.name}</span>
+                <span className="text-lg">{category.emoji}</span>
+                <span className="text-sm flex-1">{category.name}</span>
+                {category.plan !== 'free' && (
+                  <span className="text-xs px-2 py-0.5 rounded bg-yellow-600 text-white uppercase">
+                    {category.plan === 'enterprise' ? 'ENT' : category.plan}
+                  </span>
+                )}
               </Link>
             ))}
           </div>
@@ -125,6 +124,30 @@ const Sidebar = () => {
             >
               <FiUser size={20} />
               <span>Profile</span>
+            </Link>
+            <Link
+              to="/team"
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+                isActive('/team')
+                  ? 'bg-primary text-white'
+                  : 'text-gray-300 hover:bg-gray-800'
+              }`}
+            >
+              <FiUsers size={20} />
+              <span>Team</span>
+              <span className="text-xs px-2 py-0.5 rounded bg-blue-600 text-white uppercase">Pro</span>
+            </Link>
+            <Link
+              to="/integrations"
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+                isActive('/integrations')
+                  ? 'bg-primary text-white'
+                  : 'text-gray-300 hover:bg-gray-800'
+              }`}
+            >
+              <FiZap size={20} />
+              <span>Integrations</span>
+              <span className="text-xs px-2 py-0.5 rounded bg-blue-600 text-white uppercase">Pro</span>
             </Link>
           </div>
         </div>

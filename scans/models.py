@@ -4,7 +4,7 @@ from django.utils import timezone
 
 
 class Scan(models.Model):
-    """Scan model"""
+    """Scan model - supports both legacy scan_type and new category-based scans"""
     
     STATUS_CHOICES = [
         ('pending', 'Pending'),
@@ -14,6 +14,7 @@ class Scan(models.Model):
         ('stopped', 'Stopped'),
     ]
     
+    # DEPRECATED - kept for backward compatibility
     SCAN_TYPE_CHOICES = [
         ('reconnaissance', 'Reconnaissance'),
         ('web_security', 'Web Security'),
@@ -24,7 +25,30 @@ class Scan(models.Model):
     
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='scans')
     target = models.CharField(max_length=500)
-    scan_type = models.CharField(max_length=50, choices=SCAN_TYPE_CHOICES, default='web_security')
+    
+    # V3.0: New category-based scanning
+    scan_category = models.ForeignKey(
+        'scans.ScanCategory',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='category_scans',
+        help_text='V3.0 scan category (replaces scan_type)'
+    )
+    selected_detectors = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='List of detector names to run (empty = all for category)'
+    )
+    
+    # Legacy field - kept for backward compatibility
+    scan_type = models.CharField(
+        max_length=50, 
+        choices=SCAN_TYPE_CHOICES, 
+        default='web_security',
+        blank=True,
+        help_text='DEPRECATED: Use scan_category instead'
+    )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     
     # Scan execution
@@ -90,11 +114,26 @@ class Scan(models.Model):
         except Exception:
             pass  # Default to 'free' if any error
         
+        # V3.0: Use category-based detectors if category is set
+        if self.scan_category:
+            # Get detectors from category
+            if self.selected_detectors:
+                enabled_detectors = self.selected_detectors
+            else:
+                # Use all detectors from category
+                enabled_detectors = list(
+                    self.scan_category.get_detectors().values_list('name', flat=True)
+                )
+        else:
+            # Legacy: use provided detectors or empty list
+            enabled_detectors = scan_config.get('enabled_detectors', [])
+        
         config = {
             'target': self.target,
-            'scan_type': self.scan_type,
+            'scan_type': self.scan_type or 'web_security',  # Fallback for legacy
+            'scan_category': self.scan_category.name if self.scan_category else None,
             'user_tier': user_tier,
-            'enabled_detectors': scan_config.get('enabled_detectors', []),
+            'enabled_detectors': enabled_detectors,
             'options': scan_config,
         }
         

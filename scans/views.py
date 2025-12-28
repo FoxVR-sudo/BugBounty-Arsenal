@@ -115,14 +115,21 @@ class ScanViewSet(viewsets.ModelViewSet):
             'pending': queryset.filter(status='pending').count(),
         })
 
-    @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated])
-    def export(self, request, pk=None):
-        """Export scan results in various formats (json, csv, pdf)"""
+    # DEPRECATED: Replaced by export_scan_report_view custom URL endpoint
+    # @action(detail=True, methods=['get'], url_path='export', url_name='export', 
+    #         renderer_classes=[])  # Disable DRF renderers, we return Django HttpResponse
+    def _export_DEPRECATED(self, request, pk=None):
+        """DEPRECATED - Export scan results in various formats (json, csv, pdf)"""
         from django.http import HttpResponse
         import csv
+        import logging
+        
+        logger = logging.getLogger(__name__)
+        logger.error(f">>> EXPORT ACTION CALLED: pk={pk}, query_params={request.query_params}, GET={request.GET}")
         
         scan = self.get_object()
         format_type = request.query_params.get('format', 'json').lower()
+        logger.error(f">>> format_type={format_type}")
         
         # Get vulnerabilities
         vulnerabilities = scan.vulnerabilities.all()
@@ -224,6 +231,13 @@ class ScanViewSet(viewsets.ModelViewSet):
             
             # Scan Info
             elements.append(Paragraph("Scan Information", heading_style))
+            
+            # Calculate duration for PDF
+            duration_str = 'N/A'
+            if scan.started_at and scan.completed_at:
+                duration_seconds = (scan.completed_at - scan.started_at).total_seconds()
+                duration_str = f"{duration_seconds:.2f}s"
+            
             scan_info_data = [
                 ['Scan ID:', str(scan.id)],
                 ['Target:', scan.target],
@@ -231,7 +245,7 @@ class ScanViewSet(viewsets.ModelViewSet):
                 ['Status:', scan.status.upper()],
                 ['Started:', scan.started_at.strftime('%Y-%m-%d %H:%M:%S') if scan.started_at else 'N/A'],
                 ['Completed:', scan.completed_at.strftime('%Y-%m-%d %H:%M:%S') if scan.completed_at else 'N/A'],
-                ['Duration:', scan.duration or 'N/A'],
+                ['Duration:', duration_str],
                 ['Vulnerabilities Found:', str(scan.vulnerabilities_found)],
             ]
             
@@ -604,10 +618,15 @@ def export_scan_report_view(request, scan_id):
     from django.http import FileResponse, HttpResponse
     from scans.exporters import export_scan_report
     import os
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    logger.error(f"🎯 EXPORT VIEW CALLED! scan_id={scan_id}, format={request.query_params.get('format')}")
     
     # Get scan
     try:
         scan = Scan.objects.get(id=scan_id)
+        logger.error(f"✅ Scan found: {scan.id}, status={scan.status}")
     except Scan.DoesNotExist:
         return Response(
             {'error': 'Scan not found'},

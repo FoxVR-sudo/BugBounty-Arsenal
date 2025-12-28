@@ -102,7 +102,7 @@ const AllResults = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex gap-2">
                         <Link
-                          to={`/scan/${scan.id}`}
+                          to={`/scan/details/${scan.id}`}
                           className="text-primary hover:text-primary-600 flex items-center gap-1"
                         >
                           <FiEye /> View

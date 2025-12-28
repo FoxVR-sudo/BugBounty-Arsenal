@@ -126,6 +126,8 @@ REST_FRAMEWORK = {
         'rest_framework.filters.OrderingFilter',
     ],
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    # Enable format suffix patterns (default is True)
+    'URL_FORMAT_OVERRIDE': 'format',  # Allow both .json and ?format=json
 }
 
 SIMPLE_JWT = {
@@ -274,3 +276,22 @@ SCANNER_DETECTOR_MAPPING = {
 STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', 'sk_test_...')  # Add your test key
 STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY', 'pk_test_...')  # Add your test key
 STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', 'whsec_...')  # Add webhook secret
+
+# ===========================
+# TWILIO SMS VERIFICATION
+# ===========================
+# Cost: ~$0.01 per SMS
+# Development mode: Set TWILIO_ENABLED=False to use console/email fallback
+TWILIO_ENABLED = os.getenv('TWILIO_ENABLED', 'False') == 'True'
+TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID', '')
+TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN', '')
+TWILIO_PHONE_NUMBER = os.getenv('TWILIO_PHONE_NUMBER', '')  # E.g., +15551234567
+
+# ===========================
+# OPENCORPORATES API
+# ===========================
+# Free tier: 500 requests/month
+# Paid tier: $99/month for 10,000 requests
+# Used for company verification (Enterprise plan only)
+OPENCORPORATES_API_KEY = os.getenv('OPENCORPORATES_API_KEY', '')
+OPENCORPORATES_ENABLED = bool(OPENCORPORATES_API_KEY)

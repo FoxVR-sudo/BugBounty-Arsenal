@@ -9,19 +9,28 @@ const ScanDetails = () => {
   const { id } = useParams();
 
   // Fetch scan details
-  const { data: scan, isLoading: scanLoading } = useQuery(['scan', id], () =>
+  const { data: scan, isLoading: scanLoading, error: scanError } = useQuery(['scan', id], () =>
     scanService.getById(id).then((res) => res.data)
   );
 
   // Fetch vulnerabilities
   const { data: vulnsData, isLoading: vulnsLoading } = useQuery(
     ['vulnerabilities', id],
-    () => scanService.getVulnerabilities(id).then((res) => res.data)
+    () => scanService.getVulnerabilities(id).then((res) => res.data),
+    { enabled: !!scan }
   );
 
   const handleDownload = async (format) => {
     try {
-      const res = await scanService.downloadReport(id, format);
+      let res;
+      if (format === 'pdf') {
+        res = await scanService.downloadPDF(id);
+      } else if (format === 'csv') {
+        res = await scanService.downloadCSV(id);
+      } else {
+        res = await scanService.downloadJSON(id);
+        format = 'json';
+      }
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -38,6 +47,36 @@ const ScanDetails = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-gray-600">Loading scan details...</div>
+      </div>
+    );
+  }
+
+  if (scanError || !scan) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <FiAlertTriangle className="mx-auto text-red-500 mb-4" size={48} />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Scan Not Found</h2>
+          <p className="text-gray-600 mb-6">The scan you're looking for doesn't exist or you don't have access.</p>
+          <Link to="/dashboard" className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-600 transition">
+            Back to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (scanError || !scan) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <FiAlertTriangle className="mx-auto text-red-500 mb-4" size={48} />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Scan Not Found</h2>
+          <p className="text-gray-600 mb-6">The scan you're looking for doesn't exist or you don't have access.</p>
+          <Link to="/dashboard" className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-600 transition">
+            Back to Dashboard
+          </Link>
+        </div>
       </div>
     );
   }

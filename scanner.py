@@ -752,14 +752,21 @@ async def scan_single_url(
             # Default to free tier if unknown
             allowed_by_tier = set(BASIC_DETECTORS)
         
-        # Detector filtering based on scan_mode AND tier
+        # V3.0: Get enabled detectors from context (category-based filtering)
+        enabled_detectors = context.get('enabled_detectors')
+        
+        # Detector filtering based on scan_mode AND tier AND enabled_detectors
         brute_only = {"brute_force_detector", "rate_limit_bypass_detector", "auth_bypass_detector", "fuzz_detector", "race_condition_detector"}
         high_risk = {"command_injection_detector"}
         filtered_active = []
         for det in ACTIVE_DETECTORS:
             name = getattr(det, "__name__", "")
             
-            # Filter by tier first
+            # V3.0: If enabled_detectors is specified (category-based scan), only include those
+            if enabled_detectors is not None and name not in enabled_detectors:
+                continue
+            
+            # Filter by tier
             if name not in allowed_by_tier:
                 continue
             
@@ -828,6 +835,11 @@ async def scan_single_url(
         # Passive detectors
         for det in PASSIVE_DETECTORS:
             detector_name = getattr(det, "__name__", str(det))
+            
+            # V3.0: Filter by enabled_detectors if specified
+            if enabled_detectors is not None and detector_name not in enabled_detectors:
+                continue
+            
             print(f"{Color.INFO}▶️ Стартира пасивен {detector_name} за {url}{Color.RESET}")
             try:
                 findings = det(text, {"url": url, "context": context})
@@ -918,6 +930,7 @@ async def _bounded_scan_with_retries(
                     'cloudflare_solver': cloudflare_solver,
                     'scan_mode': scan_mode,
                     'user_tier': user_tier,
+                    'enabled_detectors': enabled_detectors,  # V3.0: Pass detector filter
                 }
                 return await scan_single_url(
                     session,
@@ -967,11 +980,17 @@ async def async_run(
     enable_cloudflare_solver: bool = False,
     scan_mode: str = "normal",
     user_tier: str = "free",
-        extra_context: Optional[dict] = None,
+    extra_context: Optional[dict] = None,
+    enabled_detectors: Optional[List[str]] = None,  # V3.0: Filter detectors by name
 ):
     start_time = time.time()
     headers = None
     results = []
+    
+    # V3.0: Log detector filtering if enabled
+    if enabled_detectors:
+        logger.info("🎯 V3.0 Category-based scan: %d detectors enabled", len(enabled_detectors))
+        logger.debug("Enabled detectors: %s", ', '.join(enabled_detectors))
     
     # Initialize Cloudflare bypass if enabled
     bypass = get_bypass_config(
@@ -1016,6 +1035,7 @@ async def async_run(
         "used_public_dns": False,
         "scan_mode": scan_mode,
         "user_tier": user_tier,
+        "enabled_detectors": enabled_detectors,  # V3.0: Track which detectors ran
         "scan_options": {
             "concurrency": concurrency,
             "timeout": timeout,
@@ -1026,6 +1046,7 @@ async def async_run(
             "enable_cloudflare_solver": bool(enable_cloudflare_solver),
             "scan_mode": scan_mode,
             "user_tier": user_tier,
+            "enabled_detectors": enabled_detectors,  # V3.0
         },
         "scanner_version": SCANNER_VERSION,
         "secret_whitelist": secret_whitelist,
@@ -1374,6 +1395,7 @@ def run_scan(
     scan_mode: str = "normal",
     user_tier: str = "free",
     extra_context: Optional[dict] = None,
+    enabled_detectors: Optional[List[str]] = None,  # V3.0: Category-based detector filtering
 ):
     try:
         return asyncio.run(
@@ -1399,6 +1421,7 @@ def run_scan(
                 scan_mode=scan_mode,
                 user_tier=user_tier,
                 extra_context=extra_context,
+                enabled_detectors=enabled_detectors,  # V3.0
             )
         )
     except Exception as e:

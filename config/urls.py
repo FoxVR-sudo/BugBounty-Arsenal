@@ -30,6 +30,10 @@ from drf_spectacular.views import (
 
 from users.views import UserViewSet
 from users.auth_views import login_view, signup_view, token_refresh_view
+from users.api_views import (
+    send_phone_verification, verify_phone_code, resend_phone_verification,
+    verify_company, search_company, get_supported_countries
+)
 from users.admin_views import (
     admin_stats, admin_users_list, admin_user_activate, admin_user_deactivate,
     admin_scans_list, admin_database_backup, admin_database_restore,
@@ -37,8 +41,11 @@ from users.admin_views import (
 )
 from scans.views import (
     ScanViewSet, AuditLogViewSet, ApiKeyViewSet,
-    scan_status_view, scan_start_view, scan_stop_view, validate_scope_view,
-    export_all_formats_view
+    scan_status_view, scan_start_view, scan_stop_view, validate_scope_view
+)
+from scans.export_views import export_pdf_view, export_json_view, export_csv_view
+from scans.category_views import (
+    ScanCategoryViewSet, start_category_scan, get_detector_statistics
 )
 from subscriptions.views import PlanViewSet, SubscriptionViewSet
 from subscriptions.billing_views import (
@@ -49,6 +56,7 @@ from subscriptions.billing_views import (
 router = routers.DefaultRouter()
 router.register(r'users', UserViewSet, basename='user')
 router.register(r'scans', ScanViewSet, basename='scan')
+router.register(r'scan-categories', ScanCategoryViewSet, basename='scan-category')
 router.register(r'audit-logs', AuditLogViewSet, basename='auditlog')
 router.register(r'api-keys', ApiKeyViewSet, basename='apikey')
 router.register(r'plans', PlanViewSet, basename='plan')
@@ -68,13 +76,26 @@ urlpatterns = [
     path('api/auth/signup/', signup_view, name='auth-signup'),
     path('api/auth/refresh/', token_refresh_view, name='auth-refresh'),
     
+    # NEW v3.0: Phone & Company Verification endpoints
+    path('api/users/verify-phone/send/', send_phone_verification, name='send-phone-verification'),
+    path('api/users/verify-phone/confirm/', verify_phone_code, name='verify-phone-code'),
+    path('api/users/verify-phone/resend/', resend_phone_verification, name='resend-phone-verification'),
+    path('api/users/verify-company/', verify_company, name='verify-company'),
+    path('api/users/search-company/', search_company, name='search-company'),
+    path('api/users/supported-countries/', get_supported_countries, name='supported-countries'),
+    
     # Scan endpoints (custom actions - must be before router)
     path('api/scans/status/', scan_status_view, name='scan-status'),
     path('api/scans/start/', scan_start_view, name='scan-start'),
     path('api/scans/stop/<str:scan_id>/', scan_stop_view, name='scan-stop'),
     path('api/scans/validate-scope/', validate_scope_view, name='validate-scope'),
-    # path('api/scans/<int:scan_id>/export/', export_scan_report_view, name='scan-export'),  # Using router action instead
-    path('api/scans/<int:scan_id>/export-all/', export_all_formats_view, name='scan-export-all'),
+    path('api/scans/<int:scan_id>/pdf/', export_pdf_view, name='scan-export-pdf'),
+    path('api/scans/<int:scan_id>/json/', export_json_view, name='scan-export-json'),
+    path('api/scans/<int:scan_id>/csv/', export_csv_view, name='scan-export-csv'),
+    
+    # NEW v3.0: Category-based scan endpoints
+    path('api/scans/start-category-scan/', start_category_scan, name='start-category-scan'),
+    path('api/detectors/statistics/', get_detector_statistics, name='detector-statistics'),
     
     # Billing endpoints
     path('api/billing/checkout/', create_checkout_session, name='billing-checkout'),

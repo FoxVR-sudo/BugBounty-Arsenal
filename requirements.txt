@@ -41,6 +41,10 @@ daphne==4.2.0
 gunicorn==23.0.0
 whitenoise==6.9.0
 
+# Payment processing
+stripe==11.3.0
+twilio==9.5.0
+
 # Report generation
 weasyprint==60.1
 reportlab==4.0.7

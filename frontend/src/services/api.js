@@ -24,7 +24,7 @@ api.interceptors.request.use(
 // Auth services
 export const authService = {
   login: (email, password) => api.post('/auth/login/', { email, password }),
-  register: (email, password) => api.post('/auth/register/', { email, password }),
+  register: (userData) => api.post('/auth/signup/', userData),
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -35,11 +35,12 @@ export const authService = {
 export const scanService = {
   getAll: (params) => api.get('/scans/', { params }),
   getById: (id) => api.get(`/scans/${id}/`),
-  create: (data) => api.post('/scans/', data),
-  cancel: (id) => api.post(`/scans/${id}/cancel/`),
+  create: (data) => api.post('/scans/start/', data),
+  cancel: (id) => api.post(`/scans/stop/${id}/`),
   getVulnerabilities: (id, params) => api.get(`/scans/${id}/vulnerabilities/`, { params }),
-  downloadReport: (id, format = 'json') => 
-    api.get(`/scans/${id}/export/`, { params: { format }, responseType: 'blob' }),
+  downloadPDF: (id) => api.get(`/scans/${id}/pdf/`, { responseType: 'blob' }),
+  downloadJSON: (id) => api.get(`/scans/${id}/json/`, { responseType: 'blob' }),
+  downloadCSV: (id) => api.get(`/scans/${id}/csv/`, { responseType: 'blob' }),
 };
 
 // Stats services

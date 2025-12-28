@@ -5,10 +5,10 @@ from .models import Plan, Subscription
 
 @admin.register(Plan)
 class PlanAdmin(admin.ModelAdmin):
-    """Plan admin with full control over all settings"""
+    """Plan admin with full control over all settings - Updated v3.0"""
     
-    list_display = ['display_name', 'name', 'price_display', 'scans_per_day', 'storage_limit_mb', 'max_detectors', 'is_active', 'is_popular', 'order']
-    list_filter = ['is_active', 'is_popular']
+    list_display = ['display_name', 'name', 'price_display', 'scans_per_day', 'scans_per_month', 'allow_dangerous_tools', 'allow_teams', 'allow_integrations', 'is_active', 'is_popular', 'order']
+    list_filter = ['is_active', 'is_popular', 'allow_dangerous_tools', 'allow_teams', 'allow_integrations']
     search_fields = ['name', 'display_name', 'description']
     list_editable = ['is_active', 'is_popular', 'order']
     ordering = ['order', 'price']
@@ -17,14 +17,16 @@ class PlanAdmin(admin.ModelAdmin):
         ('Basic Information', {
             'fields': ('name', 'display_name', 'description', 'price', 'is_active', 'is_popular', 'order')
         }),
-        ('Scan Limits', {
-            'fields': ('scans_per_day', 'scans_per_month', 'concurrent_scans', 'max_urls_per_scan')
+        ('Scan Limits (v3.0)', {
+            'fields': ('scans_per_day', 'scans_per_month', 'concurrent_scans'),
+            'description': 'FREE: 3/day 10/month | PRO: 100/day 500/month | ENTERPRISE: -1 (unlimited)'
         }),
         ('Storage & Retention', {
             'fields': ('storage_limit_mb', 'retention_days')
         }),
-        ('Detector & Scan Types', {
-            'fields': ('max_detectors', 'allowed_scan_types')
+        ('NEW v3.0: Access Control', {
+            'fields': ('allow_dangerous_tools', 'allow_teams', 'max_team_members', 'allow_integrations', 'max_integrations'),
+            'description': 'Dangerous tools (Nuclei/payloads): Enterprise only | Teams: Pro & Enterprise | Integrations: Pro & Enterprise'
         }),
         ('Features List', {
             'fields': ('features',),

@@ -1,40 +1,79 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../services/api';
-import { FiMail, FiLock, FiShield } from 'react-icons/fi';
+import { FiMail, FiLock, FiShield, FiUser, FiPhone, FiMapPin } from 'react-icons/fi';
 
 const Register = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  // V3.0: Extended user fields
+  const [formData, setFormData] = useState({
+    first_name: '',
+    middle_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    address: '',
+    password: '',
+    confirmPassword: '',
+  });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    if (password !== confirmPassword) {
+    // Validation
+    if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
 
-    if (password.length < 8) {
+    if (formData.password.length < 8) {
       setError('Password must be at least 8 characters');
+      return;
+    }
+
+    if (!formData.first_name || !formData.last_name) {
+      setError('First name and last name are required');
+      return;
+    }
+
+    if (!formData.phone) {
+      setError('Phone number is required');
       return;
     }
 
     setLoading(true);
 
     try {
-      await authService.register(email, password);
-      const loginResponse = await authService.login(email, password);
+      // V3.0: Send extended registration data
+      const registrationData = {
+        email: formData.email,
+        password: formData.password,
+        first_name: formData.first_name,
+        middle_name: formData.middle_name,
+        last_name: formData.last_name,
+        phone: formData.phone,
+        address: formData.address,
+      };
+      
+      await authService.register(registrationData);
+      const loginResponse = await authService.login(formData.email, formData.password);
       localStorage.setItem('token', loginResponse.data.access);
-      localStorage.setItem('user', email);
-      navigate('/dashboard');
+      localStorage.setItem('user', formData.email);
+      
+      // V3.0: Redirect to phone verification
+      navigate('/verify-phone');
     } catch (err) {
-      setError(err.response?.data?.detail || 'Registration failed. Please try again.');
+      setError(err.response?.data?.detail || err.response?.data?.error || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -60,14 +99,58 @@ const Register = () => {
           )}
 
           <form onSubmit={handleSubmit}>
+            {/* V3.0: Three names required */}
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2 text-sm">First Name *</label>
+                <div className="relative">
+                  <FiUser className="absolute left-3 top-3 text-gray-400" size={16} />
+                  <input
+                    type="text"
+                    name="first_name"
+                    value={formData.first_name}
+                    onChange={handleChange}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder="John"
+                    required
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2 text-sm">Middle Name</label>
+                <input
+                  type="text"
+                  name="middle_name"
+                  value={formData.middle_name}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="M."
+                />
+              </div>
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2 text-sm">Last Name *</label>
+                <input
+                  type="text"
+                  name="last_name"
+                  value={formData.last_name}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="Doe"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Email */}
             <div className="mb-4">
-              <label className="block text-gray-700 font-semibold mb-2">Email</label>
+              <label className="block text-gray-700 font-semibold mb-2">Email *</label>
               <div className="relative">
                 <FiMail className="absolute left-3 top-3 text-gray-400" />
                 <input
                   type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   placeholder="your@email.com"
                   required
@@ -75,14 +158,51 @@ const Register = () => {
               </div>
             </div>
 
+            {/* Phone */}
             <div className="mb-4">
-              <label className="block text-gray-700 font-semibold mb-2">Password</label>
+              <label className="block text-gray-700 font-semibold mb-2">Phone *</label>
+              <div className="relative">
+                <FiPhone className="absolute left-3 top-3 text-gray-400" />
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="+359888123456"
+                  required
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Include country code (e.g., +359)</p>
+            </div>
+
+            {/* Address */}
+            <div className="mb-4">
+              <label className="block text-gray-700 font-semibold mb-2">Address *</label>
+              <div className="relative">
+                <FiMapPin className="absolute left-3 top-3 text-gray-400" />
+                <input
+                  type="text"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="Street, City, Country"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Password */}
+            <div className="mb-4">
+              <label className="block text-gray-700 font-semibold mb-2">Password *</label>
               <div className="relative">
                 <FiLock className="absolute left-3 top-3 text-gray-400" />
                 <input
                   type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   placeholder="••••••••"
                   required
@@ -90,14 +210,16 @@ const Register = () => {
               </div>
             </div>
 
+            {/* Confirm Password */}
             <div className="mb-6">
-              <label className="block text-gray-700 font-semibold mb-2">Confirm Password</label>
+              <label className="block text-gray-700 font-semibold mb-2">Confirm Password *</label>
               <div className="relative">
                 <FiLock className="absolute left-3 top-3 text-gray-400" />
                 <input
                   type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                   placeholder="••••••••"
                   required
