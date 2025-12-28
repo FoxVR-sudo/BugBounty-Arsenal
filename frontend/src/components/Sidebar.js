@@ -1,22 +1,53 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import axios from 'axios';
 import { 
   FiHome, FiList, FiBarChart2, 
-  FiUser, FiLogOut, FiUsers, FiZap
+  FiUser, FiLogOut, FiUsers, FiZap, FiLock
 } from 'react-icons/fi';
-
-// V3.0: Scan categories (real scanner pages)
-const scanCategories = [
-  { id: 'recon', name: 'Reconnaissance', plan: 'free', emoji: '🔍' },
-  { id: 'web', name: 'Web Security', plan: 'free', emoji: '🌐' },
-  { id: 'api', name: 'API Security', plan: 'pro', emoji: '🔌' },
-  { id: 'vuln', name: 'Vulnerabilities', plan: 'pro', emoji: '🛡️' },
-  { id: 'mobile', name: 'Mobile Security', plan: 'pro', emoji: '📱' },
-  { id: 'custom', name: 'Custom Scan', plan: 'enterprise', emoji: '⚡' },
-];
 
 const Sidebar = () => {
   const location = useLocation();
+  const [categories, setCategories] = useState([]);
+  const [userPlan, setUserPlan] = useState('free');
+
+  useEffect(() => {
+    fetchCategories();
+    fetchUserPlan();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:8001/api/scan-categories/', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      // Sort categories by plan level: free -> pro -> enterprise
+      const planOrder = { 'free': 0, 'pro': 1, 'enterprise': 2 };
+      const sorted = response.data.sort((a, b) => {
+        const aLevel = planOrder[a.required_plan] || 0;
+        const bLevel = planOrder[b.required_plan] || 0;
+        return aLevel - bLevel;
+      });
+      
+      setCategories(sorted);
+    } catch (err) {
+      console.error('Failed to fetch categories:', err);
+    }
+  };
+
+  const fetchUserPlan = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:8001/api/auth/me/', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setUserPlan(response.data.current_plan?.toLowerCase() || 'free');
+    } catch (err) {
+      console.error('Failed to fetch user plan:', err);
+    }
+  };
 
   const isActive = (path) => location.pathname === path;
 
@@ -55,25 +86,35 @@ const Sidebar = () => {
             Scan Categories
           </h3>
           <div className="space-y-1">
-            {scanCategories.map((category) => (
-              <Link
-                key={category.id}
-                to={`/scan/${category.id}`}
-                className={`flex items-center gap-3 px-4 py-2 rounded-lg transition ${
-                  isActive(`/scan/${category.id}`)
-                    ? 'bg-primary text-white'
-                    : 'text-gray-300 hover:bg-gray-800'
-                }`}
-              >
-                <span className="text-lg">{category.emoji}</span>
-                <span className="text-sm flex-1">{category.name}</span>
-                {category.plan !== 'free' && (
-                  <span className="text-xs px-2 py-0.5 rounded bg-yellow-600 text-white uppercase">
-                    {category.plan === 'enterprise' ? 'ENT' : category.plan}
-                  </span>
-                )}
-              </Link>
-            ))}
+            {categories.map((category) => {
+              const hasAccess = category.has_access;
+              const isLocked = !hasAccess;
+              
+              return (
+                <Link
+                  key={category.id}
+                  to={`/scan/${category.name}`}
+                  className={`flex items-center gap-3 px-4 py-2 rounded-lg transition ${
+                    isActive(`/scan/${category.name}`)
+                      ? 'bg-primary text-white'
+                      : isLocked
+                      ? 'text-gray-500 hover:bg-gray-800 cursor-pointer'
+                      : 'text-gray-300 hover:bg-gray-800'
+                  }`}
+                >
+                  <span className="text-lg">{category.icon_emoji || category.icon || '🔍'}</span>
+                  <span className="text-sm flex-1">{category.display_name}</span>
+                  {isLocked && (
+                    <FiLock size={14} className="text-gray-500" />
+                  )}
+                  {!isLocked && category.required_plan !== 'free' && (
+                    <span className="text-xs px-2 py-0.5 rounded bg-yellow-600 text-white uppercase">
+                      {category.required_plan === 'enterprise' ? 'ENT' : category.required_plan}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
           </div>
         </div>
 

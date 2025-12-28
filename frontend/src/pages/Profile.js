@@ -1,13 +1,33 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from 'react-query';
+import { Link } from 'react-router-dom';
+import axios from 'axios';
+import { format } from 'date-fns';
 import { statsService } from '../services/api';
-import { FiUser, FiMail, FiCalendar, FiActivity, FiShield, FiAward } from 'react-icons/fi';
+import { FiUser, FiMail, FiCalendar, FiActivity, FiShield, FiAward, FiAlertTriangle, FiCheckCircle, FiDownload } from 'react-icons/fi';
 import DashboardLayout from '../components/DashboardLayout';
 
 const Profile = () => {
+  const [scanFilter, setScanFilter] = useState('all'); // all, completed, failed, running
+
   const { data: profile } = useQuery('profile', () =>
     statsService.getOverview().then(res => res.data)
   );
+
+  const { data: scansData } = useQuery('profileScans', async () => {
+    const token = localStorage.getItem('token');
+    const response = await axios.get('http://localhost:8001/api/scans/', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return response.data;
+  });
+
+  const scans = scansData?.results || [];
+  
+  const filteredScans = scans.filter(scan => {
+    if (scanFilter === 'all') return true;
+    return scan.status === scanFilter;
+  });
 
   const userEmail = localStorage.getItem('user') || 'admin@bugbountyarsenal.com';
 
@@ -93,20 +113,115 @@ const Profile = () => {
 
             {/* Activity Log */}
             <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold mb-4">Recent Activity</h2>
-              <div className="space-y-3">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="flex items-start gap-3 pb-3 border-b last:border-0">
-                    <div className="bg-blue-100 text-blue-600 rounded-full p-2">
-                      <FiActivity size={16} />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm text-gray-900">Completed XSS scan on example.com</p>
-                      <p className="text-xs text-gray-500 mt-1">2 hours ago</p>
-                    </div>
-                  </div>
-                ))}
+              <h2 className="text-xl font-semibold mb-4">Scan History</h2>
+              
+              {/* Filter Tabs */}
+              <div className="flex gap-2 mb-4 border-b">
+                <button
+                  onClick={() => setScanFilter('all')}
+                  className={`px-4 py-2 font-semibold transition ${
+                    scanFilter === 'all'
+                      ? 'text-primary border-b-2 border-primary'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  All ({scans.length})
+                </button>
+                <button
+                  onClick={() => setScanFilter('completed')}
+                  className={`px-4 py-2 font-semibold transition ${
+                    scanFilter === 'completed'
+                      ? 'text-primary border-b-2 border-primary'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Completed ({scans.filter(s => s.status === 'completed').length})
+                </button>
+                <button
+                  onClick={() => setScanFilter('running')}
+                  className={`px-4 py-2 font-semibold transition ${
+                    scanFilter === 'running'
+                      ? 'text-primary border-b-2 border-primary'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Running ({scans.filter(s => s.status === 'running').length})
+                </button>
+                <button
+                  onClick={() => setScanFilter('failed')}
+                  className={`px-4 py-2 font-semibold transition ${
+                    scanFilter === 'failed'
+                      ? 'text-primary border-b-2 border-primary'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  Failed ({scans.filter(s => s.status === 'failed').length})
+                </button>
               </div>
+
+              {/* Scans Table */}
+              {filteredScans.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No scans found
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">Target</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">Type</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">Status</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">Findings</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">Date</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-900">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredScans.map((scan) => (
+                        <tr key={scan.id} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-4 text-sm text-gray-900">{scan.target}</td>
+                          <td className="py-3 px-4 text-sm text-gray-600">{scan.scan_category || scan.scan_type || 'General'}</td>
+                          <td className="py-3 px-4">
+                            <StatusBadge status={scan.status} />
+                          </td>
+                          <td className="py-3 px-4">
+                            {scan.vulnerabilities_found > 0 ? (
+                              <span className="flex items-center gap-1 text-red-600 font-semibold text-sm">
+                                <FiAlertTriangle size={14} />
+                                {scan.vulnerabilities_found}
+                              </span>
+                            ) : (
+                              <span className="text-sm text-gray-500">0</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-sm text-gray-600">
+                            {format(new Date(scan.created_at), 'MMM dd, HH:mm')}
+                          </td>
+                          <td className="py-3 px-4">
+                            <Link
+                              to={`/scan/details/${scan.id}`}
+                              className="text-primary hover:text-primary-600 text-sm font-semibold"
+                            >
+                              View
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              
+              {/* Export Button */}
+              {scans.length > 0 && (
+                <div className="mt-4 flex justify-end">
+                  <button className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition">
+                    <FiDownload size={16} />
+                    Export History
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -158,6 +273,21 @@ const Profile = () => {
         </div>
       </div>
     </DashboardLayout>
+  );
+};
+
+const StatusBadge = ({ status }) => {
+  const styles = {
+    pending: 'bg-yellow-100 text-yellow-800',
+    running: 'bg-blue-100 text-blue-800',
+    completed: 'bg-green-100 text-green-800',
+    failed: 'bg-red-100 text-red-800',
+  };
+
+  return (
+    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${styles[status] || 'bg-gray-100 text-gray-800'}`}>
+      {status}
+    </span>
   );
 };
 

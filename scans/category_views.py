@@ -47,13 +47,24 @@ class ScanCategoryViewSet(viewsets.ReadOnlyModelViewSet):
         return queryset.filter(id__in=accessible_categories)
     
     def list(self, request):
-        """List all accessible scan categories"""
-        categories = self.get_queryset()
+        """List all scan categories with access status"""
+        # Get ALL categories, not just accessible ones
+        all_categories = ScanCategory.objects.filter(is_active=True)
+        
+        # Get user's plan
+        user_plan = 'free'
+        try:
+            subscription = Subscription.objects.filter(user=request.user, status='active').first()
+            if subscription:
+                user_plan = subscription.plan.name
+        except:
+            pass
         
         data = []
-        for category in categories:
+        for category in all_categories:
             detector_count = category.detectors.filter(is_active=True).count()
             dangerous_count = category.detectors.filter(is_active=True, is_dangerous=True).count()
+            has_access = category.can_be_used_by_plan(user_plan)
             
             data.append({
                 'id': category.id,
@@ -66,13 +77,15 @@ class ScanCategoryViewSet(viewsets.ReadOnlyModelViewSet):
                 'detector_count': detector_count,
                 'dangerous_detector_count': dangerous_count,
                 'is_enterprise_only': category.required_plan == 'enterprise',
+                'has_access': has_access,  # Frontend can use this
             })
         
         return Response(data)
     
     def retrieve(self, request, pk=None):
         """Get category details with detector list"""
-        category = get_object_or_404(self.get_queryset(), pk=pk)
+        # Get any active category, not just accessible ones (for upgrade page)
+        category = get_object_or_404(ScanCategory.objects.filter(is_active=True), pk=pk)
         
         # Get detectors for this category
         detectors = category.get_detectors()
@@ -109,7 +122,8 @@ class ScanCategoryViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=['get'])
     def detectors(self, request, pk=None):
         """Get detectors for a specific category"""
-        category = get_object_or_404(self.get_queryset(), pk=pk)
+        # Get any active category, not just accessible ones (for upgrade page)
+        category = get_object_or_404(ScanCategory.objects.filter(is_active=True), pk=pk)
         detectors = category.get_detectors()
         
         data = []

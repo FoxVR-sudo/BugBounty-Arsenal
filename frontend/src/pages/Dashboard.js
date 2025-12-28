@@ -12,6 +12,7 @@ const Dashboard = () => {
   const [showNewScan, setShowNewScan] = useState(false);
   const [subscription, setSubscription] = useState(null);
   const [categoryStats, setCategoryStats] = useState([]);
+  const [userInfo, setUserInfo] = useState(null);
 
   // Fetch scans
   const { data: scans, isLoading, refetch } = useQuery('scans', () =>
@@ -27,7 +28,20 @@ const Dashboard = () => {
   useEffect(() => {
     fetchSubscription();
     fetchCategoryStats();
+    fetchUserInfo();
   }, []);
+
+  const fetchUserInfo = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:8001/api/auth/me/', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setUserInfo(response.data);
+    } catch (err) {
+      console.error('Failed to fetch user info:', err);
+    }
+  };
 
   const fetchSubscription = async () => {
     try {
@@ -63,6 +77,44 @@ const Dashboard = () => {
   return (
     <DashboardLayout>
       <div className="p-8">
+        {/* User Info Card - Tree Format */}
+        {userInfo && (
+          <div className="bg-white rounded-lg shadow p-6 mb-8">
+            <div className="font-mono text-sm space-y-1">
+              <div className="flex items-center">
+                <span className="text-gray-600 w-32">├─ username:</span>
+                <span className="font-semibold text-gray-900">
+                  {(userInfo.full_name && userInfo.full_name.trim()) ? userInfo.full_name : userInfo.email.split('@')[0].toUpperCase()}
+                </span>
+              </div>
+              <div className="flex items-center">
+                <span className="text-gray-600 w-32">├─ Plan:</span>
+                <span className="font-semibold text-gray-900">{userInfo.current_plan || 'Loading...'}</span>
+              </div>
+              <div className="flex items-center">
+                <span className="text-gray-600 w-32">├─ email:</span>
+                <span className="font-semibold text-gray-900">{userInfo.email}</span>
+              </div>
+              {userInfo.phone && userInfo.phone.trim() && (
+                <div className="flex items-center">
+                  <span className="text-gray-600 w-32">├─ phone:</span>
+                  <span className="font-semibold text-gray-900">{userInfo.phone}</span>
+                </div>
+              )}
+              {userInfo.company_name && userInfo.company_name.trim() && (
+                <div className="flex items-center">
+                  <span className="text-gray-600 w-32">├─ company:</span>
+                  <span className="font-semibold text-gray-900">{userInfo.company_name}</span>
+                </div>
+              )}
+              <div className="flex items-center">
+                <span className="text-gray-600 w-32">└─ IP:</span>
+                <span className="font-semibold text-gray-900">{userInfo.client_ip || 'N/A'}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <StatCard
@@ -148,43 +200,35 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* V3.0: Available Categories - Links to Real Scanner Pages */}
+        {/* Scanner Detector Information */}
         {categoryStats && categoryStats.length > 0 && (
           <div className="mb-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Available Scan Categories</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {categoryStats.map((category) => (
-                <Link
-                  key={category.id}
-                  to={`/scan/${category.name}`}
-                  className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition border-2 border-transparent hover:border-primary cursor-pointer"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h4 className="text-lg font-bold text-gray-900 mb-1">
-                        {category.icon_emoji || category.icon} {category.display_name}
-                      </h4>
-                      <p className="text-sm text-gray-600">{category.description}</p>
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Scanner Capabilities</h3>
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {categoryStats.map((category) => (
+                  <div key={category.id} className="border-l-4 border-primary pl-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-2xl">{category.icon_emoji || category.icon || '🔍'}</span>
+                      <h4 className="font-bold text-gray-900">{category.display_name}</h4>
+                      {category.required_plan && category.required_plan !== 'free' && (
+                        <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full uppercase">
+                          {category.required_plan}
+                        </span>
+                      )}
                     </div>
-                    {category.required_plan !== 'free' && (
-                      <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 uppercase font-semibold">
-                        {category.required_plan}
-                      </span>
-                    )}
+                    <p className="text-sm text-gray-600 mb-2">{category.description}</p>
+                    <div className="text-xs text-gray-500">
+                      📦 {category.detector_count || 'Multiple'} detectors
+                      {category.dangerous_detector_count > 0 && (
+                        <span className="ml-2 text-red-600">
+                          🔴 {category.dangerous_detector_count} dangerous
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-gray-500 mb-3">
-                    <span>{category.detector_count} detectors</span>
-                    {category.dangerous_detector_count > 0 && (
-                      <span className="text-red-600">
-                        🔴 {category.dangerous_detector_count} dangerous
-                      </span>
-                    )}
-                  </div>
-                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-primary-600 transition">
-                    <FiPlay /> Start {category.display_name} Scan
-                  </div>
-                </Link>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         )}
@@ -259,7 +303,7 @@ const Dashboard = () => {
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-sm text-gray-600">
-                          {scan.scan_type}
+                          {scan.scan_category || scan.scan_type || 'General'}
                         </span>
                       </td>
                       <td className="px-6 py-4">

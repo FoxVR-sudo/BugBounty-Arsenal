@@ -15,6 +15,8 @@ const CategoryScan = () => {
   const [scanProgress, setScanProgress] = useState(0);
   const [scanStatus, setScanStatus] = useState('');
   const [results, setResults] = useState(null);
+  const [subscription, setSubscription] = useState(null);
+  const [hasAccess, setHasAccess] = useState(null); // null = loading, true = access, false = no access
   
   // Form state
   const [target, setTarget] = useState('');
@@ -28,6 +30,7 @@ const CategoryScan = () => {
 
   useEffect(() => {
     fetchCategoryData();
+    fetchSubscription();
   }, [categoryId]);
 
   const fetchCategoryData = async () => {
@@ -65,6 +68,45 @@ const CategoryScan = () => {
       setLoading(false);
     }
   };
+
+  const fetchSubscription = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:8001/api/subscriptions/current/', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setSubscription(response.data);
+    } catch (err) {
+      console.error('Failed to fetch subscription:', err);
+    }
+  };
+
+  // Check access when both category and subscription are loaded
+  useEffect(() => {
+    if (category && subscription) {
+      const planHierarchy = { 'free': 0, 'pro': 1, 'pro plan': 1, 'enterprise': 2 };
+      // subscription has plan_name, not plan.name
+      const userPlanName = (subscription.plan_name || subscription.plan?.name || 'free').toLowerCase();
+      const userPlanLevel = planHierarchy[userPlanName] || 0;
+      const requiredPlanLevel = planHierarchy[category.required_plan?.toLowerCase()] || 0;
+      
+      console.log('Access check:', {
+        category: category.name,
+        required: category.required_plan,
+        userPlan: userPlanName,
+        userLevel: userPlanLevel,
+        requiredLevel: requiredPlanLevel,
+        hasAccess: userPlanLevel >= requiredPlanLevel
+      });
+      
+      setHasAccess(userPlanLevel >= requiredPlanLevel);
+    } else if (category && !subscription) {
+      // If subscription hasn't loaded yet, check if it's a free category
+      const isFree = category.required_plan?.toLowerCase() === 'free';
+      console.log('No subscription loaded, category:', category.name, 'is free?', isFree);
+      setHasAccess(isFree);
+    }
+  }, [category, subscription]);
 
   const handleStartScan = async (e) => {
     e.preventDefault();
@@ -216,7 +258,95 @@ const CategoryScan = () => {
           <p className="text-gray-600">{category.description}</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Show Upgrade UI if no access */}
+        {hasAccess === false ? (
+          <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg shadow-xl p-12 text-center">
+            <div className="mb-6">
+              <div className="inline-block p-4 bg-white bg-opacity-20 rounded-full mb-4">
+                <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <h2 className="text-3xl font-bold mb-4">Upgrade Required</h2>
+              <p className="text-xl mb-2">
+                {category.display_name} scanner requires a <span className="font-bold">{category.required_plan.toUpperCase()}</span> plan
+              </p>
+              <p className="text-white text-opacity-90 mb-8">
+                You are currently on the <span className="font-semibold">{subscription?.plan?.display_name || 'Free'}</span> plan
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 text-left">
+              {/* Free Plan */}
+              <div className="bg-white bg-opacity-10 rounded-lg p-6 backdrop-blur-sm">
+                <h3 className="text-lg font-bold mb-2">Free Plan</h3>
+                <div className="text-2xl font-bold mb-4">$0<span className="text-sm">/month</span></div>
+                <ul className="space-y-2 text-sm">
+                  <li>✓ 5 scans per day</li>
+                  <li>✓ Recon scanner</li>
+                  <li>✓ Web scanner</li>
+                  <li>✗ API scanner</li>
+                  <li>✗ Vuln scanner</li>
+                  <li>✗ Mobile scanner</li>
+                </ul>
+              </div>
+
+              {/* Pro Plan */}
+              <div className="bg-white text-gray-900 rounded-lg p-6 shadow-2xl transform scale-105 border-4 border-yellow-400">
+                <div className="text-center mb-2">
+                  <span className="bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-xs font-bold">RECOMMENDED</span>
+                </div>
+                <h3 className="text-lg font-bold mb-2">Pro Plan</h3>
+                <div className="text-2xl font-bold mb-4">$49<span className="text-sm">/month</span></div>
+                <ul className="space-y-2 text-sm">
+                  <li>✓ 50 scans per day</li>
+                  <li>✓ All Free features</li>
+                  <li>✓ API scanner</li>
+                  <li>✓ Vuln scanner</li>
+                  <li>✓ Mobile scanner</li>
+                  <li>✓ Priority support</li>
+                  <li>✓ Team collaboration</li>
+                </ul>
+                <button 
+                  onClick={() => navigate('/pricing')}
+                  className="w-full mt-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-lg font-bold hover:opacity-90 transition"
+                >
+                  Upgrade to Pro
+                </button>
+              </div>
+
+              {/* Enterprise Plan */}
+              <div className="bg-white bg-opacity-10 rounded-lg p-6 backdrop-blur-sm">
+                <h3 className="text-lg font-bold mb-2">Enterprise</h3>
+                <div className="text-2xl font-bold mb-4">Custom</div>
+                <ul className="space-y-2 text-sm">
+                  <li>✓ Unlimited scans</li>
+                  <li>✓ All Pro features</li>
+                  <li>✓ Custom scanners</li>
+                  <li>✓ Dangerous detectors</li>
+                  <li>✓ API access</li>
+                  <li>✓ Dedicated support</li>
+                  <li>✓ Custom integrations</li>
+                </ul>
+                <button 
+                  onClick={() => navigate('/pricing')}
+                  className="w-full mt-4 bg-white bg-opacity-20 py-3 rounded-lg font-bold hover:bg-opacity-30 transition"
+                >
+                  Contact Sales
+                </button>
+              </div>
+            </div>
+
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="px-6 py-3 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg font-semibold transition"
+            >
+              Back to Dashboard
+            </button>
+          </div>
+        ) : (
+          /* Scanner Form - Show only if user has access */
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left: Configuration */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-lg p-6">
@@ -491,6 +621,7 @@ const CategoryScan = () => {
             )}
           </div>
         </div>
+        )}
       </div>
     </DashboardLayout>
   );

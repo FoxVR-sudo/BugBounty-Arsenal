@@ -8,6 +8,57 @@ from rest_framework.response import Response
 from .services import PhoneVerificationService, CompanyVerificationService
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_current_user(request):
+    """
+    Get current authenticated user info
+    
+    GET /api/auth/me/
+    """
+    user = request.user
+    
+    # Get client IP
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        client_ip = x_forwarded_for.split(',')[0]
+    else:
+        client_ip = request.META.get('REMOTE_ADDR')
+    
+    # Get subscription plan
+    current_plan = 'Free'
+    try:
+        from subscriptions.models import Subscription
+        subscription = Subscription.objects.filter(user=user, status='active').first()
+        if subscription:
+            current_plan = subscription.plan.display_name
+    except:
+        pass
+    
+    return Response({
+        'id': user.id,
+        'email': user.email,
+        'first_name': user.first_name,
+        'middle_name': user.middle_name,
+        'last_name': user.last_name,
+        'full_name': user.full_name,
+        'phone': user.phone,
+        'phone_verified': user.phone_verified,
+        'company_name': user.company_name,
+        'company_registration_number': user.company_registration_number,
+        'company_address': user.company_address,
+        'company_country': user.company_country,
+        'company_verified': user.company_verified,
+        'address': user.address,
+        'is_superuser': user.is_superuser,
+        'is_staff': user.is_staff,
+        'is_admin': user.is_admin,
+        'date_joined': user.date_joined,
+        'client_ip': client_ip,
+        'current_plan': current_plan,
+    })
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def send_phone_verification(request):

@@ -17,6 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.views.generic import RedirectView
+from django.http import JsonResponse
 from rest_framework import routers
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -32,7 +33,7 @@ from users.views import UserViewSet
 from users.auth_views import login_view, signup_view, token_refresh_view
 from users.api_views import (
     send_phone_verification, verify_phone_code, resend_phone_verification,
-    verify_company, search_company, get_supported_countries
+    verify_company, search_company, get_supported_countries, get_current_user
 )
 from users.admin_views import (
     admin_stats, admin_users_list, admin_user_activate, admin_user_deactivate,
@@ -75,6 +76,7 @@ urlpatterns = [
     path('api/auth/login/', login_view, name='auth-login'),
     path('api/auth/signup/', signup_view, name='auth-signup'),
     path('api/auth/refresh/', token_refresh_view, name='auth-refresh'),
+    path('api/auth/me/', get_current_user, name='current-user'),
     
     # NEW v3.0: Phone & Company Verification endpoints
     path('api/users/verify-phone/send/', send_phone_verification, name='send-phone-verification'),
@@ -96,6 +98,10 @@ urlpatterns = [
     # NEW v3.0: Category-based scan endpoints
     path('api/scans/start-category-scan/', start_category_scan, name='start-category-scan'),
     path('api/detectors/statistics/', get_detector_statistics, name='detector-statistics'),
+    
+    # NEW v3.0: Placeholder endpoints for Pro features (to prevent 404 errors)
+    path('api/teams/', lambda request: JsonResponse({'results': [], 'message': 'Teams feature available in Pro plan'}), name='teams-list'),
+    path('api/integrations/', lambda request: JsonResponse({'results': [], 'message': 'Integrations feature available in Pro plan'}), name='integrations-list'),
     
     # Billing endpoints
     path('api/billing/checkout/', create_checkout_session, name='billing-checkout'),

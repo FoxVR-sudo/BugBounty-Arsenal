@@ -8,6 +8,7 @@ import CategoryScan from './pages/CategoryScan';
 import AllResults from './pages/AllResults';
 import Analytics from './pages/Analytics';
 import Profile from './pages/Profile';
+import Pricing from './pages/Pricing';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import PhoneVerification from './pages/PhoneVerification';
@@ -48,6 +49,14 @@ function App() {
             }
           />
           <Route
+            path="/scan/details/:id"
+            element={
+              <PrivateRoute>
+                <ScanDetails />
+              </PrivateRoute>
+            }
+          />
+          <Route
             path="/scan/:categoryId"
             element={
               <PrivateRoute>
@@ -72,7 +81,7 @@ function App() {
             }
           />
           <Route
-            path="/profidetails/le"
+            path="/profile"
             element={
               <PrivateRoute>
                 <Profile />
@@ -80,10 +89,10 @@ function App() {
             }
           />
           <Route
-            path="/scan/:id"
+            path="/pricing"
             element={
               <PrivateRoute>
-                <ScanDetails />
+                <Pricing />
               </PrivateRoute>
             }
           />
