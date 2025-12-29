@@ -137,10 +137,15 @@ def login_view(request):
 @permission_classes([AllowAny])
 def signup_view(request):
     """
-    User registration endpoint.
+    User registration endpoint with optional plan selection.
     
     Creates a new user account and returns JWT tokens.
+    If a paid plan (Pro/Enterprise) is selected, also returns checkout URL.
     """
+    from subscriptions.models import Plan
+    from subscriptions.stripe_service import StripeService
+    from django.conf import settings
+    
     serializer = UserCreateSerializer(data=request.data)
     
     if not serializer.is_valid():
@@ -161,11 +166,147 @@ def signup_view(request):
     # Serialize user data
     user_serializer = UserSerializer(user)
     
-    return Response({
+    response_data = {
         'access': str(refresh.access_token),
         'refresh': str(refresh),
         'user': user_serializer.data
-    }, status=status.HTTP_201_CREATED)
+    }
+    
+    # Check if user selected a paid plan during registration
+    plan_id = request.data.get('plan_id')
+    if plan_id:
+        try:
+            plan = Plan.objects.get(id=plan_id)
+            
+            # If it's a paid plan (not Free), create checkout session
+            if plan.price > 0:
+                frontend_url = settings.FRONTEND_URL
+                success_url = f"{frontend_url}/payment-success"
+                cancel_url = f"{frontend_url}/register?payment=cancelled"
+                
+                try:
+                    checkout_session = StripeService.create_checkout_session(
+                        user=user,
+                        plan=plan,
+                        success_url=success_url,
+                        cancel_url=cancel_url
+                    )
+                    response_data['checkout_url'] = checkout_session.url
+                    response_data['requires_payment'] = True
+                except Exception as e:
+                    # If Stripe not configured, return test mode URL
+                    response_data['checkout_url'] = f"{frontend_url}/pricing"
+                    response_data['requires_payment'] = True
+                    response_data['test_mode'] = True
+            else:
+                # Free plan - create subscription immediately
+                from subscriptions.models import Subscription
+                Subscription.objects.create(
+                    user=user,
+                    plan=plan,
+                    status='active'
+                )
+                response_data['requires_payment'] = False
+        except Plan.DoesNotExist:
+            pass  # Ignore invalid plan_id
+    
+    return Response(response_data, status=status.HTTP_201_CREATED)
+
+
+@extend_schema(
+    summary="Enterprise Registration",
+    description="Register a new enterprise customer account with company details",
+    tags=["Authentication"],
+    request={
+        'application/json': {
+            'type': 'object',
+            'properties': {
+                'email': {'type': 'string'},
+                'password': {'type': 'string'},
+                'password_confirm': {'type': 'string'},
+                'first_name': {'type': 'string'},
+                'last_name': {'type': 'string'},
+                'phone': {'type': 'string'},
+                'company_name': {'type': 'string'},
+                'vat_number': {'type': 'string'},
+                'registration_number': {'type': 'string'},
+                'billing_address': {'type': 'string'},
+                'billing_city': {'type': 'string'},
+                'billing_country': {'type': 'string'},
+                'payment_terms': {'type': 'string'},
+            }
+        }
+    },
+    responses={201: {'type': 'object'}}
+)
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def signup_enterprise_view(request):
+    """Enterprise customer registration with company details."""
+    from subscriptions.models import Plan, EnterpriseCustomer
+    from subscriptions.stripe_service import StripeService
+    from django.conf import settings
+    
+    serializer = UserCreateSerializer(data=request.data)
+    
+    if not serializer.is_valid():
+        return Response({'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Create user
+    user = serializer.save()
+    django_login(request, user)
+    
+    # Generate JWT tokens
+    refresh = RefreshToken.for_user(user)
+    user_serializer = UserSerializer(user)
+    
+    response_data = {
+        'access': str(refresh.access_token),
+        'refresh': str(refresh),
+        'user': user_serializer.data
+    }
+    
+    # Get Enterprise plan
+    try:
+        enterprise_plan = Plan.objects.get(name__iexact='enterprise')
+    except Plan.DoesNotExist:
+        return Response({'error': 'Enterprise plan not found'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    # Create EnterpriseCustomer record
+    EnterpriseCustomer.objects.create(
+        user=user,
+        company_name=request.data.get('company_name'),
+        vat_number=request.data.get('vat_number', ''),
+        registration_number=request.data.get('registration_number', ''),
+        billing_address=request.data.get('billing_address'),
+        billing_city=request.data.get('billing_city'),
+        billing_country=request.data.get('billing_country', 'Bulgaria'),
+        billing_zip=request.data.get('billing_zip', ''),
+        billing_email=request.data.get('billing_email', user.email),
+        billing_phone=request.data.get('billing_phone', request.data.get('phone', '')),
+        accounting_contact_name=request.data.get('accounting_contact_name', ''),
+        accounting_contact_email=request.data.get('accounting_contact_email', ''),
+        payment_terms=request.data.get('payment_terms', 'net_30'),
+        use_stripe=True
+    )
+    
+    # Create Stripe checkout for Enterprise plan
+    frontend_url = settings.FRONTEND_URL
+    try:
+        checkout_session = StripeService.create_checkout_session(
+            user=user,
+            plan=enterprise_plan,
+            success_url=f"{frontend_url}/payment-success",
+            cancel_url=f"{frontend_url}/register-enterprise?payment=cancelled"
+        )
+        response_data['checkout_url'] = checkout_session.url
+        response_data['requires_payment'] = True
+    except Exception:
+        response_data['checkout_url'] = f"{frontend_url}/pricing"
+        response_data['requires_payment'] = True
+        response_data['test_mode'] = True
+    
+    return Response(response_data, status=status.HTTP_201_CREATED)
 
 
 @extend_schema(

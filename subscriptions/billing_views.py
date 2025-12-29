@@ -5,9 +5,10 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from drf_spectacular.utils import extend_schema, OpenApiExample
+from drf_spectacular.utils import extend_schema
 from django.conf import settings
-import os
+from subscriptions.models import Plan, Subscription
+from subscriptions.stripe_service import StripeService
 import logging
 
 logger = logging.getLogger(__name__)
@@ -17,49 +18,15 @@ logger = logging.getLogger(__name__)
     summary="Create Stripe Checkout Session",
     description="Create a Stripe checkout session for subscribing to a plan",
     tags=["Billing"],
-    request={
-        'application/json': {
-            'type': 'object',
-            'properties': {
-                'plan_id': {'type': 'string', 'description': 'ID of the plan to subscribe to'},
-                'success_url': {'type': 'string', 'description': 'URL to redirect after success'},
-                'cancel_url': {'type': 'string', 'description': 'URL to redirect if cancelled'}
-            },
-            'required': ['plan_id']
-        }
-    },
-    responses={
-        200: {
-            'type': 'object',
-            'properties': {
-                'checkout_url': {'type': 'string', 'description': 'Stripe checkout URL'},
-                'session_id': {'type': 'string', 'description': 'Checkout session ID'}
-            }
-        }
-    },
-    examples=[
-        OpenApiExample(
-            'Checkout Example',
-            value={
-                'plan_id': '1',
-                'success_url': 'http://localhost:8000/dashboard/',
-                'cancel_url': 'http://localhost:8000/'
-            }
-        )
-    ]
 )
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_checkout_session(request):
-    """
-    Create Stripe checkout session for plan subscription.
+    """Create Stripe checkout session for plan subscription"""
     
-    In test mode, returns a mock checkout URL.
-    In production with Stripe configured, creates real checkout session.
-    """
     plan_id = request.data.get('plan_id')
-    success_url = request.data.get('success_url', 'http://localhost:8000/dashboard/')
-    cancel_url = request.data.get('cancel_url', 'http://localhost:8000/')
+    success_url = request.data.get('success_url', f'{settings.FRONTEND_URL}/dashboard')
+    cancel_url = request.data.get('cancel_url', f'{settings.FRONTEND_URL}/pricing')
     
     if not plan_id:
         return Response(
@@ -67,51 +34,25 @@ def create_checkout_session(request):
             status=status.HTTP_400_BAD_REQUEST
         )
     
-    # Check if Stripe is configured
-    stripe_key = os.getenv('STRIPE_SECRET_KEY', '')
-    
-    if not stripe_key or stripe_key.startswith('sk_test_') is False:
-        # Test mode - return mock checkout URL
-        logger.info(f"Creating mock checkout session for plan {plan_id}")
-        return Response({
-            'checkout_url': f'/mock-checkout?plan={plan_id}',
-            'session_id': f'mock_session_{plan_id}',
-            'message': 'Test mode: Stripe not configured. Use real Stripe keys in production.'
-        }, status=status.HTTP_200_OK)
-    
     try:
-        import stripe
-        stripe.api_key = stripe_key
-        
-        from subscriptions.models import Plan
         plan = Plan.objects.get(id=plan_id)
         
-        # Create Stripe checkout session
-        session = stripe.checkout.Session.create(
-            payment_method_types=['card'],
-            line_items=[{
-                'price_data': {
-                    'currency': 'usd',
-                    'product_data': {
-                        'name': plan.name,
-                        'description': plan.description,
-                    },
-                    'unit_amount': int(plan.price * 100),  # Convert to cents
-                    'recurring': {
-                        'interval': 'month',
-                    },
-                },
-                'quantity': 1,
-            }],
-            mode='subscription',
-            success_url=success_url + '?session_id={CHECKOUT_SESSION_ID}',
-            cancel_url=cancel_url,
-            customer_email=request.user.email,
-            client_reference_id=str(request.user.id),
-            metadata={
-                'user_id': str(request.user.id),
-                'plan_id': str(plan.id),
-            }
+        # Check if Stripe is configured
+        if not settings.STRIPE_SECRET_KEY or settings.STRIPE_SECRET_KEY == 'sk_test_...':
+            # Test mode - return mock checkout
+            logger.info(f"Test mode: mock checkout for plan {plan.name}")
+            return Response({
+                'checkout_url': f'{settings.FRONTEND_URL}/mock-checkout?plan={plan_id}',
+                'session_id': f'mock_session_{plan_id}',
+                'message': 'Stripe not configured. Configure STRIPE_SECRET_KEY for real payments.'
+            }, status=status.HTTP_200_OK)
+        
+        # Create real Stripe session
+        session = StripeService.create_checkout_session(
+            user=request.user,
+            plan=plan,
+            success_url=success_url,
+            cancel_url=cancel_url
         )
         
         return Response({
@@ -119,10 +60,15 @@ def create_checkout_session(request):
             'session_id': session.id
         }, status=status.HTTP_200_OK)
         
-    except Exception as e:
-        logger.error(f"Error creating checkout session: {e}")
+    except Plan.DoesNotExist:
         return Response(
-            {'error': f'Failed to create checkout session: {str(e)}'},
+            {'error': 'Plan not found'},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        logger.error(f"Checkout error: {str(e)}")
+        return Response(
+            {'error': 'Failed to create checkout session'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 

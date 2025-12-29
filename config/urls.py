@@ -30,7 +30,7 @@ from drf_spectacular.views import (
 )
 
 from users.views import UserViewSet
-from users.auth_views import login_view, signup_view, token_refresh_view
+from users.auth_views import login_view, signup_view, signup_enterprise_view, token_refresh_view
 from users.api_views import (
     send_phone_verification, verify_phone_code, resend_phone_verification,
     verify_company, search_company, get_supported_countries, get_current_user
@@ -76,6 +76,7 @@ urlpatterns = [
     # Authentication endpoints (must be before api/ include)
     path('api/auth/login/', login_view, name='auth-login'),
     path('api/auth/signup/', signup_view, name='auth-signup'),
+    path('api/auth/signup-enterprise/', signup_enterprise_view, name='auth-signup-enterprise'),
     path('api/auth/refresh/', token_refresh_view, name='auth-refresh'),
     path('api/auth/me/', get_current_user, name='current-user'),
     

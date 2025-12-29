@@ -11,7 +11,9 @@ import Profile from './pages/Profile';
 import Pricing from './pages/Pricing';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import RegisterEnterprise from './pages/RegisterEnterprise';
 import PhoneVerification from './pages/PhoneVerification';
+import PaymentSuccess from './pages/PaymentSuccess';
 import TeamManagement from './pages/TeamManagement';
 import Integrations from './pages/Integrations';
 import './index.css';
@@ -39,6 +41,8 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/register-enterprise" element={<RegisterEnterprise />} />
+          <Route path="/payment-success" element={<PaymentSuccess />} />
           <Route path="/verify-phone" element={<PrivateRoute><PhoneVerification /></PrivateRoute>} />
           <Route
             path="/dashboard"
