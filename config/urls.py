@@ -52,6 +52,7 @@ from subscriptions.views import PlanViewSet, SubscriptionViewSet
 from subscriptions.billing_views import (
     create_checkout_session, billing_portal, buy_extra_scans, change_tier
 )
+from subscriptions.api_views import get_plans, get_current_subscription
 
 # DRF Router
 router = routers.DefaultRouter()
@@ -60,7 +61,7 @@ router.register(r'scans', ScanViewSet, basename='scan')
 router.register(r'scan-categories', ScanCategoryViewSet, basename='scan-category')
 router.register(r'audit-logs', AuditLogViewSet, basename='auditlog')
 router.register(r'api-keys', ApiKeyViewSet, basename='apikey')
-router.register(r'plans', PlanViewSet, basename='plan')
+# router.register(r'plans', PlanViewSet, basename='plan')  # Using custom endpoint instead
 router.register(r'subscriptions', SubscriptionViewSet, basename='subscription')
 
 urlpatterns = [
@@ -98,6 +99,10 @@ urlpatterns = [
     # NEW v3.0: Category-based scan endpoints
     path('api/scans/start-category-scan/', start_category_scan, name='start-category-scan'),
     path('api/detectors/statistics/', get_detector_statistics, name='detector-statistics'),
+    
+    # NEW v3.1: Plan and subscription endpoints
+    path('api/plans/', get_plans, name='plans-list'),
+    path('api/subscriptions/current/', get_current_subscription, name='subscription-current'),
     
     # NEW v3.0: Placeholder endpoints for Pro features (to prevent 404 errors)
     path('api/teams/', lambda request: JsonResponse({'results': [], 'message': 'Teams feature available in Pro plan'}), name='teams-list'),

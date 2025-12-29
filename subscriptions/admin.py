@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import Plan, Subscription
+from django.utils import timezone
+from .models import Plan, Subscription, EnterpriseCustomer, Invoice
 
 
 @admin.register(Plan)
@@ -123,3 +124,154 @@ class SubscriptionAdmin(admin.ModelAdmin):
         queryset.update(status='cancelled', cancel_at_period_end=True)
         self.message_user(request, f'⚠️ Cancelled {queryset.count()} subscriptions')
     cancel_subscriptions.short_description = 'Cancel selected subscriptions'
+
+
+@admin.register(EnterpriseCustomer)
+class EnterpriseCustomerAdmin(admin.ModelAdmin):
+    """Enterprise customer billing management"""
+    
+    list_display = ['company_name', 'user_email', 'custom_monthly_price', 'payment_terms', 'invoice_frequency', 'is_active', 'created_at']
+    list_filter = ['is_active', 'payment_terms', 'invoice_frequency', 'billing_country']
+    search_fields = ['company_name', 'user__email', 'vat_number', 'registration_number', 'billing_email']
+    list_editable = ['is_active']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Company Information', {
+            'fields': ('user', 'subscription', 'company_name', 'vat_number', 'registration_number', 'is_active')
+        }),
+        ('Billing Address', {
+            'fields': ('billing_address', 'billing_city', 'billing_country', 'billing_zip')
+        }),
+        ('Billing Contacts', {
+            'fields': ('billing_email', 'billing_phone', 'accounting_contact_name', 'accounting_contact_email')
+        }),
+        ('Payment Terms & Pricing', {
+            'fields': ('custom_monthly_price', 'payment_terms', 'invoice_frequency')
+        }),
+        ('Invoice Settings', {
+            'fields': ('po_number_required', 'custom_invoice_notes', 'use_stripe', 'stripe_customer_id')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def user_email(self, obj):
+        return obj.user.email
+    user_email.short_description = 'User Email'
+    user_email.admin_order_field = 'user__email'
+    
+    actions = ['generate_monthly_invoice']
+    
+    def generate_monthly_invoice(self, request, queryset):
+        """Generate invoice for selected customers"""
+        from datetime import date, timedelta
+        from dateutil.relativedelta import relativedelta
+        
+        count = 0
+        for customer in queryset:
+            if not customer.is_active:
+                continue
+            
+            # Generate invoice for current month
+            today = date.today()
+            invoice_date = today
+            period_start = today.replace(day=1)
+            period_end = (period_start + relativedelta(months=1)) - timedelta(days=1)
+            
+            # Calculate due date based on payment terms
+            if customer.payment_terms == 'net_15':
+                due_date = invoice_date + timedelta(days=15)
+            elif customer.payment_terms == 'net_30':
+                due_date = invoice_date + timedelta(days=30)
+            elif customer.payment_terms == 'net_60':
+                due_date = invoice_date + timedelta(days=60)
+            else:  # prepaid
+                due_date = invoice_date
+            
+            # Generate invoice number
+            year_month = today.strftime('%Y%m')
+            existing_count = Invoice.objects.filter(invoice_number__startswith=f'INV-{year_month}').count()
+            invoice_number = f'INV-{year_month}-{existing_count + 1:03d}'
+            
+            # Create invoice
+            Invoice.objects.create(
+                enterprise_customer=customer,
+                subscription=customer.subscription,
+                invoice_number=invoice_number,
+                invoice_date=invoice_date,
+                due_date=due_date,
+                period_start=period_start,
+                period_end=period_end,
+                subtotal=customer.custom_monthly_price,
+                vat_rate=20.00,  # Default VAT
+                status='draft'
+            )
+            count += 1
+        
+        self.message_user(request, f'✅ Generated {count} invoices')
+    generate_monthly_invoice.short_description = '📄 Generate monthly invoice'
+
+
+@admin.register(Invoice)
+class InvoiceAdmin(admin.ModelAdmin):
+    """Invoice management with PDF generation"""
+    
+    list_display = ['invoice_number', 'company_name', 'invoice_date', 'due_date', 'total_display', 'status', 'sent_at', 'paid_at']
+    list_filter = ['status', 'invoice_date', 'sent_at', 'paid_at']
+    search_fields = ['invoice_number', 'enterprise_customer__company_name', 'po_number']
+    readonly_fields = ['created_at', 'updated_at', 'vat_amount', 'total_amount']
+    date_hierarchy = 'invoice_date'
+    ordering = ['-invoice_date']
+    
+    fieldsets = (
+        ('Invoice Details', {
+            'fields': ('enterprise_customer', 'subscription', 'invoice_number', 'invoice_date', 'due_date')
+        }),
+        ('Billing Period', {
+            'fields': ('period_start', 'period_end')
+        }),
+        ('Amounts', {
+            'fields': ('subtotal', 'vat_rate', 'vat_amount', 'total_amount')
+        }),
+        ('Status & Tracking', {
+            'fields': ('status', 'sent_at', 'paid_at', 'payment_method')
+        }),
+        ('Optional', {
+            'fields': ('po_number', 'notes', 'pdf_file', 'stripe_invoice_id'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def company_name(self, obj):
+        return obj.enterprise_customer.company_name
+    company_name.short_description = 'Company'
+    company_name.admin_order_field = 'enterprise_customer__company_name'
+    
+    def total_display(self, obj):
+        color = 'green' if obj.status == 'paid' else ('red' if obj.status == 'overdue' else 'orange')
+        return format_html('<span style="color: {}; font-weight: bold;">${}</span>', color, obj.total_amount)
+    total_display.short_description = 'Total Amount'
+    
+    actions = ['mark_as_sent', 'mark_as_paid', 'mark_as_overdue']
+    
+    def mark_as_sent(self, request, queryset):
+        queryset.update(status='sent', sent_at=timezone.now())
+        self.message_user(request, f'✅ Marked {queryset.count()} invoices as sent')
+    mark_as_sent.short_description = '📧 Mark as Sent'
+    
+    def mark_as_paid(self, request, queryset):
+        queryset.update(status='paid', paid_at=timezone.now())
+        self.message_user(request, f'✅ Marked {queryset.count()} invoices as paid')
+    mark_as_paid.short_description = '💰 Mark as Paid'
+    
+    def mark_as_overdue(self, request, queryset):
+        queryset.update(status='overdue')
+        self.message_user(request, f'⚠️ Marked {queryset.count()} invoices as overdue')
+    mark_as_overdue.short_description = '⏰ Mark as Overdue'

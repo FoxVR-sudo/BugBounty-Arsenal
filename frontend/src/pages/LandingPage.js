@@ -1,8 +1,26 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FiShield, FiZap, FiTarget, FiLock, FiDollarSign, FiCheck, FiCode, FiActivity } from 'react-icons/fi';
+import axios from 'axios';
 
 const LandingPage = () => {
+  const [plans, setPlans] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPlans = async () => {
+      try {
+        const response = await axios.get('http://localhost:8001/api/plans/');
+        setPlans(response.data);
+      } catch (error) {
+        console.error('Failed to fetch plans:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPlans();
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900">
       {/* Header/Nav */}
@@ -133,49 +151,19 @@ const LandingPage = () => {
           <h2 className="text-4xl font-bold text-white text-center mb-12">
             Transparent Pricing
           </h2>
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            <PricingCard
-              name="Free"
-              price="$0"
-              period="forever"
-              features={[
-                '5 scans per month',
-                'Reconnaissance only',
-                'Basic reporting',
-                'Email support',
-              ]}
-              buttonText="Start Free"
-            />
-            <PricingCard
-              name="Pro"
-              price="$49"
-              period="per month"
-              features={[
-                '100 scans per month',
-                'All scan types',
-                'Advanced reporting',
-                'Export to JSON/PDF',
-                'Priority support',
-                'API access',
-              ]}
-              buttonText="Start Pro"
-              highlighted={true}
-            />
-            <PricingCard
-              name="Enterprise"
-              price="Custom"
-              period="contact us"
-              features={[
-                'Unlimited scans',
-                'Custom integrations',
-                'Dedicated support',
-                'SLA guarantee',
-                'Custom detectors',
-                'White-label',
-              ]}
-              buttonText="Contact Sales"
-            />
-          </div>
+          {loading ? (
+            <div className="text-center text-white">Loading plans...</div>
+          ) : (
+            <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+              {plans.map((plan) => (
+                <PricingCard
+                  key={plan.id}
+                  plan={plan}
+                  highlighted={plan.is_popular}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -307,38 +295,78 @@ const FeatureCard = ({ icon, title, items }) => (
   </div>
 );
 
-const PricingCard = ({ name, price, period, features, buttonText, highlighted }) => (
-  <div
-    className={`p-8 rounded-lg ${
-      highlighted
-        ? 'bg-primary border-2 border-primary transform scale-105'
-        : 'bg-gray-800 border-2 border-gray-700'
-    }`}
-  >
-    <h3 className="text-2xl font-bold text-white mb-2">{name}</h3>
-    <div className="mb-6">
-      <span className="text-4xl font-bold text-white">{price}</span>
-      <span className="text-gray-400 ml-2">/ {period}</span>
-    </div>
-    <ul className="space-y-3 mb-8">
-      {features.map((feature, i) => (
-        <li key={i} className="flex items-start gap-2 text-gray-300">
-          <FiCheck className="text-green-500 mt-1 flex-shrink-0" />
-          {feature}
-        </li>
-      ))}
-    </ul>
-    <Link
-      to="/register"
-      className={`block text-center px-6 py-3 rounded-lg font-semibold transition ${
+const PricingCard = ({ plan, highlighted }) => {
+  const isFree = plan.price === 0 || plan.price === '0.00';
+  const isEnterprise = plan.name === 'enterprise';
+  
+  return (
+    <div
+      className={`p-8 rounded-lg ${
         highlighted
-          ? 'bg-white text-primary hover:bg-gray-100'
-          : 'bg-primary text-white hover:bg-primary-600'
+          ? 'bg-primary border-2 border-primary transform scale-105'
+          : 'bg-gray-800 border-2 border-gray-700'
       }`}
     >
-      {buttonText}
-    </Link>
-  </div>
-);
+      <h3 className="text-2xl font-bold text-white mb-2">{plan.display_name}</h3>
+      <div className="mb-6">
+        <span className="text-4xl font-bold text-white">
+          {isFree ? 'Free' : `$${plan.price}`}
+        </span>
+        <span className="text-gray-400 ml-2">
+          / {isFree ? 'forever' : 'per month'}
+        </span>
+      </div>
+      <ul className="space-y-3 mb-8">
+        <li className="flex items-start gap-2 text-gray-300">
+          <FiCheck className="text-green-500 mt-1 flex-shrink-0" />
+          {plan.daily_scan_limit === -1 ? 'Unlimited' : plan.daily_scan_limit} scans per day
+        </li>
+        <li className="flex items-start gap-2 text-gray-300">
+          <FiCheck className="text-green-500 mt-1 flex-shrink-0" />
+          {plan.monthly_scan_limit === -1 ? 'Unlimited' : plan.monthly_scan_limit} scans per month
+        </li>
+        {plan.features && plan.features.length > 0 ? (
+          plan.features.map((feature, i) => (
+            <li key={i} className="flex items-start gap-2 text-gray-300">
+              <FiCheck className="text-green-500 mt-1 flex-shrink-0" />
+              {feature}
+            </li>
+          ))
+        ) : (
+          <>
+            {plan.allow_teams && (
+              <li className="flex items-start gap-2 text-gray-300">
+                <FiCheck className="text-green-500 mt-1 flex-shrink-0" />
+                Team collaboration ({plan.max_team_members} members)
+              </li>
+            )}
+            {plan.allow_integrations && (
+              <li className="flex items-start gap-2 text-gray-300">
+                <FiCheck className="text-green-500 mt-1 flex-shrink-0" />
+                Integrations ({plan.max_integrations} max)
+              </li>
+            )}
+            {plan.allow_dangerous_tools && (
+              <li className="flex items-start gap-2 text-gray-300">
+                <FiCheck className="text-green-500 mt-1 flex-shrink-0" />
+                Dangerous tools & custom payloads
+              </li>
+            )}
+          </>
+        )}
+      </ul>
+      <Link
+        to="/register"
+        className={`block text-center px-6 py-3 rounded-lg font-semibold transition ${
+          highlighted
+            ? 'bg-white text-primary hover:bg-gray-100'
+            : 'bg-primary text-white hover:bg-primary-600'
+        }`}
+      >
+        {isFree ? 'Start Free' : isEnterprise ? 'Contact Sales' : `Get ${plan.display_name}`}
+      </Link>
+    </div>
+  );
+};
 
 export default LandingPage;

@@ -17,6 +17,7 @@ const CategoryScan = () => {
   const [results, setResults] = useState(null);
   const [subscription, setSubscription] = useState(null);
   const [hasAccess, setHasAccess] = useState(null); // null = loading, true = access, false = no access
+  const [plans, setPlans] = useState([]); // For upgrade page
   
   // Form state
   const [target, setTarget] = useState('');
@@ -31,6 +32,7 @@ const CategoryScan = () => {
   useEffect(() => {
     fetchCategoryData();
     fetchSubscription();
+    fetchPlans();
   }, [categoryId]);
 
   const fetchCategoryData = async () => {
@@ -78,6 +80,15 @@ const CategoryScan = () => {
       setSubscription(response.data);
     } catch (err) {
       console.error('Failed to fetch subscription:', err);
+    }
+  };
+
+  const fetchPlans = async () => {
+    try {
+      const response = await axios.get('http://localhost:8001/api/plans/');
+      setPlans(response.data);
+    } catch (err) {
+      console.error('Failed to fetch plans:', err);
     }
   };
 
@@ -277,64 +288,56 @@ const CategoryScan = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 text-left">
-              {/* Free Plan */}
-              <div className="bg-white bg-opacity-10 rounded-lg p-6 backdrop-blur-sm">
-                <h3 className="text-lg font-bold mb-2">Free Plan</h3>
-                <div className="text-2xl font-bold mb-4">$0<span className="text-sm">/month</span></div>
-                <ul className="space-y-2 text-sm">
-                  <li>✓ 5 scans per day</li>
-                  <li>✓ Recon scanner</li>
-                  <li>✓ Web scanner</li>
-                  <li>✗ API scanner</li>
-                  <li>✗ Vuln scanner</li>
-                  <li>✗ Mobile scanner</li>
-                </ul>
-              </div>
-
-              {/* Pro Plan */}
-              <div className="bg-white text-gray-900 rounded-lg p-6 shadow-2xl transform scale-105 border-4 border-yellow-400">
-                <div className="text-center mb-2">
-                  <span className="bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-xs font-bold">RECOMMENDED</span>
-                </div>
-                <h3 className="text-lg font-bold mb-2">Pro Plan</h3>
-                <div className="text-2xl font-bold mb-4">$49<span className="text-sm">/month</span></div>
-                <ul className="space-y-2 text-sm">
-                  <li>✓ 50 scans per day</li>
-                  <li>✓ All Free features</li>
-                  <li>✓ API scanner</li>
-                  <li>✓ Vuln scanner</li>
-                  <li>✓ Mobile scanner</li>
-                  <li>✓ Priority support</li>
-                  <li>✓ Team collaboration</li>
-                </ul>
-                <button 
-                  onClick={() => navigate('/pricing')}
-                  className="w-full mt-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 rounded-lg font-bold hover:opacity-90 transition"
-                >
-                  Upgrade to Pro
-                </button>
-              </div>
-
-              {/* Enterprise Plan */}
-              <div className="bg-white bg-opacity-10 rounded-lg p-6 backdrop-blur-sm">
-                <h3 className="text-lg font-bold mb-2">Enterprise</h3>
-                <div className="text-2xl font-bold mb-4">Custom</div>
-                <ul className="space-y-2 text-sm">
-                  <li>✓ Unlimited scans</li>
-                  <li>✓ All Pro features</li>
-                  <li>✓ Custom scanners</li>
-                  <li>✓ Dangerous detectors</li>
-                  <li>✓ API access</li>
-                  <li>✓ Dedicated support</li>
-                  <li>✓ Custom integrations</li>
-                </ul>
-                <button 
-                  onClick={() => navigate('/pricing')}
-                  className="w-full mt-4 bg-white bg-opacity-20 py-3 rounded-lg font-bold hover:bg-opacity-30 transition"
-                >
-                  Contact Sales
-                </button>
-              </div>
+              {plans.map((plan, index) => {
+                const isFree = plan.price === 0 || plan.price === '0.00';
+                const isPro = plan.name === 'pro';
+                const isPopular = plan.is_popular;
+                
+                return (
+                  <div 
+                    key={plan.id}
+                    className={`rounded-lg p-6 ${
+                      isPopular 
+                        ? 'bg-white text-gray-900 shadow-2xl transform scale-105 border-4 border-yellow-400' 
+                        : 'bg-white bg-opacity-10 backdrop-blur-sm'
+                    }`}
+                  >
+                    {isPopular && (
+                      <div className="text-center mb-2">
+                        <span className="bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-xs font-bold">RECOMMENDED</span>
+                      </div>
+                    )}
+                    
+                    <h3 className={`text-lg font-bold mb-2 ${isPopular ? 'text-gray-900' : ''}`}>
+                      {plan.display_name}
+                    </h3>
+                    <div className={`text-2xl font-bold mb-4 ${isPopular ? 'text-gray-900' : ''}`}>
+                      {isFree ? 'Free' : `$${plan.price}`}
+                      <span className="text-sm">/month</span>
+                    </div>
+                    
+                    <ul className={`space-y-2 text-sm ${isPopular ? 'text-gray-700' : ''}`}>
+                      <li>✓ {plan.daily_scan_limit === -1 ? 'Unlimited' : plan.daily_scan_limit} scans per day</li>
+                      {plan.features && plan.features.slice(0, 6).map((feature, idx) => (
+                        <li key={idx}>✓ {feature}</li>
+                      ))}
+                    </ul>
+                    
+                    {!isFree && (
+                      <button 
+                        onClick={() => navigate('/pricing')}
+                        className={`w-full mt-4 py-3 rounded-lg font-bold transition ${
+                          isPopular
+                            ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:opacity-90'
+                            : 'bg-white bg-opacity-20 hover:bg-opacity-30'
+                        }`}
+                      >
+                        {plan.name === 'enterprise' ? 'Contact Sales' : `Upgrade to ${plan.display_name}`}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             <button

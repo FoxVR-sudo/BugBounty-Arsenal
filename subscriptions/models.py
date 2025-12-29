@@ -196,3 +196,139 @@ class Payment(models.Model):
     
     def __str__(self):
         return f"{self.user.email} - ${self.amount} ({self.status})"
+
+
+class EnterpriseCustomer(models.Model):
+    """
+    Enterprise customer billing information - for manual invoicing
+    Used when Enterprise clients pay via bank transfer instead of Stripe
+    """
+    
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='enterprise_customer')
+    subscription = models.OneToOneField(Subscription, on_delete=models.CASCADE, null=True, blank=True)
+    
+    # Company Details
+    company_name = models.CharField(max_length=200, help_text='Legal company name')
+    vat_number = models.CharField(max_length=50, blank=True, help_text='VAT/ДДС number')
+    registration_number = models.CharField(max_length=50, blank=True, help_text='Company registration number (ЕИК/БУЛСТАТ)')
+    
+    # Billing Address
+    billing_address = models.TextField(help_text='Street address')
+    billing_city = models.CharField(max_length=100)
+    billing_country = models.CharField(max_length=100, default='Bulgaria')
+    billing_zip = models.CharField(max_length=20, blank=True)
+    
+    # Billing Contacts
+    billing_email = models.EmailField(help_text='Email for invoices')
+    billing_phone = models.CharField(max_length=50, blank=True)
+    accounting_contact_name = models.CharField(max_length=200, blank=True, help_text='Name of accounting person')
+    accounting_contact_email = models.EmailField(blank=True, help_text='Separate accounting email')
+    
+    # Payment Terms
+    PAYMENT_TERMS_CHOICES = [
+        ('net_15', 'Net 15 days'),
+        ('net_30', 'Net 30 days'),
+        ('net_60', 'Net 60 days'),
+        ('prepaid', 'Prepaid'),
+    ]
+    payment_terms = models.CharField(max_length=20, choices=PAYMENT_TERMS_CHOICES, default='net_30')
+    
+    INVOICE_FREQUENCY_CHOICES = [
+        ('monthly', 'Monthly'),
+        ('quarterly', 'Quarterly'),
+        ('yearly', 'Yearly'),
+    ]
+    invoice_frequency = models.CharField(max_length=20, choices=INVOICE_FREQUENCY_CHOICES, default='monthly')
+    
+    custom_monthly_price = models.DecimalField(max_digits=10, decimal_places=2, default=299.00, help_text='Custom negotiated price per month')
+    
+    # Invoice Settings
+    po_number_required = models.BooleanField(default=False, help_text='Require Purchase Order number')
+    custom_invoice_notes = models.TextField(blank=True, help_text='Custom notes to include in all invoices')
+    
+    # Payment Method
+    use_stripe = models.BooleanField(default=False, help_text='True = Stripe auto-billing, False = manual invoicing')
+    stripe_customer_id = models.CharField(max_length=100, blank=True)
+    
+    # Status
+    is_active = models.BooleanField(default=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'enterprise_customers'
+        verbose_name = 'Enterprise Customer'
+        verbose_name_plural = 'Enterprise Customers'
+    
+    def __str__(self):
+        return f"{self.company_name} ({self.user.email})"
+
+
+class Invoice(models.Model):
+    """
+    Invoice tracking for Enterprise customers
+    Supports both manual and Stripe invoicing
+    """
+    
+    enterprise_customer = models.ForeignKey(EnterpriseCustomer, on_delete=models.CASCADE, related_name='invoices')
+    subscription = models.ForeignKey(Subscription, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # Invoice Details
+    invoice_number = models.CharField(max_length=50, unique=True, help_text='e.g., INV-2025-001')
+    invoice_date = models.DateField()
+    due_date = models.DateField()
+    period_start = models.DateField(help_text='Billing period start')
+    period_end = models.DateField(help_text='Billing period end')
+    
+    # Amounts
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2, help_text='Amount before tax')
+    vat_rate = models.DecimalField(max_digits=5, decimal_places=2, default=20.00, help_text='VAT percentage')
+    vat_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text='Calculated VAT amount')
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, help_text='Total with VAT')
+    
+    # Status
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('sent', 'Sent'),
+        ('paid', 'Paid'),
+        ('overdue', 'Overdue'),
+        ('cancelled', 'Cancelled'),
+    ]
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
+    
+    # Files
+    pdf_file = models.FileField(upload_to='invoices/%Y/%m/', blank=True, help_text='Generated invoice PDF')
+    
+    # Tracking
+    sent_at = models.DateTimeField(null=True, blank=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    payment_method = models.CharField(max_length=50, blank=True, help_text='e.g., Bank Transfer, Stripe')
+    
+    # Optional
+    po_number = models.CharField(max_length=100, blank=True, verbose_name='PO Number', help_text='Purchase Order number')
+    notes = models.TextField(blank=True, help_text='Internal notes')
+    
+    # Stripe Integration
+    stripe_invoice_id = models.CharField(max_length=100, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'invoices'
+        ordering = ['-invoice_date']
+        indexes = [
+            models.Index(fields=['enterprise_customer', 'status']),
+            models.Index(fields=['invoice_number']),
+        ]
+    
+    def __str__(self):
+        return f"{self.invoice_number} - {self.enterprise_customer.company_name} (${self.total_amount})"
+    
+    def save(self, *args, **kwargs):
+        # Auto-calculate VAT and total
+        if self.subtotal:
+            self.vat_amount = (self.subtotal * self.vat_rate) / 100
+            self.total_amount = self.subtotal + self.vat_amount
+        super().save(*args, **kwargs)
