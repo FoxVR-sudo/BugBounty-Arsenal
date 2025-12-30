@@ -9,6 +9,7 @@ import AllResults from './pages/AllResults';
 import Analytics from './pages/Analytics';
 import Profile from './pages/Profile';
 import Pricing from './pages/Pricing';
+import Subscription from './pages/Subscription';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import RegisterEnterprise from './pages/RegisterEnterprise';
@@ -97,6 +98,14 @@ function App() {
             element={
               <PrivateRoute>
                 <Pricing />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/subscription"
+            element={
+              <PrivateRoute>
+                <Subscription />
               </PrivateRoute>
             }
           />

@@ -52,7 +52,10 @@ from subscriptions.views import PlanViewSet, SubscriptionViewSet
 from subscriptions.billing_views import (
     create_checkout_session, billing_portal, buy_extra_scans, change_tier
 )
-from subscriptions.api_views import get_plans, get_current_subscription
+from subscriptions.api_views import (
+    get_plans, get_current_subscription, cancel_subscription, 
+    change_plan, reactivate_subscription
+)
 
 # DRF Router
 router = routers.DefaultRouter()
@@ -104,6 +107,9 @@ urlpatterns = [
     # NEW v3.1: Plan and subscription endpoints
     path('api/plans/', get_plans, name='plans-list'),
     path('api/subscriptions/current/', get_current_subscription, name='subscription-current'),
+    path('api/subscriptions/cancel/', cancel_subscription, name='subscription-cancel'),
+    path('api/subscriptions/change-plan/', change_plan, name='subscription-change-plan'),
+    path('api/subscriptions/reactivate/', reactivate_subscription, name='subscription-reactivate'),
     
     # NEW v3.0: Placeholder endpoints for Pro features (to prevent 404 errors)
     path('api/teams/', lambda request: JsonResponse({'results': [], 'message': 'Teams feature available in Pro plan'}), name='teams-list'),
