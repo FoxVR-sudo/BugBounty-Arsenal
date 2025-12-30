@@ -95,10 +95,12 @@ def billing_portal(request):
     In test mode, returns a mock portal URL.
     In production with Stripe configured, creates real portal session.
     """
-    stripe_key = os.getenv('STRIPE_SECRET_KEY', '')
+    from django.conf import settings
     
-    if not stripe_key or stripe_key.startswith('sk_test_') is False:
-        # Test mode
+    stripe_key = settings.STRIPE_SECRET_KEY
+    
+    if not stripe_key or not stripe_key.startswith('sk_'):
+        # Test mode - Stripe not configured
         return Response({
             'portal_url': '/mock-billing-portal',
             'message': 'Test mode: Stripe not configured'
