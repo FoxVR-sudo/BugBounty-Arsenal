@@ -22,37 +22,6 @@ const Subscription = () => {
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8001/api';
 
-  useEffect(() => {
-    // Check for Stripe checkout success and sync
-    const sessionId = searchParams.get('session_id');
-    if (sessionId) {
-      syncSubscription(sessionId);
-    } else if (searchParams.get('upgraded') === 'true') {
-      setSuccess('Plan upgraded successfully!');
-      fetchSubscriptionData();
-    } else {
-      fetchSubscriptionData();
-    }
-  }, []);
-
-  const syncSubscription = async (sessionId) => {
-    try {
-      const token = localStorage.getItem('token');
-      await axios.post(`${API_URL}/subscriptions/sync/`, 
-        { session_id: sessionId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setSuccess('Subscription updated successfully!');
-      // Remove session_id from URL
-      navigate('/subscription?upgraded=true', { replace: true });
-      fetchSubscriptionData();
-    } catch (error) {
-      console.error('Failed to sync subscription:', error);
-      setError('Failed to sync subscription. Please refresh the page.');
-      fetchSubscriptionData();
-    }
-  };
-
   const fetchSubscriptionData = async () => {
     setLoading(true);
     try {
@@ -160,6 +129,39 @@ const Subscription = () => {
       setActionLoading(false);
     }
   };
+
+  const syncSubscription = async (sessionId) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`${API_URL}/subscriptions/sync/`, 
+        { session_id: sessionId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setSuccess('Subscription updated successfully!');
+      // Remove session_id from URL
+      navigate('/subscription?upgraded=true', { replace: true });
+      fetchSubscriptionData();
+    } catch (error) {
+      console.error('Failed to sync subscription:', error);
+      setError('Failed to sync subscription. Please refresh the page.');
+      fetchSubscriptionData();
+    }
+  };
+
+  useEffect(() => {
+    // Check for Stripe checkout success and sync
+    const sessionId = searchParams.get('session_id');
+    if (sessionId) {
+      console.log('Found session_id, syncing subscription:', sessionId);
+      syncSubscription(sessionId);
+    } else if (searchParams.get('upgraded') === 'true') {
+      setSuccess('Plan upgraded successfully!');
+      fetchSubscriptionData();
+    } else {
+      fetchSubscriptionData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   if (loading) {
     return (
