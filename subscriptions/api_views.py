@@ -200,7 +200,7 @@ def change_plan(request):
                 checkout_session = StripeService.create_checkout_session(
                     user=request.user,
                     plan=new_plan,
-                    success_url=f"{frontend_url}/subscription?upgraded=true",
+                    success_url=f"{frontend_url}/subscription",
                     cancel_url=f"{frontend_url}/subscription"
                 )
                 return Response({
@@ -266,7 +266,7 @@ def change_plan(request):
             checkout_session = StripeService.create_checkout_session(
                 user=request.user,
                 plan=new_plan,
-                success_url=f"{frontend_url}/subscription?upgraded=true",
+                success_url=f"{frontend_url}/subscription",
                 cancel_url=f"{frontend_url}/subscription"
             )
             return Response({
