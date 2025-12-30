@@ -73,9 +73,6 @@ urlpatterns = [
     # Favicon redirect
     path('favicon.ico', RedirectView.as_view(url='/static/favicon.svg', permanent=True)),
     
-    # Web interface (templates)
-    path('', include('web.urls')),
-    
     # Authentication endpoints (must be before api/ include)
     path('api/auth/login/', login_view, name='auth-login'),
     path('api/auth/signup/', signup_view, name='auth-signup'),
