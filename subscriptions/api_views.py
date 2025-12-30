@@ -321,3 +321,40 @@ def reactivate_subscription(request):
         return Response({
             'message': 'Subscription reactivated successfully',
         })
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def sync_subscription(request):
+    """
+    Sync subscription with Stripe after successful checkout
+    
+    POST /api/subscriptions/sync/
+    Body: { "session_id": "cs_test_..." }
+    """
+    import stripe
+    
+    session_id = request.data.get('session_id')
+    if not session_id:
+        return Response({'error': 'session_id required'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        # Retrieve checkout session from Stripe
+        session = stripe.checkout.Session.retrieve(session_id)
+        
+        if session.payment_status != 'paid':
+            return Response({'error': 'Payment not completed'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Handle checkout completion (update subscription)
+        StripeService.handle_checkout_completed(session)
+        
+        return Response({
+            'message': 'Subscription synced successfully',
+            'status': 'success'
+        })
+        
+    except stripe.error.StripeError as e:
+        logger.error(f'Stripe error during sync: {str(e)}')
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        logger.error(f'Failed to sync subscription: {str(e)}')
+        return Response({'error': 'Failed to sync subscription'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
