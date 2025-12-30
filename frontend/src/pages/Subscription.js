@@ -115,14 +115,13 @@ const Subscription = () => {
     setActionLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.post(
+      const response = await axios.get(
         `${API_URL}/billing/portal/`,
-        {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      if (response.data.url) {
-        window.location.href = response.data.url;
+      if (response.data.portal_url) {
+        window.location.href = response.data.portal_url;
       }
     } catch (err) {
       setError('Failed to open billing portal');
