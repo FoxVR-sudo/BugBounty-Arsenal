@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { 
   FiHome, FiList, FiBarChart2, 
-  FiUser, FiLogOut, FiUsers, FiZap, FiLock
+  FiUser, FiLogOut, FiUsers, FiZap, FiLock, FiCreditCard
 } from 'react-icons/fi';
 
 const Sidebar = () => {
@@ -155,6 +155,17 @@ const Sidebar = () => {
             Account
           </h3>
           <div className="space-y-1">
+            <Link
+              to="/subscription"
+              className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+                isActive('/subscription')
+                  ? 'bg-primary text-white'
+                  : 'text-gray-300 hover:bg-gray-800'
+              }`}
+            >
+              <FiCreditCard size={20} />
+              <span>Subscription</span>
+            </Link>
             <Link
               to="/profile"
               className={`flex items-center gap-3 px-4 py-3 rounded-lg transition ${

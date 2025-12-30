@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from 'react-query';
 import { scanService, statsService } from '../services/api';
 import axios from 'axios';
-import { FiPlus, FiDownload, FiEye, FiActivity, FiCheckCircle, FiClock, FiAlertTriangle, FiTrendingUp, FiPlay } from 'react-icons/fi';
+import { FiPlus, FiDownload, FiEye, FiActivity, FiCheckCircle, FiClock, FiAlertTriangle, FiTrendingUp, FiPlay, FiCreditCard, FiArrowRight } from 'react-icons/fi';
 import { format } from 'date-fns';
 import DashboardLayout from '../components/DashboardLayout';
 import CategoryScanForm from '../components/CategoryScanForm';
@@ -112,6 +112,40 @@ const Dashboard = () => {
                 <span className="font-semibold text-gray-900">{userInfo.client_ip || 'N/A'}</span>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Current Subscription Plan Card */}
+        {subscription && (
+          <div className="mb-8 bg-gradient-to-r from-primary to-blue-600 rounded-lg shadow-lg p-6 text-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="bg-white bg-opacity-20 rounded-full p-4">
+                  <FiCreditCard size={32} />
+                </div>
+                <div>
+                  <h3 className="text-sm opacity-90">Current Plan</h3>
+                  <p className="text-3xl font-bold">{subscription.plan.display_name || 'Free Plan'}</p>
+                  <p className="text-sm opacity-90 mt-1">
+                    {subscription.plan.price === 0 ? 'Free forever' : `$${subscription.plan.price}/month`}
+                  </p>
+                </div>
+              </div>
+              <Link
+                to="/subscription"
+                className="flex items-center gap-2 px-6 py-3 bg-white text-primary rounded-lg font-semibold hover:bg-opacity-90 transition"
+              >
+                Manage Subscription
+                <FiArrowRight />
+              </Link>
+            </div>
+            {subscription.plan.price === 0 && (
+              <div className="mt-4 pt-4 border-t border-white border-opacity-20">
+                <p className="text-sm opacity-90">
+                  🚀 Upgrade to <strong>Pro</strong> or <strong>Enterprise</strong> for unlimited scans and advanced features
+                </p>
+              </div>
+            )}
           </div>
         )}
 
