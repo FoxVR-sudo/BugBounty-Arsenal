@@ -54,7 +54,7 @@ from subscriptions.billing_views import (
 )
 from subscriptions.api_views import (
     get_plans, get_current_subscription, cancel_subscription, 
-    change_plan, reactivate_subscription, sync_subscription
+    change_plan, reactivate_subscription, sync_subscription, upgrade_to_enterprise
 )
 
 # DRF Router
@@ -108,6 +108,7 @@ urlpatterns = [
     path('api/subscriptions/change-plan/', change_plan, name='subscription-change-plan'),
     path('api/subscriptions/reactivate/', reactivate_subscription, name='subscription-reactivate'),
     path('api/subscriptions/sync/', sync_subscription, name='subscription-sync'),
+    path('api/subscriptions/upgrade-to-enterprise/', upgrade_to_enterprise, name='subscription-upgrade-enterprise'),
     
     # NEW v3.0: Placeholder endpoints for Pro features (to prevent 404 errors)
     path('api/teams/', lambda request: JsonResponse({'results': [], 'message': 'Teams feature available in Pro plan'}), name='teams-list'),

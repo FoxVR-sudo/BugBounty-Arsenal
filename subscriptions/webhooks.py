@@ -52,6 +52,10 @@ def stripe_webhook(request):
             logger.info(f"Processing checkout.session.completed: {event_data['id']}")
             StripeService.handle_checkout_completed(event_data)
         
+        elif event_type == 'payment_intent.succeeded':
+            logger.info(f"Processing payment_intent.succeeded: {event_data['id']}")
+            StripeService.handle_payment_intent_succeeded(event_data)
+        
         elif event_type == 'customer.subscription.updated':
             logger.info(f"Processing subscription.updated: {event_data['id']}")
             StripeService.handle_subscription_updated(event_data)

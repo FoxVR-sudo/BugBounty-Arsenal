@@ -175,7 +175,7 @@ def cancel_subscription(request):
 @permission_classes([IsAuthenticated])
 def change_plan(request):
     """
-    Upgrade or downgrade subscription plan
+    Upgrade from Free to Pro plan only
     
     POST /api/subscriptions/change-plan/
     Body: { "new_plan_id": 2 }
@@ -190,92 +190,48 @@ def change_plan(request):
     except Plan.DoesNotExist:
         return Response({'error': 'Plan not found'}, status=status.HTTP_404_NOT_FOUND)
     
+    # ONLY allow Free → Pro upgrade
+    if new_plan.name != 'pro':
+        return Response({
+            'error': 'Invalid plan change',
+            'message': 'Only upgrade from Free to Pro is available. For Enterprise, contact sales.',
+            'redirect_url': '/register-enterprise' if new_plan.name == 'enterprise' else None
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
     try:
         subscription = Subscription.objects.get(user=request.user, status='active')
-    except Subscription.DoesNotExist:
-        # No subscription - create checkout for new plan
-        if new_plan.price > 0:
-            try:
-                frontend_url = settings.FRONTEND_URL
-                checkout_session = StripeService.create_checkout_session(
-                    user=request.user,
-                    plan=new_plan,
-                    success_url=f"{frontend_url}/subscription",
-                    cancel_url=f"{frontend_url}/subscription"
-                )
-                return Response({
-                    'checkout_url': checkout_session.url,
-                    'requires_payment': True,
-                })
-            except Exception as e:
-                logger.error(f'Failed to create checkout: {str(e)}')
-                return Response({'error': 'Failed to create checkout session'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        else:
-            # Free plan - create subscription
-            subscription = Subscription.objects.create(
-                user=request.user,
-                plan=new_plan,
-                status='active'
-            )
+        
+        # Block if already on Pro or Enterprise
+        if subscription.plan.name != 'free':
             return Response({
-                'message': 'Plan changed successfully',
-                'new_plan': new_plan.display_name,
-            })
-    
-    # User has subscription - check if same plan
-    if subscription.plan.id == new_plan_id:
-        return Response({'error': 'Already on this plan'}, status=status.HTTP_400_BAD_REQUEST)
-    
-    # Downgrade to free plan
-    if new_plan.price == 0:
-        if subscription.stripe_subscription_id:
-            try:
-                StripeService.cancel_subscription(subscription.stripe_subscription_id, at_period_end=True)
-            except Exception as e:
-                logger.error(f'Failed to cancel for downgrade: {str(e)}')
+                'error': 'Plan change not allowed',
+                'message': f'You are currently on {subscription.plan.display_name} plan. Downgrades are not supported. Contact support for assistance.'
+            }, status=status.HTTP_400_BAD_REQUEST)
         
-        subscription.plan = new_plan
-        subscription.cancel_at_period_end = True
-        subscription.save()
-        
-        return Response({
-            'message': f'Plan will change to {new_plan.display_name} at period end',
-            'current_period_end': subscription.current_period_end,
-        })
-    
-    # Upgrade/change paid plan
-    if subscription.stripe_subscription_id:
-        try:
-            StripeService.update_subscription(subscription.stripe_subscription_id, new_plan)
-            subscription.plan = new_plan
-            subscription.cancel_at_period_end = False
-            subscription.save()
+        # Allow Free → Pro upgrade only
+        if subscription.plan.id == new_plan_id:
+            return Response({'error': 'Already on this plan'}, status=status.HTTP_400_BAD_REQUEST)
             
-            return Response({
-                'message': f'Plan changed to {new_plan.display_name}',
-                'new_plan': new_plan.display_name,
-                'proration': 'You will be charged/credited the prorated amount',
-            })
-        except Exception as e:
-            logger.error(f'Failed to update subscription: {str(e)}')
-            return Response({'error': 'Failed to update subscription'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    else:
-        # No Stripe subscription, create new checkout
-        try:
-            frontend_url = settings.FRONTEND_URL
-            checkout_session = StripeService.create_checkout_session(
-                user=request.user,
-                plan=new_plan,
-                success_url=f"{frontend_url}/subscription",
-                cancel_url=f"{frontend_url}/subscription"
-            )
-            return Response({
-                'checkout_url': checkout_session.url,
-                'requires_payment': True,
-            })
-        except Exception as e:
-            logger.error(f'Failed to create checkout: {str(e)}')
-            return Response({'error': 'Failed to create checkout session'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except Subscription.DoesNotExist:
+        # No subscription - allow only Pro plan creation
+        pass
+    
+    # Create checkout for Pro plan
+    try:
+        frontend_url = settings.FRONTEND_URL
+        checkout_session = StripeService.create_checkout_session(
+            user=request.user,
+            plan=new_plan,
+            success_url=f"{frontend_url}/subscription",
+            cancel_url=f"{frontend_url}/subscription"
+        )
+        return Response({
+            'checkout_url': checkout_session.url,
+            'requires_payment': True,
+        })
+    except Exception as e:
+        logger.error(f'Failed to create checkout: {str(e)}')
+        return Response({'error': 'Failed to create checkout session'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['POST'])
@@ -358,3 +314,99 @@ def sync_subscription(request):
     except Exception as e:
         logger.error(f'Failed to sync subscription: {str(e)}')
         return Response({'error': 'Failed to sync subscription'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def upgrade_to_enterprise(request):
+    """
+    Upgrade existing user (Free/Pro) to Enterprise plan
+    Requires company information
+    
+    POST /api/subscriptions/upgrade-to-enterprise/
+    """
+    from .models import EnterpriseCustomer, Plan
+    
+    # Check if user already has Enterprise
+    existing = EnterpriseCustomer.objects.filter(user=request.user).first()
+    if existing and existing.is_active:
+        return Response({'error': 'Already an Enterprise customer'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Get Enterprise plan
+    try:
+        enterprise_plan = Plan.objects.get(name='enterprise', is_active=True)
+    except Plan.DoesNotExist:
+        return Response({'error': 'Enterprise plan not available'}, status=status.HTTP_404_NOT_FOUND)
+    
+    # Extract company data
+    company_data = {
+        'company_name': request.data.get('company_name'),
+        'vat_number': request.data.get('vat_number', ''),
+        'registration_number': request.data.get('registration_number', ''),
+        'billing_address': request.data.get('billing_address'),
+        'billing_city': request.data.get('billing_city'),
+        'billing_country': request.data.get('billing_country', 'Bulgaria'),
+        'billing_zip': request.data.get('billing_zip', ''),
+        'billing_email': request.data.get('billing_email', request.user.email),
+        'billing_phone': request.data.get('billing_phone', ''),
+        'accounting_contact_name': request.data.get('accounting_contact_name', ''),
+        'accounting_contact_email': request.data.get('accounting_contact_email', ''),
+        'payment_terms': request.data.get('payment_terms', 'net_30'),
+    }
+    
+    # Validate required fields
+    if not company_data['company_name'] or not company_data['billing_address'] or not company_data['billing_city']:
+        return Response({'error': 'Company name, billing address, and billing city are required'}, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        # Get or update subscription
+        subscription, created = Subscription.objects.get_or_create(
+            user=request.user,
+            defaults={'plan': enterprise_plan, 'status': 'pending'}
+        )
+        
+        if not created:
+            # Mark as pending until payment
+            subscription.plan = enterprise_plan
+            subscription.status = 'pending'
+            subscription.cancel_at_period_end = False
+        
+        # Create or update EnterpriseCustomer
+        if existing:
+            # Reactivate existing
+            for key, value in company_data.items():
+                setattr(existing, key, value)
+            existing.is_active = True
+            existing.subscription = subscription
+            existing.save()
+            enterprise_customer = existing
+        else:
+            # Create new
+            enterprise_customer = EnterpriseCustomer.objects.create(
+                user=request.user,
+                subscription=subscription,
+                is_active=False,  # Will activate after payment
+                **company_data
+            )
+        
+        # Create Payment Intent instead of Checkout Session
+        payment_intent = StripeService.create_payment_intent(
+            user=request.user,
+            plan=enterprise_plan,
+            metadata={
+                'subscription_id': subscription.id,
+                'enterprise_customer_id': enterprise_customer.id,
+            }
+        )
+        
+        logger.info(f"Created Enterprise upgrade payment intent for user {request.user.email}")
+        
+        return Response({
+            'message': 'Enterprise registration initiated',
+            'client_secret': payment_intent.client_secret,
+            'requires_payment': True,
+        })
+        
+    except Exception as e:
+        logger.error(f'Failed to upgrade to Enterprise: {str(e)}')
+        return Response({'error': 'Failed to create Enterprise upgrade'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

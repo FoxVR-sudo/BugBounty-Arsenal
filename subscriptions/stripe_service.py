@@ -37,6 +37,38 @@ class StripeService:
             raise
     
     @staticmethod
+    def create_payment_intent(user, plan, metadata=None):
+        """Create Stripe Payment Intent for embedded payment"""
+        try:
+            # Get or create customer
+            subscription = Subscription.objects.filter(user=user).first()
+            
+            if subscription and subscription.stripe_customer_id:
+                customer_id = subscription.stripe_customer_id
+            else:
+                customer_id = StripeService.create_customer(user)
+                if subscription:
+                    subscription.stripe_customer_id = customer_id
+                    subscription.save()
+            
+            # Create payment intent
+            intent = stripe.PaymentIntent.create(
+                amount=int(plan.price * 100),  # Convert to cents
+                currency='usd',
+                customer=customer_id,
+                metadata=metadata or {},
+                automatic_payment_methods={'enabled': True},
+                description=f'{plan.display_name} subscription',
+            )
+            
+            logger.info(f"Created Payment Intent {intent.id} for user {user.email} - plan {plan.name}")
+            return intent
+            
+        except stripe.error.StripeError as e:
+            logger.error(f"Payment Intent creation failed: {str(e)}")
+            raise
+    
+    @staticmethod
     def create_checkout_session(user, plan, success_url, cancel_url):
         """Create Stripe Checkout Session for subscription"""
         try:
@@ -113,29 +145,45 @@ class StripeService:
             raise
     
     @staticmethod
+    def reactivate_subscription(stripe_subscription_id):
+        """Reactivate a cancelled subscription (remove cancel_at_period_end)"""
+        try:
+            subscription = stripe.Subscription.modify(
+                stripe_subscription_id,
+                cancel_at_period_end=False
+            )
+            logger.info(f"Reactivated subscription {stripe_subscription_id}")
+            return subscription
+            
+        except stripe.error.StripeError as e:
+            logger.error(f"Subscription reactivation failed: {str(e)}")
+            raise
+    
+    @staticmethod
     def update_subscription(stripe_subscription_id, new_plan):
         """Update subscription to a new plan"""
         try:
             # Get current subscription
             subscription = stripe.Subscription.retrieve(stripe_subscription_id)
             
-            # Update the subscription
+            # Create a new price for the plan
+            price = stripe.Price.create(
+                currency='usd',
+                unit_amount=int(new_plan.price * 100),
+                recurring={'interval': 'month'},
+                product_data={
+                    'name': new_plan.display_name,
+                },
+            )
+            
+            # Update the subscription with the new price
             updated_subscription = stripe.Subscription.modify(
                 stripe_subscription_id,
                 cancel_at_period_end=False,
                 proration_behavior='create_prorations',
                 items=[{
                     'id': subscription['items']['data'][0].id,
-                    'price_data': {
-                        'currency': 'usd',
-                        'product_data': {
-                            'name': new_plan.display_name,
-                        },
-                        'unit_amount': int(new_plan.price * 100),
-                        'recurring': {
-                            'interval': 'month',
-                        },
-                    },
+                    'price': price.id,
                 }],
                 metadata={
                     'plan_name': new_plan.name,
@@ -256,6 +304,85 @@ class StripeService:
         """Handle successful invoice payment"""
         try:
             # Update subscription status if needed
+            if invoice.subscription:
+                subscription = Subscription.objects.filter(
+                    stripe_subscription_id=invoice.subscription
+                ).first()
+                
+                if subscription and subscription.status != 'active':
+                    subscription.status = 'active'
+                    subscription.save()
+                    logger.info(f"Activated subscription {invoice.subscription} after payment")
+            
+            logger.info(f"Invoice {invoice.id} paid successfully")
+            
+        except Exception as e:
+            logger.error(f"Error handling invoice payment: {str(e)}")
+    
+    @staticmethod
+    def handle_payment_intent_succeeded(payment_intent):
+        """Handle successful payment intent (for embedded payments)"""
+        try:
+            # Get metadata
+            metadata = payment_intent.metadata
+            subscription_id = metadata.get('subscription_id')
+            enterprise_customer_id = metadata.get('enterprise_customer_id')
+            
+            if not subscription_id:
+                logger.warning(f"Payment Intent {payment_intent.id} has no subscription_id")
+                return
+            
+            # Get subscription
+            subscription = Subscription.objects.get(id=subscription_id)
+            
+            # Create Stripe subscription
+            stripe_subscription = stripe.Subscription.create(
+                customer=payment_intent.customer,
+                items=[{
+                    'price_data': {
+                        'currency': 'usd',
+                        'product_data': {
+                            'name': subscription.plan.display_name,
+                        },
+                        'unit_amount': int(subscription.plan.price * 100),
+                        'recurring': {'interval': 'month'},
+                    },
+                }],
+                metadata={
+                    'user_id': str(subscription.user.id),
+                    'plan_name': subscription.plan.name,
+                },
+                default_payment_method=payment_intent.payment_method,
+            )
+            
+            # Update subscription
+            subscription.status = 'active'
+            subscription.stripe_subscription_id = stripe_subscription.id
+            subscription.current_period_start = timezone.make_aware(
+                datetime.fromtimestamp(stripe_subscription.current_period_start)
+            )
+            subscription.current_period_end = timezone.make_aware(
+                datetime.fromtimestamp(stripe_subscription.current_period_end)
+            )
+            subscription.save()
+            
+            # Activate enterprise customer if present
+            if enterprise_customer_id:
+                try:
+                    enterprise = EnterpriseCustomer.objects.get(id=enterprise_customer_id)
+                    enterprise.is_active = True
+                    enterprise.save()
+                    logger.info(f"Activated EnterpriseCustomer {enterprise_customer_id}")
+                except EnterpriseCustomer.DoesNotExist:
+                    logger.warning(f"EnterpriseCustomer {enterprise_customer_id} not found")
+            
+            logger.info(f"Payment succeeded for subscription {subscription.id}, created Stripe subscription {stripe_subscription.id}")
+            
+        except Subscription.DoesNotExist:
+            logger.error(f"Subscription {subscription_id} not found for Payment Intent {payment_intent.id}")
+        except Exception as e:
+            logger.error(f"Error handling payment intent succeeded: {str(e)}")
+            raise
             if invoice.subscription:
                 subscription = Subscription.objects.filter(
                     stripe_subscription_id=invoice.subscription

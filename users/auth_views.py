@@ -2,13 +2,22 @@
 Authentication views for login and signup with JWT tokens.
 """
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.throttling import AnonRateThrottle
 from django.contrib.auth import authenticate, login as django_login
 from drf_spectacular.utils import extend_schema, OpenApiExample
 from .serializers import UserCreateSerializer, UserSerializer
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+# Custom throttle for login attempts
+class LoginRateThrottle(AnonRateThrottle):
+    scope = 'login'  # Uses 'login' rate from settings (5/hour)
 
 
 @extend_schema(
@@ -53,9 +62,10 @@ from .serializers import UserCreateSerializer, UserSerializer
 )
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([LoginRateThrottle])
 def login_view(request):
     """
-    User login endpoint.
+    User login endpoint with rate limiting (5 attempts per hour).
     
     Accepts email and password, returns JWT tokens and user data.
     """
@@ -72,6 +82,7 @@ def login_view(request):
     user = authenticate(request, username=email, password=password)
     
     if user is None:
+        logger.warning(f"Failed login attempt for email: {email} from IP: {request.META.get('REMOTE_ADDR')}")
         return Response(
             {'error': 'Invalid email or password'},
             status=status.HTTP_401_UNAUTHORIZED
@@ -146,9 +157,12 @@ def signup_view(request):
     from subscriptions.stripe_service import StripeService
     from django.conf import settings
     
+    logger.info(f"Signup request data: {request.data}")
+    
     serializer = UserCreateSerializer(data=request.data)
     
     if not serializer.is_valid():
+        logger.error(f"Signup validation failed: {serializer.errors}")
         return Response(
             {'errors': serializer.errors},
             status=status.HTTP_400_BAD_REQUEST
@@ -172,43 +186,20 @@ def signup_view(request):
         'user': user_serializer.data
     }
     
-    # Check if user selected a paid plan during registration
-    plan_id = request.data.get('plan_id')
-    if plan_id:
-        try:
-            plan = Plan.objects.get(id=plan_id)
-            
-            # If it's a paid plan (not Free), create checkout session
-            if plan.price > 0:
-                frontend_url = settings.FRONTEND_URL
-                success_url = f"{frontend_url}/payment-success"
-                cancel_url = f"{frontend_url}/register?payment=cancelled"
-                
-                try:
-                    checkout_session = StripeService.create_checkout_session(
-                        user=user,
-                        plan=plan,
-                        success_url=success_url,
-                        cancel_url=cancel_url
-                    )
-                    response_data['checkout_url'] = checkout_session.url
-                    response_data['requires_payment'] = True
-                except Exception as e:
-                    # If Stripe not configured, return test mode URL
-                    response_data['checkout_url'] = f"{frontend_url}/pricing"
-                    response_data['requires_payment'] = True
-                    response_data['test_mode'] = True
-            else:
-                # Free plan - create subscription immediately
-                from subscriptions.models import Subscription
-                Subscription.objects.create(
-                    user=user,
-                    plan=plan,
-                    status='active'
-                )
-                response_data['requires_payment'] = False
-        except Plan.DoesNotExist:
-            pass  # Ignore invalid plan_id
+    # Auto-create Free plan subscription for all new users
+    try:
+        from subscriptions.models import Plan, Subscription
+        free_plan = Plan.objects.get(name__iexact='free')
+        Subscription.objects.create(
+            user=user,
+            plan=free_plan,
+            status='active'
+        )
+        logger.info(f"Created Free subscription for user {user.email}")
+    except Plan.DoesNotExist:
+        logger.warning("Free plan not found in database")
+    except Exception as e:
+        logger.error(f"Failed to create subscription: {str(e)}")
     
     return Response(response_data, status=status.HTTP_201_CREATED)
 

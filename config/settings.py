@@ -79,6 +79,14 @@ DATABASES = {
     }
 }
 
+# Cache configuration for rate limiting
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'bugbounty-arsenal-cache',
+    }
+}
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -128,6 +136,12 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     # Enable format suffix patterns (default is True)
     'URL_FORMAT_OVERRIDE': 'format',  # Allow both .json and ?format=json
+    # Rate limiting
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/hour',  # General anonymous rate limit
+        'user': '1000/hour',  # Authenticated users
+        'login': '3/hour',  # Login attempts - 3 tries per hour
+    }
 }
 
 SIMPLE_JWT = {

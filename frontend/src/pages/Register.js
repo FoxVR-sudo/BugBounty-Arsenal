@@ -1,11 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../services/api';
-import { FiMail, FiLock, FiShield, FiUser, FiPhone, FiMapPin, FiCheck } from 'react-icons/fi';
-import axios from 'axios';
+import { FiMail, FiLock, FiShield, FiUser, FiPhone, FiMapPin } from 'react-icons/fi';
 
 const Register = () => {
-  // V3.0: Extended user fields + plan selection
   const [formData, setFormData] = useState({
     first_name: '',
     middle_name: '',
@@ -15,33 +13,10 @@ const Register = () => {
     address: '',
     password: '',
     confirmPassword: '',
-    plan_id: '', // Selected plan
   });
-  const [plans, setPlans] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-
-  // Fetch available plans on mount (Free and Pro only)
-  useEffect(() => {
-    const fetchPlans = async () => {
-      try {
-        const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8001/api';
-        const response = await axios.get(`${API_URL}/plans/`);
-        // Filter out Enterprise plan - it has separate registration
-        const individualPlans = response.data.filter(p => p.name.toLowerCase() !== 'enterprise');
-        setPlans(individualPlans);
-        // Pre-select Free plan by default
-        const freePlan = individualPlans.find(p => p.name.toLowerCase() === 'free');
-        if (freePlan) {
-          setFormData(prev => ({ ...prev, plan_id: freePlan.id }));
-        }
-      } catch (err) {
-        console.error('Failed to fetch plans:', err);
-      }
-    };
-    fetchPlans();
-  }, []);
 
   const handleChange = (e) => {
     setFormData({
@@ -78,17 +53,16 @@ const Register = () => {
     setLoading(true);
 
     try {
-      // V3.0: Send extended registration data with plan selection
+      // All new registrations start with Free plan
       const registrationData = {
         email: formData.email,
         password: formData.password,
-        password_confirm: formData.confirmPassword, // Backend requires this
+        password_confirm: formData.confirmPassword,
         first_name: formData.first_name,
         middle_name: formData.middle_name,
         last_name: formData.last_name,
         phone: formData.phone,
         address: formData.address,
-        plan_id: formData.plan_id, // Include selected plan
       };
       
       const registerResponse = await authService.register(registrationData);
@@ -97,16 +71,14 @@ const Register = () => {
       localStorage.setItem('token', registerResponse.data.access);
       localStorage.setItem('user', formData.email);
       
-      // Check if payment is required (Pro/Enterprise plan)
-      if (registerResponse.data.requires_payment && registerResponse.data.checkout_url) {
-        // Redirect to Stripe checkout
-        window.location.href = registerResponse.data.checkout_url;
-      } else {
-        // Free plan or payment not required - proceed to phone verification
-        navigate('/verify-phone');
-      }
+      // Proceed to phone verification
+      navigate('/verify-phone');
     } catch (err) {
-      setError(err.response?.data?.detail || err.response?.data?.error || 'Registration failed. Please try again.');
+      console.error('Registration error:', err.response?.data);
+      const errorMsg = err.response?.data?.errors 
+        ? Object.entries(err.response.data.errors).map(([field, msgs]) => `${field}: ${msgs.join(', ')}`).join(' | ')
+        : (err.response?.data?.detail || err.response?.data?.error || 'Registration failed. Please try again.');
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -120,8 +92,8 @@ const Register = () => {
             <FiShield className="text-primary" />
             BugBounty Arsenal
           </Link>
-          <h2 className="text-2xl font-bold text-white">Create Account</h2>
-          <p className="text-gray-400 mt-2">Start scanning for vulnerabilities</p>
+          <h2 className="text-2xl font-bold text-white">Create Free Account</h2>
+          <p className="text-gray-400 mt-2">Start scanning for vulnerabilities - upgrade anytime</p>
         </div>
 
         <div className="bg-white rounded-lg shadow-xl p-8">
@@ -132,74 +104,6 @@ const Register = () => {
           )}
 
           <form onSubmit={handleSubmit}>
-            {/* Plan Selection */}
-            <div className="mb-6">
-              <label className="block text-gray-700 font-semibold mb-3">Choose Your Plan *</label>
-              <div className="grid grid-cols-1 gap-3">
-                {plans.map((plan) => (
-                  <div
-                    key={plan.id}
-                    onClick={() => setFormData({ ...formData, plan_id: plan.id })}
-                    className={`relative cursor-pointer p-4 border-2 rounded-lg transition ${
-                      formData.plan_id === plan.id
-                        ? 'border-primary bg-primary bg-opacity-5'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                          formData.plan_id === plan.id ? 'border-primary bg-primary' : 'border-gray-300'
-                        }`}>
-                          {formData.plan_id === plan.id && (
-                            <FiCheck className="text-white" size={14} />
-                          )}
-                        </div>
-                        <div>
-                          <div className="font-bold text-gray-900">
-                            {plan.name}
-                            {plan.is_popular && (
-                              <span className="ml-2 text-xs bg-primary text-white px-2 py-0.5 rounded-full">
-                                Popular
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-sm text-gray-600 mt-0.5">{plan.description}</div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-gray-900">
-                          {plan.price === 0 ? 'Free' : `$${plan.price}`}
-                        </div>
-                        {plan.price > 0 && (
-                          <div className="text-xs text-gray-500">/month</div>
-                        )}
-                      </div>
-                    </div>
-                    {/* Show key features */}
-                    <div className="mt-2 ml-8 text-xs text-gray-500">
-                      {plan.features?.slice(0, 3).map((feature, idx) => (
-                        <div key={idx} className="flex items-center gap-1">
-                          <FiCheck size={12} className="text-primary" />
-                          <span>{feature.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <p className="text-xs text-gray-500 mt-2">
-                {plans.find(p => p.id === formData.plan_id)?.price > 0
-                  ? '💳 You will be redirected to secure payment after registration'
-                  : '✓ No payment required'}
-              </p>
-              <div className="mt-3 text-center">
-                <span className="text-sm text-gray-600">Enterprise plan? </span>
-                <Link to="/register-enterprise" className="text-sm text-primary font-semibold hover:text-primary-600">
-                  Register as company →
-                </Link>
-              </div>
-            </div>
 
             {/* V3.0: Three names required */}
             <div className="grid grid-cols-3 gap-4 mb-4">
@@ -334,8 +238,12 @@ const Register = () => {
               disabled={loading}
               className="w-full px-6 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Creating account...' : 'Create Account'}
+              {loading ? 'Creating account...' : 'Create Free Account'}
             </button>
+
+            <p className="mt-4 text-center text-sm text-gray-600">
+              🎉 Start with Free plan - upgrade to Pro anytime from your dashboard
+            </p>
           </form>
 
           <div className="mt-6 text-center text-sm">

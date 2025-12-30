@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { authService } from '../services/api';
 import { FiMail, FiLock, FiShield, FiUser, FiPhone, FiMapPin, FiBriefcase, FiFileText } from 'react-icons/fi';
 import axios from 'axios';
+import EnterprisePaymentForm from '../components/EnterprisePaymentForm';
 
 const RegisterEnterprise = () => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [showPaymentForm, setShowPaymentForm] = useState(false);
+  const [clientSecret, setClientSecret] = useState('');
   const [formData, setFormData] = useState({
     // Personal/Account Info
     email: '',
@@ -39,6 +43,35 @@ const RegisterEnterprise = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8001/api';
+
+  // Check if user is logged in
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      // Fetch current user data
+      axios.get(`${API_URL}/auth/me/`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(response => {
+        setIsLoggedIn(true);
+        setCurrentUser(response.data);
+        // Pre-fill form with user data
+        setFormData(prev => ({
+          ...prev,
+          email: response.data.email,
+          first_name: response.data.first_name || '',
+          middle_name: response.data.middle_name || '',
+          last_name: response.data.last_name || '',
+          phone: response.data.phone || '',
+        }));
+      })
+      .catch(err => {
+        console.error('Failed to fetch user:', err);
+        setIsLoggedIn(false);
+      });
+    }
+  }, []);
 
   const handleChange = (e) => {
     setFormData({
@@ -47,24 +80,39 @@ const RegisterEnterprise = () => {
     });
   };
 
+  const handlePaymentSuccess = () => {
+    // Payment completed successfully
+    setShowPaymentForm(false);
+    navigate('/subscription?payment=success');
+  };
+
+  const handlePaymentError = (error) => {
+    // Payment failed
+    console.error('Payment error:', error);
+    setError(error.message || 'Payment failed. Please try again.');
+    setShowPaymentForm(false);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    // Validation
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
+    // Validation for new registration only
+    if (!isLoggedIn) {
+      if (formData.password !== formData.confirmPassword) {
+        setError('Passwords do not match');
+        return;
+      }
 
-    if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters');
-      return;
-    }
+      if (formData.password.length < 8) {
+        setError('Password must be at least 8 characters');
+        return;
+      }
 
-    if (!formData.first_name || !formData.last_name) {
-      setError('First name and last name are required');
-      return;
+      if (!formData.first_name || !formData.last_name) {
+        setError('First name and last name are required');
+        return;
+      }
     }
 
     if (!formData.company_name) {
@@ -80,10 +128,52 @@ const RegisterEnterprise = () => {
     setLoading(true);
 
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8001/api';
+      const token = localStorage.getItem('token');
       
-      // Register enterprise customer
-      const response = await axios.post(`${API_URL}/auth/signup-enterprise/`, {
+      if (isLoggedIn) {
+        // UPGRADE MODE: Add enterprise data to existing user
+        const response = await axios.post(
+          `${API_URL}/subscriptions/upgrade-to-enterprise/`,
+          {
+            // Company info
+            company_name: formData.company_name,
+            vat_number: formData.vat_number,
+            registration_number: formData.registration_number,
+            
+            // Billing address
+            billing_address: formData.billing_address,
+            billing_city: formData.billing_city,
+            billing_country: formData.billing_country,
+            billing_zip: formData.billing_zip,
+            
+            // Billing contacts
+            billing_email: formData.billing_email || formData.email,
+            billing_phone: formData.billing_phone || formData.phone,
+            accounting_contact_name: formData.accounting_contact_name,
+            accounting_contact_email: formData.accounting_contact_email,
+            
+            // Payment terms
+            payment_terms: formData.payment_terms,
+          },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        
+        // Check if payment is required (embedded payment)
+        if (response.data.requires_payment && response.data.client_secret) {
+          // Show embedded payment form
+          setClientSecret(response.data.client_secret);
+          setShowPaymentForm(true);
+          setLoading(false);
+        } else if (response.data.checkout_url) {
+          // Fallback to redirect (shouldn't happen with new flow)
+          window.location.href = response.data.checkout_url;
+        } else {
+          // No payment required
+          navigate('/subscription?upgraded=true');
+        }
+      } else {
+        // NEW REGISTRATION MODE: Create new user with enterprise plan
+        const response = await axios.post(`${API_URL}/auth/signup-enterprise/`, {
         // Account credentials
         email: formData.email,
         password: formData.password,
@@ -128,6 +218,7 @@ const RegisterEnterprise = () => {
         // No payment required or manual invoicing - proceed to verification
         navigate('/verify-phone');
       }
+    }
     } catch (err) {
       setError(err.response?.data?.detail || err.response?.data?.error || 'Registration failed. Please try again.');
     } finally {
@@ -143,8 +234,18 @@ const RegisterEnterprise = () => {
             <FiShield className="text-primary" />
             BugBounty Arsenal
           </Link>
-          <h2 className="text-2xl font-bold text-white">Enterprise Registration</h2>
-          <p className="text-gray-400 mt-2">Register your company for advanced bug bounty scanning</p>
+          <h2 className="text-2xl font-bold text-white">
+            {showPaymentForm 
+              ? 'Complete Payment'
+              : (isLoggedIn ? 'Upgrade to Enterprise' : 'Enterprise Registration')}
+          </h2>
+          <p className="text-gray-400 mt-2">
+            {showPaymentForm
+              ? 'Enter your payment details to activate Enterprise plan'
+              : (isLoggedIn 
+                ? 'Add your company details to upgrade to Enterprise plan'
+                : 'Register your company for advanced bug bounty scanning')}
+          </p>
         </div>
 
         <div className="bg-white rounded-lg shadow-xl p-8">
@@ -154,8 +255,30 @@ const RegisterEnterprise = () => {
             </div>
           )}
 
-          <form onSubmit={handleSubmit}>
-            {/* Account Information */}
+          {showPaymentForm && clientSecret ? (
+            // Show payment form
+            <div className="payment-section">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">Payment Information</h3>
+              <EnterprisePaymentForm
+                clientSecret={clientSecret}
+                onSuccess={handlePaymentSuccess}
+                onError={handlePaymentError}
+              />
+            </div>
+          ) : (
+            // Show company registration form
+            <>
+              {isLoggedIn && currentUser && (
+                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <strong>Upgrading as:</strong> {currentUser.email}
+                  </p>
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit}>
+            {/* Account Information - Only show for new registrations */}
+            {!isLoggedIn && (
             <div className="mb-6">
               <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                 <FiUser className="text-primary" />
@@ -254,6 +377,7 @@ const RegisterEnterprise = () => {
                 </div>
               </div>
             </div>
+            )}
 
             {/* Company Information */}
             <div className="mb-6 pt-6 border-t">
@@ -419,6 +543,8 @@ const RegisterEnterprise = () => {
               Sign in
             </Link>
           </div>
+          </>
+          )}
         </div>
       </div>
     </div>

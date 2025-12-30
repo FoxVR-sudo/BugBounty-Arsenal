@@ -105,7 +105,18 @@ const Subscription = () => {
         fetchSubscriptionData();
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to change plan');
+      const errorData = err.response?.data;
+      
+      // Check if it's Enterprise plan requiring special registration
+      if (errorData?.redirect_url) {
+        setError(errorData.message || errorData.error);
+        // Show message for 2 seconds then redirect
+        setTimeout(() => {
+          navigate(errorData.redirect_url);
+        }, 2000);
+      } else {
+        setError(errorData?.error || 'Failed to change plan');
+      }
     } finally {
       setActionLoading(false);
     }
@@ -391,7 +402,9 @@ const Subscription = () => {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
             <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full p-6 my-8">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-bold text-gray-900">Choose Your Plan</h3>
+                <h3 className="text-2xl font-bold text-gray-900">
+                  {currentPlan?.name === 'free' ? 'Upgrade to Pro' : 'Your Plan'}
+                </h3>
                 <button
                   onClick={() => setShowUpgradeDialog(false)}
                   className="text-gray-400 hover:text-gray-600"
@@ -400,8 +413,21 @@ const Subscription = () => {
                 </button>
               </div>
               
+              {currentPlan?.name !== 'free' && (
+                <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <p className="text-sm text-yellow-800">
+                    <strong>Note:</strong> Plan changes and downgrades are not available. 
+                    {currentPlan?.name === 'enterprise' 
+                      ? ' For Enterprise plan changes, please contact your account manager.'
+                      : ' For assistance with your subscription, please contact support.'}
+                  </p>
+                </div>
+              )}
+              
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {plans.map((plan) => (
+                {plans
+                  .filter(plan => currentPlan?.name === 'free' ? plan.name === 'pro' : true)
+                  .map((plan) => (
                   <div
                     key={plan.id}
                     className={`border-2 rounded-lg p-6 cursor-pointer transition ${
@@ -433,7 +459,7 @@ const Subscription = () => {
                       <div className="text-center py-2 bg-gray-100 rounded text-gray-600 font-semibold">
                         Current Plan
                       </div>
-                    ) : (
+                    ) : plan.name === 'pro' && currentPlan?.name === 'free' ? (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -443,8 +469,22 @@ const Subscription = () => {
                         className="w-full py-2 bg-primary text-white rounded-lg font-semibold hover:bg-primary-600 transition disabled:opacity-50 flex items-center justify-center gap-2"
                       >
                         {actionLoading ? <FiLoader className="animate-spin" /> : <FiArrowRight />}
-                        {plan.price > (currentPlan?.price || 0) ? 'Upgrade' : plan.price === 0 ? 'Downgrade' : 'Switch'}
+                        Upgrade to Pro
                       </button>
+                    ) : plan.name === 'enterprise' ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.location.href = '/register-enterprise';
+                        }}
+                        className="w-full py-2 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 transition flex items-center justify-center gap-2"
+                      >
+                        Contact Sales
+                      </button>
+                    ) : (
+                      <div className="text-center py-2 bg-gray-100 rounded text-gray-500 text-sm">
+                        Not Available
+                      </div>
                     )}
                   </div>
                 ))}
