@@ -46,12 +46,10 @@ const Dashboard = () => {
   const fetchSubscription = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8001/api/subscriptions/', {
+      const response = await axios.get('http://localhost:8001/api/subscriptions/current/', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      if (response.data.results && response.data.results[0]) {
-        setSubscription(response.data.results[0]);
-      }
+      setSubscription(response.data);
     } catch (err) {
       console.error('Failed to fetch subscription:', err);
     }
@@ -179,7 +177,7 @@ const Dashboard = () => {
 
         {/* V3.0: Subscription Usage */}
         {subscription && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             {/* Daily Usage */}
             <div className="bg-gradient-to-r from-primary to-blue-600 text-white rounded-lg shadow-lg p-6">
               <div className="flex items-center justify-between mb-4">
@@ -230,6 +228,48 @@ const Dashboard = () => {
                   }}
                 ></div>
               </div>
+            </div>
+
+            {/* Subscription Plan Card */}
+            <div className="bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-lg shadow-lg p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="bg-white bg-opacity-20 rounded-full p-3">
+                  <FiCreditCard size={28} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold opacity-90">Current Plan</h3>
+                  <p className="text-2xl font-bold">{subscription.plan?.display_name || 'Loading...'}</p>
+                </div>
+              </div>
+              <div className="mb-4">
+                <p className="text-3xl font-bold">
+                  {subscription.plan?.price === 0 ? 'Free' : `$${subscription.plan?.price}`}
+                  <span className="text-sm font-normal opacity-90">/month</span>
+                </p>
+              </div>
+              <div className="space-y-2 mb-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <FiCheckCircle size={16} />
+                  <span>{subscription.plan?.daily_scan_limit} scans/day</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <FiCheckCircle size={16} />
+                  <span>{subscription.plan?.concurrent_scans} concurrent</span>
+                </div>
+                {subscription.plan?.storage_limit_gb && (
+                  <div className="flex items-center gap-2">
+                    <FiCheckCircle size={16} />
+                    <span>{subscription.plan.storage_limit_gb}GB storage</span>
+                  </div>
+                )}
+              </div>
+              <Link
+                to="/subscription"
+                className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-white text-green-600 rounded-lg font-semibold hover:bg-opacity-90 transition"
+              >
+                Manage Plan
+                <FiArrowRight />
+              </Link>
             </div>
           </div>
         )}
