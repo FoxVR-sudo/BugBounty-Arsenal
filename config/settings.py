@@ -273,8 +273,8 @@ SCANNER_DETECTOR_MAPPING = {
 # ===========================
 # STRIPE PAYMENT SETTINGS
 # ===========================
-STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', 'sk_test_...')  # Add your test key
-STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY', 'pk_test_...')  # Add your test key
+STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', 'sk_test_51SXJtn52SV94wEf5SNO4Jar6tnLfewtgHH7uKZZOqss0Lh3t1TohyFa5F5mPxL6V3VznGD5OZxTkH3ThFsQRtNwW00OLhIwrQC')
+STRIPE_PUBLISHABLE_KEY = os.getenv('STRIPE_PUBLISHABLE_KEY', 'pk_test_51SXJtn52SV94wEf50efdijZaHFZvFfqACR6ZhyZnFF3kkDCR7tZ6elBqWEuAtWRgnsqGEXm12vmbtEIX610ico3X00x9Urkn6D')
 STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', 'whsec_...')  # Add webhook secret
 
 # Frontend URL for redirects
