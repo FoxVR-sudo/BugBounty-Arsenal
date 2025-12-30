@@ -162,7 +162,7 @@ const Dashboard = () => {
         </div>
 
         {/* V3.0: Subscription Usage */}
-        {subscription && (
+        {subscription && subscription.plan && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
             {/* Daily Usage */}
             <div className="bg-gradient-to-r from-primary to-blue-600 text-white rounded-lg shadow-lg p-6">
@@ -170,10 +170,10 @@ const Dashboard = () => {
                 <div>
                   <h3 className="text-lg font-semibold mb-2">Daily Scan Usage</h3>
                   <p className="text-3xl font-bold">
-                    {subscription.scans_used_today || 0} / {subscription.plan.daily_scan_limit}
+                    {subscription.scans_used_today || 0} / {subscription.plan?.daily_scan_limit || 0}
                   </p>
                   <p className="text-sm opacity-90 mt-1">
-                    {subscription.plan.daily_scan_limit - (subscription.scans_used_today || 0)} scans remaining today
+                    {(subscription.plan?.daily_scan_limit || 0) - (subscription.scans_used_today || 0)} scans remaining today
                   </p>
                 </div>
                 <div className="bg-white bg-opacity-20 rounded-full p-4">
@@ -184,7 +184,7 @@ const Dashboard = () => {
                 <div
                   className="bg-white h-3 rounded-full transition-all duration-500"
                   style={{ 
-                    width: `${Math.min((subscription.scans_used_today || 0) / subscription.plan.daily_scan_limit * 100, 100)}%` 
+                    width: `${Math.min((subscription.scans_used_today || 0) / (subscription.plan?.daily_scan_limit || 1) * 100, 100)}%` 
                   }}
                 ></div>
               </div>
@@ -196,10 +196,10 @@ const Dashboard = () => {
                 <div>
                   <h3 className="text-lg font-semibold mb-2">Monthly Scan Usage</h3>
                   <p className="text-3xl font-bold">
-                    {subscription.scans_used_this_month || 0} / {subscription.plan.monthly_scan_limit}
+                    {subscription.scans_used_this_month || 0} / {subscription.plan?.monthly_scan_limit || 0}
                   </p>
                   <p className="text-sm opacity-90 mt-1">
-                    {subscription.plan.monthly_scan_limit - (subscription.scans_used_this_month || 0)} scans remaining this month
+                    {(subscription.plan?.monthly_scan_limit || 0) - (subscription.scans_used_this_month || 0)} scans remaining this month
                   </p>
                 </div>
                 <div className="bg-white bg-opacity-20 rounded-full p-4">
@@ -210,7 +210,7 @@ const Dashboard = () => {
                 <div
                   className="bg-white h-3 rounded-full transition-all duration-500"
                   style={{ 
-                    width: `${Math.min((subscription.scans_used_this_month || 0) / subscription.plan.monthly_scan_limit * 100, 100)}%` 
+                    width: `${Math.min((subscription.scans_used_this_month || 0) / (subscription.plan?.monthly_scan_limit || 1) * 100, 100)}%` 
                   }}
                 ></div>
               </div>
@@ -245,7 +245,7 @@ const Dashboard = () => {
                 {subscription.plan?.storage_limit_gb && (
                   <div className="flex items-center gap-2">
                     <FiCheckCircle size={16} />
-                    <span>{subscription.plan.storage_limit_gb}GB storage</span>
+                    <span>{subscription.plan?.storage_limit_gb}GB storage</span>
                   </div>
                 )}
               </div>
