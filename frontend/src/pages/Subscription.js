@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -19,6 +19,7 @@ const Subscription = () => {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const syncedSessionRef = useRef(null);
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://127.0.0.1:8001/api';
 
@@ -131,6 +132,14 @@ const Subscription = () => {
   };
 
   const syncSubscription = async (sessionId) => {
+    // Prevent duplicate syncs
+    if (syncedSessionRef.current === sessionId) {
+      console.log('Session already synced, skipping');
+      return;
+    }
+    
+    syncedSessionRef.current = sessionId;
+    
     try {
       const token = localStorage.getItem('token');
       await axios.post(`${API_URL}/subscriptions/sync/`, 
