@@ -155,6 +155,7 @@ const scannerInfo = {
 const ScannerPage = () => {
   const { type } = useParams();
   const [target, setTarget] = useState('');
+  const [acceptDisclaimer, setAcceptDisclaimer] = useState(false);
   const [options, setOptions] = useState({
     depth: 'medium',
     timeout: 30,
@@ -212,6 +213,12 @@ const ScannerPage = () => {
 
   const handleScan = async (e) => {
     e.preventDefault();
+
+    if (!acceptDisclaimer) {
+      alert('You must confirm that you have authorization to scan this target');
+      return;
+    }
+
     try {
       const scanData = {
         target,
@@ -353,9 +360,40 @@ const ScannerPage = () => {
                   </label>
                 </div>
 
+                {/* Legal Disclaimer */}
+                <div className="p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+                  <div className="flex items-start gap-3">
+                    <FiAlertCircle className="text-yellow-600 mt-1 flex-shrink-0" size={20} />
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-yellow-800 text-sm mb-2">⚠️ Правно предупреждение</h4>
+                      <p className="text-xs text-yellow-700 mb-2">
+                        Сканирането на системи БЕЗ разрешение е незаконно. 
+                        Носите пълна отговорност за вашите действия.
+                      </p>
+                      <label className="flex items-start gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={acceptDisclaimer}
+                          onChange={(e) => setAcceptDisclaimer(e.target.checked)}
+                          className="mt-0.5 w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                          required
+                        />
+                        <span className="text-xs text-yellow-800 font-medium">
+                          Потвърждавам, че имам изрично разрешение да сканирам тази система. *
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
                 <button
                   type="submit"
-                  className="w-full bg-primary text-white py-3 rounded-lg hover:bg-primary-600 transition font-semibold flex items-center justify-center gap-2"
+                  disabled={!acceptDisclaimer}
+                  className={`w-full py-3 rounded-lg font-semibold flex items-center justify-center gap-2 ${
+                    acceptDisclaimer 
+                      ? 'bg-primary text-white hover:bg-primary-600 transition' 
+                      : 'bg-gray-400 text-white cursor-not-allowed'
+                  }`}
                 >
                   <FiPlay />
                   Start Scan

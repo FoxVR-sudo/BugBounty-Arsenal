@@ -22,6 +22,7 @@ const CategoryScan = () => {
   // Form state
   const [target, setTarget] = useState('');
   const [selectedDetectors, setSelectedDetectors] = useState([]);
+  const [acceptDisclaimer, setAcceptDisclaimer] = useState(false);
   const [options, setOptions] = useState({
     depth: 3,
     timeout: 30,
@@ -129,6 +130,11 @@ const CategoryScan = () => {
     
     if (selectedDetectors.length === 0) {
       alert('Please select at least one detector');
+      return;
+    }
+
+    if (!acceptDisclaimer) {
+      alert('You must confirm that you have authorization to scan this target');
       return;
     }
 
@@ -492,12 +498,40 @@ const CategoryScan = () => {
                   </div>
                 </div>
 
+                {/* Legal Disclaimer */}
+                <div className="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded">
+                  <div className="flex items-start gap-3">
+                    <FiAlertTriangle className="text-yellow-600 mt-1 flex-shrink-0" size={20} />
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-yellow-800 mb-2">⚠️ Правно предупреждение</h4>
+                      <p className="text-sm text-yellow-700 mb-3">
+                        Сканирането на системи БЕЗ разрешение е незаконно и представлява престъпление. 
+                        Носите пълна отговорност за вашите действия.
+                      </p>
+                      <label className="flex items-start gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={acceptDisclaimer}
+                          onChange={(e) => setAcceptDisclaimer(e.target.checked)}
+                          className="mt-1 w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                          disabled={scanning}
+                          required
+                        />
+                        <span className="text-sm text-yellow-800 font-medium">
+                          Потвърждавам, че имам изрично ПИСМЕНО разрешение да сканирам тази система 
+                          и приемам пълната отговорност за последствията от този скан. *
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  disabled={scanning || selectedDetectors.length === 0}
+                  disabled={scanning || selectedDetectors.length === 0 || !acceptDisclaimer}
                   className={`w-full px-6 py-4 rounded-lg font-semibold text-white flex items-center justify-center gap-2 ${
-                    scanning || selectedDetectors.length === 0
+                    scanning || selectedDetectors.length === 0 || !acceptDisclaimer
                       ? 'bg-gray-400 cursor-not-allowed'
                       : 'bg-primary hover:bg-primary-600 transition'
                   }`}
