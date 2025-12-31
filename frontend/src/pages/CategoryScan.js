@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
-import { FiPlay, FiLoader, FiCheckCircle, FiAlertTriangle, FiSettings } from 'react-icons/fi';
+import { FiPlay, FiLoader, FiCheckCircle, FiAlertTriangle, FiSettings, FiCreditCard } from 'react-icons/fi';
 import DashboardLayout from '../components/DashboardLayout';
+import { useTheme } from '../contexts/ThemeContext';
 
 const CategoryScan = () => {
   const { categoryId } = useParams();
   const navigate = useNavigate();
+  const { isDark } = useTheme();
   
   const [category, setCategory] = useState(null);
   const [detectors, setDetectors] = useState([]);
@@ -18,6 +20,8 @@ const CategoryScan = () => {
   const [subscription, setSubscription] = useState(null);
   const [hasAccess, setHasAccess] = useState(null); // null = loading, true = access, false = no access
   const [plans, setPlans] = useState([]); // For upgrade page
+  const [showLimitModal, setShowLimitModal] = useState(false);
+  const [limitError, setLimitError] = useState('');
   
   // Form state
   const [target, setTarget] = useState('');
@@ -169,8 +173,15 @@ const CategoryScan = () => {
       
     } catch (err) {
       console.error('Scan failed:', err);
-      alert(err.response?.data?.error || 'Failed to start scan');
       setScanning(false);
+      
+      // Handle 402 Payment Required (daily limit exceeded)
+      if (err.response?.status === 402) {
+        setLimitError(err.response?.data?.error || 'Daily scan limit exceeded');
+        setShowLimitModal(true);
+      } else {
+        alert(err.response?.data?.error || 'Failed to start scan');
+      }
     }
   };
 
@@ -658,6 +669,61 @@ const CategoryScan = () => {
             )}
           </div>
         </div>
+        )}
+
+        {/* Limit Exceeded Modal */}
+        {showLimitModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className={`rounded-2xl shadow-2xl border max-w-lg w-full p-8 text-center ${
+              isDark
+                ? 'bg-gray-800/95 backdrop-blur-xl border-gray-700/50'
+                : 'bg-white/95 backdrop-blur-xl border-gray-200/50'
+            }`}>
+              <div className="mb-6">
+                <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                  <FiAlertTriangle className="text-red-600" size={32} />
+                </div>
+                <h3 className={`text-2xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  Daily Scan Limit Reached
+                </h3>
+                <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                  {limitError}
+                </p>
+              </div>
+              <div className={`rounded-lg p-4 mb-6 ${
+                isDark ? 'bg-blue-900/30 border border-blue-700/50' : 'bg-blue-50 border border-blue-200'
+              }`}>
+                <p className={`text-sm font-semibold mb-2 ${isDark ? 'text-blue-300' : 'text-blue-900'}`}>
+                  Upgrade to Pro Plan and get:
+                </p>
+                <ul className={`text-sm text-left space-y-1 ${isDark ? 'text-blue-200' : 'text-blue-800'}`}>
+                  <li>✓ 50 scans per day</li>
+                  <li>✓ 1,000 scans per month</li>
+                  <li>✓ Advanced scanners & detectors</li>
+                  <li>✓ Priority support</li>
+                  <li>✓ API access</li>
+                </ul>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowLimitModal(false)}
+                  className={`flex-1 px-6 py-3 rounded-lg font-semibold transition ${
+                    isDark
+                      ? 'bg-gray-700 text-white hover:bg-gray-600'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  Close
+                </button>
+                <Link
+                  to="/subscription"
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-primary to-blue-600 text-white rounded-lg font-semibold hover:opacity-90 transition text-center flex items-center justify-center gap-2"
+                >
+                  <FiCreditCard /> Upgrade Now
+                </Link>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </DashboardLayout>

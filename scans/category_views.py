@@ -10,7 +10,7 @@ from django.shortcuts import get_object_or_404
 from scans.category_models import ScanCategory, DetectorConfig
 from scans.models import Scan
 from scans.serializers import ScanSerializer
-from subscriptions.models import Subscription
+from subscriptions.models import Subscription, Plan
 
 
 class ScanCategoryViewSet(viewsets.ReadOnlyModelViewSet):
@@ -218,15 +218,25 @@ def start_category_scan(request):
     # Check scan limits
     try:
         subscription = Subscription.objects.get(user=user)
-        can_scan, message = subscription.can_start_scan()
-        if not can_scan:
-            return Response(
-                {'error': message},
-                status=status.HTTP_429_TOO_MANY_REQUESTS
-            )
     except Subscription.DoesNotExist:
+        # Auto-create free subscription if it doesn't exist
+        try:
+            free_plan = Plan.objects.get(name='free')
+            subscription = Subscription.objects.create(
+                user=user,
+                plan=free_plan,
+                status='active'
+            )
+        except Plan.DoesNotExist:
+            return Response(
+                {'error': 'No free plan available. Please contact support.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    can_scan, message = subscription.can_start_scan()
+    if not can_scan:
         return Response(
-            {'error': 'No active subscription found'},
+            {'error': message},
             status=status.HTTP_402_PAYMENT_REQUIRED
         )
     

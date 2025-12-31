@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from 'react-query';
+import { ThemeProvider } from './contexts/ThemeContext';
 import LandingPage from './pages/LandingPage';
 import Dashboard from './pages/Dashboard';
 import ScanDetails from './pages/ScanDetails';
@@ -42,21 +43,22 @@ const PrivateRoute = ({ children }) => {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <Router>
-        <div className="flex flex-col min-h-screen">
-          <div className="flex-grow">
-            <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/register-enterprise" element={<RegisterEnterprise />} />
-              <Route path="/payment-success" element={<PaymentSuccess />} />
-              <Route path="/terms" element={<Terms />} />
-              <Route path="/privacy" element={<Privacy />} />
-              <Route path="/disclaimer" element={<Disclaimer />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/verify-phone" element={<PrivateRoute><PhoneVerification /></PrivateRoute>} />
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <Router>
+          <div className="flex flex-col min-h-screen">
+            <div className="flex-grow">
+              <Routes>
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/register-enterprise" element={<RegisterEnterprise />} />
+                <Route path="/payment-success" element={<PaymentSuccess />} />
+                <Route path="/terms" element={<Terms />} />
+                <Route path="/privacy" element={<Privacy />} />
+                <Route path="/disclaimer" element={<Disclaimer />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/verify-phone" element={<PrivateRoute><PhoneVerification /></PrivateRoute>} />
               <Route
             path="/dashboard"
             element={
@@ -144,6 +146,7 @@ function App() {
         </div>
       </Router>
     </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 
