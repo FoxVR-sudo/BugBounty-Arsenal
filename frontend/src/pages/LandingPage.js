@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FiShield, FiZap, FiTarget, FiLock, FiDollarSign, FiCheck, FiCode, FiActivity } from 'react-icons/fi';
+import { FiShield, FiZap, FiTarget, FiLock, FiCheck, FiCode, FiActivity, FiCreditCard, FiFileText } from 'react-icons/fi';
 import axios from 'axios';
 
 const LandingPage = () => {
@@ -208,26 +208,24 @@ const LandingPage = () => {
           <h2 className="text-4xl font-bold text-white text-center mb-12">
             Flexible Payment Options
           </h2>
-          <div className="grid md:grid-cols-4 gap-6 max-w-4xl mx-auto">
-            <div className="bg-gray-800 p-6 rounded-lg text-center">
-              <FiDollarSign className="text-4xl text-primary mx-auto mb-2" />
-              <div className="text-white font-semibold">Credit Card</div>
-              <div className="text-gray-400 text-sm">Visa, Mastercard, Amex</div>
+          <div className="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto">
+            <div className="bg-gray-800/50 backdrop-blur-lg border border-gray-700/50 p-6 rounded-xl text-center hover:bg-gray-700/50 transition">
+              <FiCreditCard className="text-5xl text-primary mx-auto mb-3" />
+              <div className="text-white font-semibold text-lg">Stripe</div>
+              <div className="text-gray-400 text-sm">Secure payment processing</div>
+              <div className="text-gray-500 text-xs mt-2">Visa, Mastercard, Amex</div>
             </div>
-            <div className="bg-gray-800 p-6 rounded-lg text-center">
-              <FiDollarSign className="text-4xl text-primary mx-auto mb-2" />
-              <div className="text-white font-semibold">PayPal</div>
-              <div className="text-gray-400 text-sm">Secure payments</div>
+            <div className="bg-gray-800/50 backdrop-blur-lg border border-gray-700/50 p-6 rounded-xl text-center hover:bg-gray-700/50 transition">
+              <FiShield className="text-5xl text-green-500 mx-auto mb-3" />
+              <div className="text-white font-semibold text-lg">PCI DSS Compliant</div>
+              <div className="text-gray-400 text-sm">Bank-level security</div>
+              <div className="text-gray-500 text-xs mt-2">SSL encrypted</div>
             </div>
-            <div className="bg-gray-800 p-6 rounded-lg text-center">
-              <FiDollarSign className="text-4xl text-primary mx-auto mb-2" />
-              <div className="text-white font-semibold">Crypto</div>
-              <div className="text-gray-400 text-sm">BTC, ETH, USDT</div>
-            </div>
-            <div className="bg-gray-800 p-6 rounded-lg text-center">
-              <FiDollarSign className="text-4xl text-primary mx-auto mb-2" />
-              <div className="text-white font-semibold">Invoice</div>
-              <div className="text-gray-400 text-sm">Enterprise only</div>
+            <div className="bg-gray-800/50 backdrop-blur-lg border border-gray-700/50 p-6 rounded-xl text-center hover:bg-gray-700/50 transition">
+              <FiFileText className="text-5xl text-blue-500 mx-auto mb-3" />
+              <div className="text-white font-semibold text-lg">Invoice</div>
+              <div className="text-gray-400 text-sm">Enterprise billing</div>
+              <div className="text-gray-500 text-xs mt-2">Net 30 terms</div>
             </div>
           </div>
         </div>
