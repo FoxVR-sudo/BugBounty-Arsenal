@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FiX, FiCookie } from 'react-icons/fi';
+import { FiInfo } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 
 const CookieConsent = () => {
@@ -30,21 +30,20 @@ const CookieConsent = () => {
       <div className="max-w-7xl mx-auto px-4 py-4">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-start gap-3 flex-1">
-            <FiCookie className="text-primary text-2xl mt-1 flex-shrink-0" />
+            <FiInfo className="text-primary text-2xl mt-1 flex-shrink-0" />
             <div className="text-sm text-gray-300">
               <p className="font-semibold text-white mb-1">
-                Този сайт използва бисквитки (cookies)
+                This site uses cookies
               </p>
               <p>
-                Използваме бисквитки за подобряване на вашето изживяване, анализ на трафика и 
-                персонализация на съдържанието. Продължавайки да използвате сайта, вие се съгласявате 
-                с нашата{' '}
+                We use cookies to improve your experience, analyze traffic, and 
+                personalize content. By continuing to use this site, you agree to our{' '}
                 <Link to="/privacy" className="text-primary hover:underline">
-                  Политика за поверителност
+                  Privacy Policy
                 </Link>
-                {' '}и{' '}
+                {' '}and{' '}
                 <Link to="/terms" className="text-primary hover:underline">
-                  Общи условия
+                  Terms of Service
                 </Link>
                 .
               </p>
@@ -56,13 +55,13 @@ const CookieConsent = () => {
               onClick={handleDecline}
               className="px-4 py-2 text-sm text-gray-400 hover:text-white transition"
             >
-              Отказ
+              Decline
             </button>
             <button
               onClick={handleAccept}
               className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition text-sm font-medium"
             >
-              Приемам
+              Accept
             </button>
           </div>
         </div>

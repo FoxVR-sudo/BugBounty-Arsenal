@@ -131,15 +131,15 @@ function App() {
             path="/integrations"
             element={
               <PrivateRoute>
-          </div>
-          <Footer />
-          <CookieConsent />
-        </div>
                 <Integrations />
               </PrivateRoute>
             }
           />
         </Routes>
+          </div>
+          <Footer />
+          <CookieConsent />
+        </div>
       </Router>
     </QueryClientProvider>
   );

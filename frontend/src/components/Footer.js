@@ -16,27 +16,27 @@ const Footer = () => {
               BugBounty Arsenal
             </div>
             <p className="text-sm text-gray-400">
-              Автоматизиран скенер за уязвимости за ethical hackers и security researchers.
+              Automated vulnerability scanner for ethical hackers and security researchers.
             </p>
           </div>
 
           {/* Legal */}
           <div>
-            <h3 className="text-white font-semibold mb-4">Правна информация</h3>
+            <h3 className="text-white font-semibold mb-4">Legal</h3>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link to="/terms" className="hover:text-primary transition">
-                  Общи условия
+                  Terms of Service
                 </Link>
               </li>
               <li>
                 <Link to="/privacy" className="hover:text-primary transition">
-                  Политика за поверителност
+                  Privacy Policy
                 </Link>
               </li>
               <li>
                 <Link to="/disclaimer" className="hover:text-primary transition">
-                  Отказ от отговорност
+                  Disclaimer
                 </Link>
               </li>
               <li>
@@ -49,21 +49,21 @@ const Footer = () => {
 
           {/* Resources */}
           <div>
-            <h3 className="text-white font-semibold mb-4">Ресурси</h3>
+            <h3 className="text-white font-semibold mb-4">Resources</h3>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link to="/docs" className="hover:text-primary transition">
-                  Документация
+                  Documentation
                 </Link>
               </li>
               <li>
                 <Link to="/usage-guide" className="hover:text-primary transition">
-                  Ръководство за употреба
+                  Usage Guide
                 </Link>
               </li>
               <li>
                 <Link to="/faq" className="hover:text-primary transition">
-                  Често задавани въпроси
+                  FAQ
                 </Link>
               </li>
               <li>
@@ -82,11 +82,11 @@ const Footer = () => {
 
           {/* Contact */}
           <div>
-            <h3 className="text-white font-semibold mb-4">Контакти</h3>
+            <h3 className="text-white font-semibold mb-4">Contact</h3>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link to="/contact" className="hover:text-primary transition">
-                  Свържете се с нас
+                  Contact Us
                 </Link>
               </li>
               <li>
@@ -105,11 +105,10 @@ const Footer = () => {
         {/* Bottom Bar */}
         <div className="border-t border-gray-800 mt-8 pt-6 text-sm text-gray-400 text-center">
           <p>
-            © {currentYear} BugBounty Arsenal. Всички права запазени.
+            © {currentYear} BugBounty Arsenal. All rights reserved.
           </p>
           <p className="mt-2 text-xs">
-            Този инструмент е предназначен само за легално тестване на собствени или упълномощени системи.
-            Неразрешеното сканиране на чужди системи е незаконно.
+            This tool is designed for legal security testing only. Unauthorized scanning is illegal.
           </p>
         </div>
       </div>

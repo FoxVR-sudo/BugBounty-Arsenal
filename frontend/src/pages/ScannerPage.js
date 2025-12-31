@@ -365,10 +365,10 @@ const ScannerPage = () => {
                   <div className="flex items-start gap-3">
                     <FiAlertCircle className="text-yellow-600 mt-1 flex-shrink-0" size={20} />
                     <div className="flex-1">
-                      <h4 className="font-semibold text-yellow-800 text-sm mb-2">⚠️ Правно предупреждение</h4>
+                      <h4 className="font-semibold text-yellow-800 text-sm mb-2">⚠️ Legal Warning</h4>
                       <p className="text-xs text-yellow-700 mb-2">
-                        Сканирането на системи БЕЗ разрешение е незаконно. 
-                        Носите пълна отговорност за вашите действия.
+                        Scanning systems WITHOUT permission is illegal. 
+                        You bear full responsibility for your actions.
                       </p>
                       <label className="flex items-start gap-2 cursor-pointer">
                         <input
@@ -379,7 +379,7 @@ const ScannerPage = () => {
                           required
                         />
                         <span className="text-xs text-yellow-800 font-medium">
-                          Потвърждавам, че имам изрично разрешение да сканирам тази система. *
+                          I confirm that I have explicit permission to scan this system. *
                         </span>
                       </label>
                     </div>

@@ -503,10 +503,10 @@ const CategoryScan = () => {
                   <div className="flex items-start gap-3">
                     <FiAlertTriangle className="text-yellow-600 mt-1 flex-shrink-0" size={20} />
                     <div className="flex-1">
-                      <h4 className="font-semibold text-yellow-800 mb-2">⚠️ Правно предупреждение</h4>
+                      <h4 className="font-semibold text-yellow-800 mb-2">⚠️ Legal Warning</h4>
                       <p className="text-sm text-yellow-700 mb-3">
-                        Сканирането на системи БЕЗ разрешение е незаконно и представлява престъпление. 
-                        Носите пълна отговорност за вашите действия.
+                        Scanning systems WITHOUT permission is illegal and constitutes a crime. 
+                        You bear full responsibility for your actions.
                       </p>
                       <label className="flex items-start gap-2 cursor-pointer">
                         <input
@@ -518,8 +518,8 @@ const CategoryScan = () => {
                           required
                         />
                         <span className="text-sm text-yellow-800 font-medium">
-                          Потвърждавам, че имам изрично ПИСМЕНО разрешение да сканирам тази система 
-                          и приемам пълната отговорност за последствията от този скан. *
+                          I confirm that I have explicit WRITTEN permission to scan this system 
+                          and accept full responsibility for the consequences of this scan. *
                         </span>
                       </label>
                     </div>

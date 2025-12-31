@@ -251,19 +251,19 @@ const Register = () => {
                   required
                 />
                 <span className="text-sm text-gray-700">
-                  Приемам{' '}
+                  I accept the{' '}
                   <Link to="/terms" target="_blank" className="text-primary hover:underline font-semibold">
-                    Общите условия
+                    Terms of Service
                   </Link>
                   ,{' '}
                   <Link to="/privacy" target="_blank" className="text-primary hover:underline font-semibold">
-                    Политиката за поверителност
+                    Privacy Policy
                   </Link>
-                  {' '}и{' '}
+                  {' '}and{' '}
                   <Link to="/disclaimer" target="_blank" className="text-primary hover:underline font-semibold">
-                    Отказа от отговорност
+                    Disclaimer
                   </Link>
-                  . Потвърждавам, че ще използвам BugBounty Arsenal само за легални цели. *
+                  . I confirm that I will use BugBounty Arsenal for legal purposes only. *
                 </span>
               </label>
             </div>
