@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FiShield, FiMail, FiGithub } from 'react-icons/fi';
+import { FiShield, FiMail } from 'react-icons/fi';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -39,43 +39,22 @@ const Footer = () => {
                   Disclaimer
                 </Link>
               </li>
-              <li>
-                <Link to="/responsible-disclosure" className="hover:text-primary transition">
-                  Responsible Disclosure
-                </Link>
-              </li>
             </ul>
           </div>
 
-          {/* Resources */}
+          {/* Quick Links */}
           <div>
-            <h3 className="text-white font-semibold mb-4">Resources</h3>
+            <h3 className="text-white font-semibold mb-4">Quick Links</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link to="/docs" className="hover:text-primary transition">
-                  Documentation
+                <Link to="/pricing" className="hover:text-primary transition">
+                  Pricing
                 </Link>
               </li>
               <li>
-                <Link to="/usage-guide" className="hover:text-primary transition">
-                  Usage Guide
+                <Link to="/dashboard" className="hover:text-primary transition">
+                  Dashboard
                 </Link>
-              </li>
-              <li>
-                <Link to="/faq" className="hover:text-primary transition">
-                  FAQ
-                </Link>
-              </li>
-              <li>
-                <a 
-                  href="https://github.com/yourusername/bugbounty-arsenal" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="hover:text-primary transition inline-flex items-center gap-1"
-                >
-                  <FiGithub className="w-4 h-4" />
-                  GitHub
-                </a>
               </li>
             </ul>
           </div>
