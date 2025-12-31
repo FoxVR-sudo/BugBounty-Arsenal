@@ -1,6 +1,7 @@
 """
 API views for phone and company verification
 """
+from django.conf import settings
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -67,14 +68,15 @@ def send_phone_verification(request):
     
     POST /api/users/verify-phone/send/
     {
-        "phone": "+359888123456"
+        "phone": "+359888123456"  # Optional - uses user.phone if not provided
     }
     """
-    phone = request.data.get('phone')
+    # Get phone from request body or user profile
+    phone = request.data.get('phone') or request.user.phone
     
     if not phone:
         return Response(
-            {'error': 'Phone number is required'},
+            {'error': 'Phone number is required. Please update your profile.'},
             status=status.HTTP_400_BAD_REQUEST
         )
     
@@ -93,12 +95,14 @@ def send_phone_verification(request):
     success, code, message = service.send_verification_code(request.user, phone)
     
     if success:
-        return Response({
+        response_data = {
             'success': True,
             'message': message,
-            # Don't send code in production, only in development
-            # 'code': code if settings.DEBUG else None,
-        })
+        }
+        # In development, include code in response for easy testing
+        if settings.DEBUG and code:
+            response_data['code'] = code
+        return Response(response_data)
     else:
         return Response(
             {'error': message},

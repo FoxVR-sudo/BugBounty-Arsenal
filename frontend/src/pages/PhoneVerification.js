@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { FiPhone, FiCheck, FiAlertCircle, FiRefreshCw } from 'react-icons/fi';
@@ -11,10 +11,14 @@ const PhoneVerification = () => {
   const [resendTimer, setResendTimer] = useState(0);
   const [codeSent, setCodeSent] = useState(false);
   const navigate = useNavigate();
+  const hasSentCode = useRef(false); // Prevent double send in React StrictMode
 
   useEffect(() => {
-    // Auto-send verification code on mount
-    sendVerificationCode();
+    // Auto-send verification code on mount (only once)
+    if (!hasSentCode.current) {
+      hasSentCode.current = true;
+      sendVerificationCode();
+    }
   }, []);
 
   useEffect(() => {

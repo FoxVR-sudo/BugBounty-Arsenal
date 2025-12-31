@@ -13,6 +13,7 @@ const Register = () => {
     address: '',
     password: '',
     confirmPassword: '',
+    acceptTerms: false,
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -47,6 +48,11 @@ const Register = () => {
 
     if (!formData.phone) {
       setError('Phone number is required');
+      return;
+    }
+
+    if (!formData.acceptTerms) {
+      setError('You must accept the Terms and Conditions and Privacy Policy');
       return;
     }
 
@@ -231,6 +237,35 @@ const Register = () => {
                   required
                 />
               </div>
+            </div>
+
+            {/* Terms and Conditions */}
+            <div className="mb-6">
+              <label className="flex items-start gap-2">
+                <input
+                  type="checkbox"
+                  name="acceptTerms"
+                  checked={formData.acceptTerms}
+                  onChange={(e) => setFormData({ ...formData, acceptTerms: e.target.checked })}
+                  className="mt-1 w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                  required
+                />
+                <span className="text-sm text-gray-700">
+                  Приемам{' '}
+                  <Link to="/terms" target="_blank" className="text-primary hover:underline font-semibold">
+                    Общите условия
+                  </Link>
+                  ,{' '}
+                  <Link to="/privacy" target="_blank" className="text-primary hover:underline font-semibold">
+                    Политиката за поверителност
+                  </Link>
+                  {' '}и{' '}
+                  <Link to="/disclaimer" target="_blank" className="text-primary hover:underline font-semibold">
+                    Отказа от отговорност
+                  </Link>
+                  . Потвърждавам, че ще използвам BugBounty Arsenal само за легални цели. *
+                </span>
+              </label>
             </div>
 
             <button

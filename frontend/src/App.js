@@ -17,6 +17,11 @@ import PhoneVerification from './pages/PhoneVerification';
 import PaymentSuccess from './pages/PaymentSuccess';
 import TeamManagement from './pages/TeamManagement';
 import Integrations from './pages/Integrations';
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
+import Disclaimer from './pages/Disclaimer';
+import Footer from './components/Footer';
+import CookieConsent from './components/CookieConsent';
 import './index.css';
 
 const queryClient = new QueryClient({
@@ -38,14 +43,19 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/register-enterprise" element={<RegisterEnterprise />} />
-          <Route path="/payment-success" element={<PaymentSuccess />} />
-          <Route path="/verify-phone" element={<PrivateRoute><PhoneVerification /></PrivateRoute>} />
-          <Route
+        <div className="flex flex-col min-h-screen">
+          <div className="flex-grow">
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/register-enterprise" element={<RegisterEnterprise />} />
+              <Route path="/payment-success" element={<PaymentSuccess />} />
+              <Route path="/terms" element={<Terms />} />
+              <Route path="/privacy" element={<Privacy />} />
+              <Route path="/disclaimer" element={<Disclaimer />} />
+              <Route path="/verify-phone" element={<PrivateRoute><PhoneVerification /></PrivateRoute>} />
+              <Route
             path="/dashboard"
             element={
               <PrivateRoute>
@@ -121,6 +131,10 @@ function App() {
             path="/integrations"
             element={
               <PrivateRoute>
+          </div>
+          <Footer />
+          <CookieConsent />
+        </div>
                 <Integrations />
               </PrivateRoute>
             }

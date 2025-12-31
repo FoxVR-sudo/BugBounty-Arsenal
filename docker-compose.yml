@@ -51,6 +51,10 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - TWILIO_ENABLED=True
+      - TWILIO_ACCOUNT_SID=AC265e1ce8956bf13845e549458469f6d4
+      - TWILIO_AUTH_TOKEN=04a2cfb9c3c84d78c5ed21e1f541ed40
+      - TWILIO_PHONE_NUMBER=+15419826422
     depends_on:
       redis:
         condition: service_healthy
