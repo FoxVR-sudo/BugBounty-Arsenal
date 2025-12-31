@@ -77,7 +77,7 @@ const Dashboard = () => {
       <div className="p-8">
         {/* User Info Card - Tree Format */}
         {userInfo && (
-          <div className="bg-white/80 backdrop-blur-lg rounded-xl shadow-xl border border-gray-200/50 p-6 mb-8">
+          <div className="bg-white/80 backdrop-blur-lg rounded-xl shadow-xl border border-gray-200/50 p-6 mb-8 hover:bg-white/90 hover:shadow-2xl transition-all duration-300">
             <div className="flex items-center justify-between">
               <div className="font-mono text-sm space-y-1">
                 <div className="flex items-center">
@@ -264,7 +264,7 @@ const Dashboard = () => {
         {categoryStats && categoryStats.length > 0 && (
           <div className="mb-8">
             <h3 className="text-xl font-bold text-gray-900 mb-4">Scanner Capabilities</h3>
-            <div className="bg-white/80 backdrop-blur-lg rounded-xl shadow-xl border border-gray-200/50 p-6">
+            <div className="bg-white/80 backdrop-blur-lg rounded-xl shadow-xl border border-gray-200/50 p-6 hover:bg-white/90 hover:shadow-2xl transition-all duration-300">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {categoryStats.map((category) => (
                   <div key={category.id} className="border-l-4 border-primary pl-4">

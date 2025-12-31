@@ -169,7 +169,7 @@ const Contact = () => {
 
           {/* Contact Information */}
           <div className="space-y-6">
-            <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200/50 p-8">
+            <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200/50 p-8 hover:bg-white/95 hover:shadow-3xl transition-all duration-300">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Get in Touch</h2>
               
               <div className="space-y-4">

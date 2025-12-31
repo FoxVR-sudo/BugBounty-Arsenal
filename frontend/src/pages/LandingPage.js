@@ -235,7 +235,7 @@ const LandingPage = () => {
 };
 
 const FeatureCard = ({ icon, title, items }) => (
-  <div className="bg-gray-900 p-6 rounded-lg">
+  <div className="bg-gray-900/50 backdrop-blur-lg border border-gray-700/50 p-6 rounded-xl hover:bg-gray-800/50 hover:border-gray-600/50 hover:shadow-xl transition-all duration-300 cursor-pointer">
     <div className="text-3xl text-primary mb-4">{icon}</div>
     <h3 className="text-xl font-bold text-white mb-4">{title}</h3>
     <ul className="text-gray-400 space-y-2 text-sm">
@@ -255,10 +255,10 @@ const PricingCard = ({ plan, highlighted }) => {
   
   return (
     <div
-      className={`p-8 rounded-lg ${
+      className={`p-8 rounded-xl transition-all duration-300 ${
         highlighted
-          ? 'bg-primary border-2 border-primary transform scale-105'
-          : 'bg-gray-800 border-2 border-gray-700'
+          ? 'bg-primary border-2 border-primary transform scale-105 hover:scale-110 hover:shadow-2xl'
+          : 'bg-gray-800/50 backdrop-blur-lg border-2 border-gray-700/50 hover:bg-gray-700/50 hover:border-gray-600/50 hover:shadow-xl'
       }`}
     >
       <h3 className="text-2xl font-bold text-white mb-2">{plan.display_name}</h3>
