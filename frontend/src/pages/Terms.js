@@ -91,9 +91,9 @@ const Terms = () => {
           <h2>7. Subscription Plans and Pricing</h2>
           <p>The Service offers the following subscription tiers:</p>
           <ul>
-            <li><strong>Free Plan:</strong> €0/month - Limited features</li>
-            <li><strong>Pro Plan:</strong> €9.99/month - Full features</li>
-            <li><strong>Enterprise Plan:</strong> €49.99/month - Advanced features and support</li>
+            <li><strong>Free Plan:</strong> $0/month - Limited features</li>
+            <li><strong>Pro Plan:</strong> $29/month - Full features</li>
+            <li><strong>Enterprise Plan:</strong> $199/month - Advanced features and support</li>
           </ul>
           <p>Prices may change with 30 days notice. Subscriptions renew automatically.</p>
 

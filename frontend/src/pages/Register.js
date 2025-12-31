@@ -102,7 +102,7 @@ const Register = () => {
           <p className="text-gray-400 mt-2">Start scanning for vulnerabilities - upgrade anytime</p>
         </div>
 
-        <div className="bg-white rounded-lg shadow-xl p-8">
+        <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200/50 p-8">
           {error && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
               {error}

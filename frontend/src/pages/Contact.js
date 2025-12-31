@@ -60,7 +60,7 @@ const Contact = () => {
 
         <div className="grid md:grid-cols-2 gap-8">
           {/* Contact Form */}
-          <div className="bg-white rounded-xl shadow-lg p-8">
+          <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200/50 p-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Send us a message</h2>
             
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -169,7 +169,7 @@ const Contact = () => {
 
           {/* Contact Information */}
           <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-lg p-8">
+            <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200/50 p-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Get in Touch</h2>
               
               <div className="space-y-4">
