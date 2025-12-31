@@ -188,7 +188,7 @@ const Privacy = () => {
 };
 
 export default Privacy;
-import { Link } from 'react-router-dom';
+
 import { FiArrowLeft, FiLock } from 'react-icons/fi';
 
 const Privacy = () => {

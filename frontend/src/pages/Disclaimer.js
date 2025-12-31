@@ -200,7 +200,7 @@ const Disclaimer = () => {
 };
 
 export default Disclaimer;
-import { Link } from 'react-router-dom';
+
 import { FiArrowLeft, FiAlertTriangle } from 'react-icons/fi';
 
 const Disclaimer = () => {
