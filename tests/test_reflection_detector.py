@@ -13,7 +13,7 @@ class TestReflectionDetector:
     @pytest.mark.asyncio
     async def test_reflection_detector_runs(self):
         """Test that Reflection detector runs without crashing"""
-        from detectors.reflection_detector import reflection_detector
+        from detectors.reflection_detector import detect_reflections as reflection_detector
         
         url = "https://example.com/search?q=test"
         context = {'per_host_rate': None}
@@ -36,7 +36,7 @@ class TestReflectionDetector:
     @pytest.mark.asyncio
     async def test_reflection_handles_errors(self):
         """Test error handling"""
-        from detectors.reflection_detector import reflection_detector
+        from detectors.reflection_detector import detect_reflections as reflection_detector
         
         url = "https://error.com/search"
         context = {'per_host_rate': None}

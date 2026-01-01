@@ -2,6 +2,8 @@
 # Passive detector: търси потенциални XSS индикатори в текста.
 from detectors.registry import register_passive
 
+__all__ = ['detect_xss_from_text']
+
 @register_passive
 def detect_xss_from_text(text, context):
     findings = []

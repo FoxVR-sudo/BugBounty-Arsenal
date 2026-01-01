@@ -13,7 +13,7 @@ class TestOAuthDetector:
     @pytest.mark.asyncio
     async def test_oauth_detector_runs(self):
         """Test that OAuth detector runs without crashing"""
-        from detectors.oauth_detector import oauth_detector
+        from detectors.oauth_detector import oauth_detector_active as oauth_detector
         
         url = "https://example.com/oauth/authorize"
         context = {'per_host_rate': None}
@@ -36,7 +36,7 @@ class TestOAuthDetector:
     @pytest.mark.asyncio
     async def test_oauth_handles_errors(self):
         """Test error handling"""
-        from detectors.oauth_detector import oauth_detector
+        from detectors.oauth_detector import oauth_detector_active as oauth_detector
         
         url = "https://error.com/oauth"
         context = {'per_host_rate': None}

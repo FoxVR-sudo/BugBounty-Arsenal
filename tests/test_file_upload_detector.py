@@ -13,7 +13,7 @@ class TestFileUploadDetector:
     @pytest.mark.asyncio
     async def test_file_upload_detector_runs(self):
         """Test that File Upload detector runs without crashing"""
-        from detectors.file_upload_detector import file_upload_detector
+        from detectors.file_upload_detector import file_upload_detector_active as file_upload_detector
         
         url = "https://example.com/upload"
         context = {'per_host_rate': None}
@@ -36,7 +36,7 @@ class TestFileUploadDetector:
     @pytest.mark.asyncio
     async def test_file_upload_handles_errors(self):
         """Test error handling"""
-        from detectors.file_upload_detector import file_upload_detector
+        from detectors.file_upload_detector import file_upload_detector_active as file_upload_detector
         
         url = "https://error.com/upload"
         context = {'per_host_rate': None}

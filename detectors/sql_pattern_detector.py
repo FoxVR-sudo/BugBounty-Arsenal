@@ -3,6 +3,8 @@
 import re
 from detectors.registry import register_passive
 
+__all__ = ['detect_sql_from_text']
+
 @register_passive
 def detect_sql_from_text(text, context):
     """
