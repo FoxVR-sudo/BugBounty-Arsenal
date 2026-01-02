@@ -31,7 +31,7 @@ from drf_spectacular.views import (
 
 from users.views import UserViewSet
 from users.auth_views import login_view, signup_view, signup_enterprise_view, token_refresh_view
-from users.landing_views import landing_page, dashboard_page, login_page, signup_page
+from users.landing_views import landing_page, dashboard_page, login_page, signup_page, pricing_page
 from users.api_views import (
     send_phone_verification, verify_phone_code, resend_phone_verification,
     verify_company, search_company, get_supported_countries, get_current_user
@@ -75,6 +75,7 @@ urlpatterns = [
     # Auth pages (HTML forms)
     path('login/', login_page, name='login-page'),
     path('signup/', signup_page, name='signup-page'),
+    path('pricing/', pricing_page, name='pricing-page'),
     
     # Dashboard (requires authentication)
     path('dashboard/', dashboard_page, name='dashboard'),

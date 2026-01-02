@@ -22,6 +22,12 @@ def signup_page(request):
     return render(request, 'signup.html')
 
 
+@require_http_methods(["GET"])
+def pricing_page(request):
+    """Pricing page view - renders pricing plans"""
+    return render(request, 'pricing.html')
+
+
 @login_required
 @require_http_methods(["GET"])
 def dashboard_page(request):
