@@ -1039,3 +1039,225 @@ body {
     }
     
     .payment-icons {
+
+/* Content Pages (Docs, About, Blog, etc.) */
+.content-page {
+    max-width: 900px;
+    margin: 2rem auto;
+    padding: 0 2rem;
+}
+
+.content-container h1 {
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+}
+
+.subtitle {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+}
+
+.docs-section, .api-section, .about-section, .legal-section, 
+.security-detail, .compliance-section {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.docs-section h2, .api-section h2, .about-section h2, 
+.legal-section h2, .security-detail h2, .compliance-section h2 {
+    color: var(--primary-blue);
+    margin-bottom: 1rem;
+}
+
+.docs-section ul, .legal-section ul, .security-detail ul {
+    list-style: none;
+    margin-top: 1rem;
+}
+
+.docs-section ul li, .legal-section ul li, .security-detail ul li {
+    padding: 0.5rem 0;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.docs-section ul li:last-child, .legal-section ul li:last-child,
+.security-detail ul li:last-child {
+    border-bottom: none;
+}
+
+.api-section pre {
+    background: var(--dark-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+    overflow-x: auto;
+}
+
+.api-section code {
+    color: var(--success);
+    font-family: 'Monaco', 'Courier New', monospace;
+}
+
+.btn-secondary {
+    display: inline-block;
+    background: transparent;
+    color: var(--primary-blue);
+    border: 2px solid var(--primary-blue);
+    padding: 0.75rem 2rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s;
+    margin-left: 1rem;
+}
+
+.btn-secondary:hover {
+    background: var(--primary-blue);
+    color: white;
+}
+
+/* Blog */
+.blog-list {
+    margin-top: 2rem;
+}
+
+.blog-post {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.blog-post h2 {
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.post-meta {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+/* Careers */
+.careers-intro {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.job-listings {
+    margin-top: 2rem;
+}
+
+.job-post {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+}
+
+.job-post h2 {
+    color: var(--primary-blue);
+    margin-bottom: 0.5rem;
+}
+
+.job-location {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.careers-contact {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-top: 2rem;
+    text-align: center;
+}
+
+/* Contact */
+.contact-methods {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+.contact-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
+.contact-card h3 {
+    color: var(--primary-blue);
+    margin-bottom: 0.5rem;
+}
+
+.contact-card p {
+    color: var(--text-secondary);
+    margin: 0.5rem 0;
+}
+
+.contact-card strong {
+    color: var(--text-primary);
+}
+
+.contact-social {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-top: 2rem;
+}
+
+.contact-social h3 {
+    color: var(--primary-blue);
+    margin-bottom: 1rem;
+}
+
+/* Compliance */
+.cert-card, .regulation-card {
+    background: var(--dark-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.cert-card h3, .regulation-card h3 {
+    color: var(--primary-blue);
+    margin-bottom: 0.5rem;
+}
+
+.cert-card p, .regulation-card p {
+    color: var(--text-secondary);
+    margin: 0.5rem 0;
+}
+
+.cert-card ul, .regulation-card ul {
+    list-style: none;
+    margin-top: 0.5rem;
+}
+
+.cert-card ul li, .regulation-card ul li {
+    padding: 0.25rem 0;
+    color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+    .contact-methods {
+        grid-template-columns: 1fr;
+    }
+}

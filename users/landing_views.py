@@ -46,3 +46,54 @@ def pricing_page(request):
 def dashboard_page(request):
     """Dashboard page view - main app interface for authenticated users"""
     return render(request, 'dashboard.html')
+
+
+# Footer pages
+@require_http_methods(["GET"])
+def docs_page(request):
+    return render(request, 'docs.html')
+
+
+@require_http_methods(["GET"])
+def api_reference_page(request):
+    return render(request, 'api_reference.html')
+
+
+@require_http_methods(["GET"])
+def about_page(request):
+    return render(request, 'about.html')
+
+
+@require_http_methods(["GET"])
+def blog_page(request):
+    return render(request, 'blog.html')
+
+
+@require_http_methods(["GET"])
+def careers_page(request):
+    return render(request, 'careers.html')
+
+
+@require_http_methods(["GET"])
+def contact_page(request):
+    return render(request, 'contact.html')
+
+
+@require_http_methods(["GET"])
+def privacy_page(request):
+    return render(request, 'privacy.html')
+
+
+@require_http_methods(["GET"])
+def terms_page(request):
+    return render(request, 'terms.html')
+
+
+@require_http_methods(["GET"])
+def security_page(request):
+    return render(request, 'security.html')
+
+
+@require_http_methods(["GET"])
+def compliance_page(request):
+    return render(request, 'compliance.html')
