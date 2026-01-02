@@ -31,6 +31,7 @@ from drf_spectacular.views import (
 
 from users.views import UserViewSet
 from users.auth_views import login_view, signup_view, signup_enterprise_view, token_refresh_view
+from users.landing_views import landing_page
 from users.api_views import (
     send_phone_verification, verify_phone_code, resend_phone_verification,
     verify_company, search_company, get_supported_countries, get_current_user
@@ -68,6 +69,9 @@ router.register(r'api-keys', ApiKeyViewSet, basename='apikey')
 router.register(r'subscriptions', SubscriptionViewSet, basename='subscription')
 
 urlpatterns = [
+    # Landing page
+    path('', landing_page, name='landing'),
+    
     path('admin/', admin.site.urls),
     
     # Favicon redirect
