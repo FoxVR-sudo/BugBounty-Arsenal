@@ -930,8 +930,10 @@ async def _bounded_scan_with_retries(
                     'cloudflare_solver': cloudflare_solver,
                     'scan_mode': scan_mode,
                     'user_tier': user_tier,
-                    'enabled_detectors': enabled_detectors,  # V3.0: Pass detector filter
+                    'enabled_detectors': extra_context.get('enabled_detectors') if extra_context else None,  # V3.0: Pass detector filter
                 }
+                if extra_context:
+                    context.update(extra_context)
                 return await scan_single_url(
                     session,
                     target_url,
