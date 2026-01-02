@@ -17,7 +17,18 @@ logger = logging.getLogger(__name__)
 
 # Custom throttle for login attempts
 class LoginRateThrottle(AnonRateThrottle):
-    scope = 'login'  # Uses 'login' rate from settings (5/hour)
+    scope = 'login'  # Uses 'login' rate from settings
+    
+    def wait(self):
+        """Return wait time in seconds with better formatting"""
+        wait_seconds = super().wait()
+        if wait_seconds:
+            # Convert to minutes if more than 60 seconds
+            if wait_seconds >= 60:
+                wait_minutes = int(wait_seconds / 60)
+                return wait_minutes * 60  # Return in minute increments
+            return wait_seconds
+        return None
 
 
 @extend_schema(

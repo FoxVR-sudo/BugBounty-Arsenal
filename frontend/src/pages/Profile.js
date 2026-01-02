@@ -6,8 +6,10 @@ import { format } from 'date-fns';
 import { statsService } from '../services/api';
 import { FiUser, FiMail, FiCalendar, FiActivity, FiShield, FiAward, FiAlertTriangle, FiCheckCircle, FiDownload } from 'react-icons/fi';
 import DashboardLayout from '../components/DashboardLayout';
+import { useTheme } from '../contexts/ThemeContext';
 
 const Profile = () => {
+  const { isDark } = useTheme();
   const [scanFilter, setScanFilter] = useState('all'); // all, completed, failed, running
 
   const { data: profile } = useQuery('profile', () =>
@@ -35,7 +37,7 @@ const Profile = () => {
     <DashboardLayout>
       <div className="p-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Profile</h1>
+          <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Profile</h1>
           <p className="text-gray-600 mt-2">Manage your account and view your statistics</p>
         </div>
 
@@ -292,6 +294,7 @@ const StatusBadge = ({ status }) => {
 };
 
 const StatBox = ({ label, value, icon, color }) => {
+  const { isDark } = useTheme();
   const colors = {
     blue: 'bg-blue-100 text-blue-600',
     red: 'bg-red-100 text-red-600',
@@ -305,7 +308,7 @@ const StatBox = ({ label, value, icon, color }) => {
         {React.cloneElement(icon, { size: 20 })}
       </div>
       <p className="text-gray-600 text-sm mb-1">{label}</p>
-      <p className="text-3xl font-bold text-gray-900">{value}</p>
+      <p className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{value}</p>
     </div>
   );
 };

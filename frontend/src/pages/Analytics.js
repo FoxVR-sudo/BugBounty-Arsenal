@@ -3,6 +3,7 @@ import { useQuery } from 'react-query';
 import { statsService } from '../services/api';
 import { FiTrendingUp, FiAlertTriangle, FiActivity, FiTarget } from 'react-icons/fi';
 import DashboardLayout from '../components/DashboardLayout';
+import { useTheme } from '../contexts/ThemeContext';
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
@@ -11,6 +12,7 @@ import {
 const COLORS = ['#EF4444', '#F59E0B', '#10B981', '#3B82F6', '#8B5CF6'];
 
 const Analytics = () => {
+  const { isDark } = useTheme();
   const { data: stats } = useQuery('analytics', () =>
     statsService.getOverview().then(res => res.data)
   );
@@ -45,8 +47,8 @@ const Analytics = () => {
     <DashboardLayout>
       <div className="p-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
-          <p className="text-gray-600 mt-2">Detailed insights into your security scans</p>
+          <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Analytics</h1>
+          <p className={`mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Detailed insights into your security scans</p>
         </div>
 
         {/* Stats Cards */}
@@ -142,6 +144,7 @@ const Analytics = () => {
 };
 
 const StatCard = ({ title, value, icon, color, trend }) => {
+  const { isDark } = useTheme();
   const colors = {
     red: 'bg-red-100 text-red-600',
     orange: 'bg-orange-100 text-orange-600',
@@ -162,7 +165,7 @@ const StatCard = ({ title, value, icon, color, trend }) => {
         )}
       </div>
       <h3 className="text-gray-500 text-sm mt-4">{title}</h3>
-      <p className="text-3xl font-bold text-gray-900 mt-2">{value}</p>
+      <p className={`text-3xl font-bold mt-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>{value}</p>
     </div>
   );
 };

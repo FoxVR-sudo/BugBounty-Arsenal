@@ -6,7 +6,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 import json
-from .models import Scan, AuditLog, ApiKey
+from .models import Scan, Vulnerability, AuditLog, ApiKey
 from .serializers import (
     ScanSerializer,
     ScanDetailSerializer,
@@ -106,13 +106,37 @@ class ScanViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def stats(self, request):
         """Get scan statistics for current user"""
+        from django.db.models import Count, Q
+        
         queryset = self.get_queryset()
+        
+        # Get all vulnerabilities for the user
+        all_vulns = Vulnerability.objects.filter(scan__user=request.user)
+        
+        # Count by severity
+        severity_counts = {
+            'critical': all_vulns.filter(severity='critical').count(),
+            'high': all_vulns.filter(severity='high').count(),
+            'medium': all_vulns.filter(severity='medium').count(),
+            'low': all_vulns.filter(severity='low').count(),
+            'info': all_vulns.filter(severity='info').count(),
+        }
+        
+        # Count by detector/type
+        vuln_by_type = {}
+        detector_counts = all_vulns.values('detector').annotate(count=Count('id'))
+        for item in detector_counts:
+            vuln_by_type[item['detector']] = item['count']
+        
         return Response({
             'total_scans': queryset.count(),
             'completed': queryset.filter(status='completed').count(),
             'running': queryset.filter(status='running').count(),
             'failed': queryset.filter(status='failed').count(),
             'pending': queryset.filter(status='pending').count(),
+            'total_vulnerabilities': all_vulns.count(),
+            'severity': severity_counts,
+            'vuln_by_type': vuln_by_type,
         })
 
     # DEPRECATED: Replaced by export_scan_report_view custom URL endpoint

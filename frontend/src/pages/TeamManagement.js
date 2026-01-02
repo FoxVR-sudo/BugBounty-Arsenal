@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FiUsers, FiUserPlus, FiTrash2, FiMail, FiCopy, FiCheck, FiShield, FiEye } from 'react-icons/fi';
 import DashboardLayout from '../components/DashboardLayout';
+import { useTheme } from '../contexts/ThemeContext';
 
 const TeamManagement = () => {
+  const { isDark } = useTheme();
   const [team, setTeam] = useState(null);
   const [members, setMembers] = useState([]);
   const [invitations, setInvitations] = useState([]);
@@ -161,7 +163,7 @@ const TeamManagement = () => {
     <DashboardLayout>
       <div className="p-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Team Management</h1>
+          <h1 className={`text-3xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>Team Management</h1>
           <p className="text-gray-600">Collaborate with your team members on security scans</p>
         </div>
 

@@ -4,6 +4,7 @@ import { useQuery } from 'react-query';
 import { scanService } from '../services/api';
 import { FiPlay, FiSettings, FiAlertCircle, FiCheckCircle, FiClock } from 'react-icons/fi';
 import DashboardLayout from '../components/DashboardLayout';
+import { useTheme } from '../contexts/ThemeContext';
 
 const scannerInfo = {
   xss: {
@@ -153,6 +154,7 @@ const scannerInfo = {
 };
 
 const ScannerPage = () => {
+  const { isDark } = useTheme();
   const { type } = useParams();
   const [target, setTarget] = useState('');
   const [acceptDisclaimer, setAcceptDisclaimer] = useState(false);
@@ -268,7 +270,7 @@ const ScannerPage = () => {
       <div className="p-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">{info.name}</h1>
+          <h1 className={`text-3xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>{info.name}</h1>
           <p className="text-gray-600">{info.description}</p>
           <div className="mt-4">
             <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${getRiskColor(info.riskLevel)}`}>

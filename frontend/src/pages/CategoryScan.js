@@ -276,7 +276,7 @@ const CategoryScan = () => {
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-2">
             <span className="text-4xl">{category.icon_emoji || category.icon}</span>
-            <h1 className="text-3xl font-bold text-gray-900">{category.display_name}</h1>
+            <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{category.display_name}</h1>
             {category.required_plan !== 'free' && (
               <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-semibold uppercase">
                 {category.required_plan}

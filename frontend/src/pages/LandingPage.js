@@ -47,11 +47,11 @@ const LandingPage = () => {
       {/* Hero Section */}
       <section className="container mx-auto px-6 py-20 text-center">
         <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
-          Professional <span className="text-primary">Bug Bounty</span> Platform
+          Professional <span className="text-primary">Security Testing</span> Platform
         </h1>
         <p className="text-xl text-gray-300 mb-8 max-w-3xl mx-auto">
-          Automated vulnerability scanning with 40+ detectors. Real-time results. No fake data.
-          100% transparent security testing for modern applications.
+          Comprehensive security scanning with 40+ detectors across 6 specialized categories.
+          Real-time vulnerability detection. Enterprise-grade infrastructure. 100% transparent results.
         </p>
         <div className="flex gap-4 justify-center">
           <Link
@@ -69,10 +69,18 @@ const LandingPage = () => {
         </div>
         
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-8 mt-16 max-w-3xl mx-auto">
+        <div className="grid grid-cols-5 gap-8 mt-16 max-w-5xl mx-auto">
           <div className="text-center">
             <div className="text-4xl font-bold text-primary">40+</div>
             <div className="text-gray-400 mt-2">Security Detectors</div>
+          </div>
+          <div className="text-center">
+            <div className="text-4xl font-bold text-primary">6</div>
+            <div className="text-gray-400 mt-2">Scan Categories</div>
+          </div>
+          <div className="text-center">
+            <div className="text-4xl font-bold text-primary">24/7</div>
+            <div className="text-gray-400 mt-2">Availability</div>
           </div>
           <div className="text-center">
             <div className="text-4xl font-bold text-primary">100%</div>
@@ -88,73 +96,163 @@ const LandingPage = () => {
       {/* Features Section */}
       <section id="features" className="bg-gray-800 py-20">
         <div className="container mx-auto px-6">
-          <h2 className="text-4xl font-bold text-white text-center mb-12">
-            Comprehensive Security Testing
+          <h2 className="text-4xl font-bold text-white text-center mb-4">
+            Complete Security Testing Platform
           </h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <p className="text-center text-gray-400 mb-12 max-w-3xl mx-auto">
+            BugBounty Arsenal provides comprehensive security testing across 6 specialized categories 
+            with 40+ advanced detectors. From reconnaissance to advanced exploitation techniques.
+          </p>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             <FeatureCard
               icon={<FiTarget />}
-              title="Reconnaissance"
+              title="Reconnaissance Scan"
               items={[
-                'Subdomain Takeover',
-                'Directory Listing',
-                'Security Headers',
-                'Secret Detection',
-                'CORS Analysis',
-                'GraphQL Discovery',
+                'Subdomain Takeover Detection',
+                'Directory Listing Discovery',
+                'Security Headers Analysis',
+                'Secret & API Key Detection',
+                'CORS Misconfiguration',
+                'GraphQL Endpoint Discovery',
               ]}
             />
             <FeatureCard
               icon={<FiCode />}
-              title="Web Security"
+              title="Web Application Scan"
               items={[
-                'XSS Detection',
-                'SQL Injection',
-                'LFI/RFI',
-                'CSRF',
-                'XXE',
-                'SSTI',
+                'XSS Detection (All Types)',
+                'SQL Injection (Advanced)',
+                'LFI/RFI Path Traversal',
+                'CSRF Token Bypass',
+                'XXE Vulnerability',
+                'SSTI Detection',
                 'Command Injection',
               ]}
             />
             <FeatureCard
               icon={<FiLock />}
-              title="API Security"
+              title="API Security Scan"
               items={[
-                'JWT Vulnerabilities',
-                'OAuth Flaws',
+                'JWT Security Testing',
+                'OAuth 2.0 Flow Analysis',
                 'Rate Limit Bypass',
-                'IDOR',
+                'IDOR Detection',
                 'NoSQL Injection',
                 'GraphQL Injection',
               ]}
             />
             <FeatureCard
               icon={<FiActivity />}
-              title="Advanced"
+              title="Vulnerability Assessment"
               items={[
-                'SSRF (+ OOB)',
-                'Race Conditions',
+                'SSRF (+ Out-of-Band)',
+                'Race Condition Testing',
                 'Cache Poisoning',
                 'Prototype Pollution',
-                'CVE Database',
-                'Brute Force',
+                'CVE Database Matching',
+                'File Upload Vulnerabilities',
+              ]}
+            />
+            <FeatureCard
+              icon={<FiShield />}
+              title="Mobile Security (Pro+)"
+              items={[
+                'iOS Security Testing',
+                'Android Analysis',
+                'API Endpoint Discovery',
+                'Certificate Pinning',
+                'Dynamic Exploitation',
+                'Binary Analysis',
+              ]}
+            />
+            <FeatureCard
+              icon={<FiZap />}
+              title="Custom Scan (Enterprise)"
+              items={[
+                'All 40+ Detectors',
+                'Nuclei Integration',
+                'Custom Payloads',
+                'Brute Force Testing',
+                'Parameter Fuzzing',
+                'Advanced Techniques',
               ]}
             />
           </div>
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section id="pricing" className="py-20">
+      {/* Platform Capabilities */}
+      <section className="py-20">
         <div className="container mx-auto px-6">
           <h2 className="text-4xl font-bold text-white text-center mb-12">
-            Transparent Pricing
+            Why Choose BugBounty Arsenal
           </h2>
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <div className="bg-gray-800/50 backdrop-blur-lg border border-gray-700/50 p-6 rounded-xl">
+              <div className="text-3xl mb-4">🚀</div>
+              <h3 className="text-xl font-bold text-white mb-3">Real-Time Scanning</h3>
+              <p className="text-gray-400">
+                Get instant results with our distributed scanning infrastructure. 
+                No waiting, no queues - start testing in seconds.
+              </p>
+            </div>
+            <div className="bg-gray-800/50 backdrop-blur-lg border border-gray-700/50 p-6 rounded-xl">
+              <div className="text-3xl mb-4">📊</div>
+              <h3 className="text-xl font-bold text-white mb-3">Detailed Reports</h3>
+              <p className="text-gray-400">
+                Export comprehensive reports in PDF, JSON, or CSV formats. 
+                Full evidence including HTTP requests, responses, and screenshots.
+              </p>
+            </div>
+            <div className="bg-gray-800/50 backdrop-blur-lg border border-gray-700/50 p-6 rounded-xl">
+              <div className="text-3xl mb-4">🔌</div>
+              <h3 className="text-xl font-bold text-white mb-3">REST API Access</h3>
+              <p className="text-gray-400">
+                Integrate scanning into your CI/CD pipeline. 
+                Full API documentation with SDKs for popular languages.
+              </p>
+            </div>
+            <div className="bg-gray-800/50 backdrop-blur-lg border border-gray-700/50 p-6 rounded-xl">
+              <div className="text-3xl mb-4">👥</div>
+              <h3 className="text-xl font-bold text-white mb-3">Team Collaboration</h3>
+              <p className="text-gray-400">
+                Share scans with your team members. 
+                Role-based access control and audit logs for enterprise compliance.
+              </p>
+            </div>
+            <div className="bg-gray-800/50 backdrop-blur-lg border border-gray-700/50 p-6 rounded-xl">
+              <div className="text-3xl mb-4">⚡</div>
+              <h3 className="text-xl font-bold text-white mb-3">High Performance</h3>
+              <p className="text-gray-400">
+                Concurrent scanning with intelligent rate limiting. 
+                Up to 20 parallel scans for Enterprise users.
+              </p>
+            </div>
+            <div className="bg-gray-800/50 backdrop-blur-lg border border-gray-700/50 p-6 rounded-xl">
+              <div className="text-3xl mb-4">🛡️</div>
+              <h3 className="text-xl font-bold text-white mb-3">Enterprise Security</h3>
+              <p className="text-gray-400">
+                SOC 2 Type II certified. PCI DSS compliant. 
+                End-to-end encryption and zero-knowledge architecture.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section id="pricing" className="bg-gray-800 py-20">
+        <div className="container mx-auto px-6">
+          <h2 className="text-4xl font-bold text-white text-center mb-4">
+            Simple, Transparent Pricing
+          </h2>
+          <p className="text-center text-gray-400 mb-12">
+            All plans include core features. Upgrade anytime as your needs grow.
+          </p>
           {loading ? (
             <div className="text-center text-white">Loading plans...</div>
           ) : (
-            <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
               {plans.map((plan) => (
                 <PricingCard
                   key={plan.id}
@@ -206,26 +304,34 @@ const LandingPage = () => {
       <section className="py-20">
         <div className="container mx-auto px-6">
           <h2 className="text-4xl font-bold text-white text-center mb-12">
-            Flexible Payment Options
+            Secure Payment Methods
           </h2>
-          <div className="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto">
+          <div className="grid md:grid-cols-4 gap-6 max-w-4xl mx-auto">
             <div className="bg-gray-800/50 backdrop-blur-lg border border-gray-700/50 p-6 rounded-xl text-center hover:bg-gray-700/50 transition">
               <FiCreditCard className="text-5xl text-primary mx-auto mb-3" />
-              <div className="text-white font-semibold text-lg">Stripe</div>
-              <div className="text-gray-400 text-sm">Secure payment processing</div>
-              <div className="text-gray-500 text-xs mt-2">Visa, Mastercard, Amex</div>
+              <div className="text-white font-semibold text-lg">Visa</div>
+              <div className="text-gray-400 text-sm">Credit & Debit Cards</div>
             </div>
             <div className="bg-gray-800/50 backdrop-blur-lg border border-gray-700/50 p-6 rounded-xl text-center hover:bg-gray-700/50 transition">
-              <FiShield className="text-5xl text-green-500 mx-auto mb-3" />
-              <div className="text-white font-semibold text-lg">PCI DSS Compliant</div>
-              <div className="text-gray-400 text-sm">Bank-level security</div>
-              <div className="text-gray-500 text-xs mt-2">SSL encrypted</div>
+              <FiCreditCard className="text-5xl text-primary mx-auto mb-3" />
+              <div className="text-white font-semibold text-lg">Mastercard</div>
+              <div className="text-gray-400 text-sm">Credit & Debit Cards</div>
+            </div>
+            <div className="bg-gray-800/50 backdrop-blur-lg border border-gray-700/50 p-6 rounded-xl text-center hover:bg-gray-700/50 transition">
+              <FiCreditCard className="text-5xl text-primary mx-auto mb-3" />
+              <div className="text-white font-semibold text-lg">Amex</div>
+              <div className="text-gray-400 text-sm">American Express</div>
             </div>
             <div className="bg-gray-800/50 backdrop-blur-lg border border-gray-700/50 p-6 rounded-xl text-center hover:bg-gray-700/50 transition">
               <FiFileText className="text-5xl text-blue-500 mx-auto mb-3" />
-              <div className="text-white font-semibold text-lg">Invoice</div>
-              <div className="text-gray-400 text-sm">Enterprise billing</div>
-              <div className="text-gray-500 text-xs mt-2">Net 30 terms</div>
+              <div className="text-white font-semibold text-lg">Bank Transfer</div>
+              <div className="text-gray-400 text-sm">Enterprise only</div>
+            </div>
+          </div>
+          <div className="text-center mt-8">
+            <div className="inline-flex items-center gap-2 text-gray-400">
+              <FiShield className="text-green-500" />
+              <span>All payments processed securely via Stripe (PCI DSS Level 1)</span>
             </div>
           </div>
         </div>
@@ -255,62 +361,102 @@ const PricingCard = ({ plan, highlighted }) => {
   
   return (
     <div
-      className={`p-8 rounded-xl transition-all duration-300 ${
+      className={`p-6 rounded-xl transition-all duration-300 flex flex-col ${
         highlighted
           ? 'bg-primary border-2 border-primary transform scale-105 hover:scale-110 hover:shadow-2xl'
           : 'bg-gray-800/50 backdrop-blur-lg border-2 border-gray-700/50 hover:bg-gray-700/50 hover:border-gray-600/50 hover:shadow-xl'
       }`}
     >
-      <h3 className="text-2xl font-bold text-white mb-2">{plan.display_name}</h3>
-      <div className="mb-6">
-        <span className="text-4xl font-bold text-white">
+      {highlighted && (
+        <div className="bg-white text-primary px-3 py-1 rounded-full text-xs font-bold inline-block mb-3">
+          MOST POPULAR
+        </div>
+      )}
+      <h3 className="text-xl font-bold text-white mb-2">{plan.display_name}</h3>
+      <p className="text-gray-300 text-xs mb-3">{plan.description}</p>
+      <div className="mb-4">
+        <span className="text-3xl font-bold text-white">
           {isFree ? 'Free' : `$${plan.price}`}
         </span>
         <span className="text-gray-400 ml-2">
-          / {isFree ? 'forever' : 'per month'}
+          / {isFree ? 'forever' : 'month'}
         </span>
       </div>
-      <ul className="space-y-3 mb-8">
+      
+      <ul className="space-y-2 mb-6 text-sm flex-grow">
+        {/* Scan Limits */}
         <li className="flex items-start gap-2 text-gray-300">
           <FiCheck className="text-green-500 mt-1 flex-shrink-0" />
-          {plan.daily_scan_limit === -1 ? 'Unlimited' : plan.daily_scan_limit} scans per day
+          <span>
+            <strong>{plan.daily_scan_limit === -1 ? 'Unlimited' : plan.daily_scan_limit}</strong> scans/day,{' '}
+            <strong>{plan.monthly_scan_limit === -1 ? 'Unlimited' : plan.monthly_scan_limit}</strong>/month
+          </span>
         </li>
+        
+        {/* Concurrent Scans */}
         <li className="flex items-start gap-2 text-gray-300">
           <FiCheck className="text-green-500 mt-1 flex-shrink-0" />
-          {plan.monthly_scan_limit === -1 ? 'Unlimited' : plan.monthly_scan_limit} scans per month
+          {plan.concurrent_scans} concurrent scans
         </li>
-        {plan.features && plan.features.length > 0 ? (
-          plan.features.map((feature, i) => (
+        
+        {/* Storage */}
+        <li className="flex items-start gap-2 text-gray-300">
+          <FiCheck className="text-green-500 mt-1 flex-shrink-0" />
+          {plan.storage_limit_mb >= 1000 ? `${(plan.storage_limit_mb / 1000).toFixed(0)} GB` : `${plan.storage_limit_mb} MB`} storage
+        </li>
+        
+        {/* Retention */}
+        <li className="flex items-start gap-2 text-gray-300">
+          <FiCheck className="text-green-500 mt-1 flex-shrink-0" />
+          {plan.retention_days}-day result retention
+        </li>
+        
+        {/* Features from database - filter out specific enterprise features */}
+        {plan.features && plan.features.map((feature, i) => {
+          // Skip these specific features for enterprise plan
+          if (isEnterprise) {
+            const skipFeatures = [
+              'Company Verification',
+              'Dedicated Support',
+              'Custom SLA'
+            ];
+            if (skipFeatures.some(skip => feature.includes(skip))) {
+              return null;
+            }
+          }
+          return (
             <li key={i} className="flex items-start gap-2 text-gray-300">
               <FiCheck className="text-green-500 mt-1 flex-shrink-0" />
               {feature}
             </li>
-          ))
-        ) : (
-          <>
-            {plan.allow_teams && (
-              <li className="flex items-start gap-2 text-gray-300">
-                <FiCheck className="text-green-500 mt-1 flex-shrink-0" />
-                Team collaboration ({plan.max_team_members} members)
-              </li>
-            )}
-            {plan.allow_integrations && (
-              <li className="flex items-start gap-2 text-gray-300">
-                <FiCheck className="text-green-500 mt-1 flex-shrink-0" />
-                Integrations ({plan.max_integrations} max)
-              </li>
-            )}
-            {plan.allow_dangerous_tools && (
-              <li className="flex items-start gap-2 text-gray-300">
-                <FiCheck className="text-green-500 mt-1 flex-shrink-0" />
-                Dangerous tools & custom payloads
-              </li>
-            )}
-          </>
+          );
+        })}
+        
+        {/* Dynamic permissions - skip specific ones for enterprise */}
+        {plan.allow_teams && !isEnterprise && (
+          <li className="flex items-start gap-2 text-gray-300">
+            <FiCheck className="text-green-500 mt-1 flex-shrink-0" />
+            Team collaboration ({plan.max_team_members === -1 ? 'unlimited' : plan.max_team_members} members)
+          </li>
+        )}
+        
+        {plan.allow_integrations && !isEnterprise && (
+          <li className="flex items-start gap-2 text-gray-300">
+            <FiCheck className="text-green-500 mt-1 flex-shrink-0" />
+            Integrations ({plan.max_integrations === -1 ? 'unlimited' : plan.max_integrations} max)
+          </li>
+        )}
+        
+        {plan.allow_dangerous_tools && !isEnterprise && (
+          <li className="flex items-start gap-2 text-gray-300">
+            <FiCheck className="text-green-500 mt-1 flex-shrink-0" />
+            Dangerous tools & advanced testing
+          </li>
         )}
       </ul>
+      
       <Link
-        to="/register"
+        to={`/register${isEnterprise ? '?plan=enterprise' : isFree ? '' : '?plan=pro'}`}
         className={`block text-center px-6 py-3 rounded-lg font-semibold transition ${
           highlighted
             ? 'bg-white text-primary hover:bg-gray-100'

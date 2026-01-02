@@ -5,8 +5,10 @@ import { SiSlack, SiJira, SiDiscord, SiTelegram, SiGithub, SiGitlab } from 'reac
 import { MdEmail } from 'react-icons/md';
 import { FiGlobe } from 'react-icons/fi';
 import DashboardLayout from '../components/DashboardLayout';
+import { useTheme } from '../contexts/ThemeContext';
 
 const Integrations = () => {
+  const { isDark } = useTheme();
   const [integrations, setIntegrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -283,7 +285,7 @@ const Integrations = () => {
     <DashboardLayout>
       <div className="p-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Integrations</h1>
+          <h1 className={`text-3xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>Integrations</h1>
           <p className="text-gray-600">Connect BugBounty Arsenal with your favorite tools</p>
         </div>
 

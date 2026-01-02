@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FiCheckCircle, FiArrowRight } from 'react-icons/fi';
+import { useTheme } from '../contexts/ThemeContext';
 
 const PaymentSuccess = () => {
+  const { isDark } = useTheme();
   const [countdown, setCountdown] = useState(5);
   const navigate = useNavigate();
 
@@ -29,7 +31,7 @@ const PaymentSuccess = () => {
               <FiCheckCircle className="text-green-600" size={48} />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Payment Successful!</h1>
+          <h1 className={`text-3xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>Payment Successful!</h1>
           <p className="text-gray-600 mb-6">Thank you for your purchase. Your subscription has been activated successfully.</p>
           <div className="bg-gray-50 rounded-lg p-6 mb-6">
             <p className="text-sm text-gray-600 mb-2">Redirecting to phone verification in</p>

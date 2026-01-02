@@ -31,6 +31,45 @@ const Dashboard = () => {
     fetchSubscription();
     fetchCategoryStats();
     fetchUserInfo();
+    
+    // Listen for window focus to refresh data when returning to tab
+    const handleFocus = () => {
+      const subscriptionUpdated = localStorage.getItem('subscription_updated');
+      if (subscriptionUpdated === 'true') {
+        localStorage.removeItem('subscription_updated');
+        console.log('Window focused - refreshing subscription data...');
+        fetchSubscription();
+        fetchUserInfo();
+        refetch(); // Refetch scans
+      }
+    };
+    
+    // Listen for storage changes from other tabs/windows
+    const handleStorageChange = (e) => {
+      if (e.key === 'subscription_updated' && e.newValue === 'true') {
+        localStorage.removeItem('subscription_updated');
+        console.log('Storage event - refreshing subscription data...');
+        fetchSubscription();
+        fetchUserInfo();
+        refetch();
+      }
+    };
+    
+    // Auto-refresh subscription data every 30 seconds to update scan counters
+    const refreshInterval = setInterval(() => {
+      console.log('Auto-refreshing subscription data...');
+      fetchSubscription();
+    }, 30000); // 30 seconds
+    
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(refreshInterval);
+    };
   }, []);
 
   const fetchUserInfo = async () => {
@@ -149,13 +188,13 @@ const Dashboard = () => {
           />
           <StatCard
             title="Active"
-            value={stats?.running_scans || 0}
+            value={stats?.running || 0}
             icon={<FiClock />}
             color="yellow"
           />
           <StatCard
             title="Completed"
-            value={stats?.completed_scans || 0}
+            value={stats?.completed || 0}
             icon={<FiCheckCircle />}
             color="green"
           />

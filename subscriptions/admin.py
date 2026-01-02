@@ -55,7 +55,7 @@ class SubscriptionAdmin(admin.ModelAdmin):
     list_display = ['user_email', 'plan_name', 'status', 'usage_display', 'storage_info', 'created_at']
     list_filter = ['status', 'plan__name', 'created_at']
     search_fields = ['user__email', 'stripe_customer_id', 'stripe_subscription_id']
-    readonly_fields = ['created_at', 'updated_at']
+    readonly_fields = ['created_at', 'updated_at', 'last_scan_reset']
     date_hierarchy = 'created_at'
     ordering = ['-created_at']
     
@@ -71,10 +71,10 @@ class SubscriptionAdmin(admin.ModelAdmin):
             'fields': ('current_period_start', 'current_period_end', 'cancel_at_period_end')
         }),
         ('Usage Tracking', {
-            'fields': ('scans_used_today', 'last_scan_reset')
+            'fields': ('scans_used_today',)
         }),
         ('Timestamps', {
-            'fields': ('created_at', 'updated_at'),
+            'fields': ('created_at', 'updated_at', 'last_scan_reset'),
             'classes': ('collapse',)
         }),
     )

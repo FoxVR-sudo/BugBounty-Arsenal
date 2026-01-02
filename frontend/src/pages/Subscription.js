@@ -6,8 +6,10 @@ import {
   FiLoader, FiCheckCircle, FiXCircle, FiArrowRight
 } from 'react-icons/fi';
 import DashboardLayout from '../components/DashboardLayout';
+import { useTheme } from '../contexts/ThemeContext';
 
 const Subscription = () => {
+  const { isDark } = useTheme();
   const [subscription, setSubscription] = useState(null);
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -57,7 +59,10 @@ const Subscription = () => {
 
       setSuccess(response.data.message);
       setShowCancelDialog(false);
-      fetchSubscriptionData();
+      // Set flag for Dashboard to refresh subscription data
+      localStorage.setItem('subscription_updated', 'true');
+      // Reload page after 1.5s to update all subscription data
+      setTimeout(() => window.location.reload(), 1500);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to cancel subscription');
     } finally {
@@ -77,7 +82,10 @@ const Subscription = () => {
       );
 
       setSuccess(response.data.message);
-      fetchSubscriptionData();
+      // Set flag for Dashboard to refresh subscription data
+      localStorage.setItem('subscription_updated', 'true');
+      // Reload page after 1.5s to update all subscription data
+      setTimeout(() => window.location.reload(), 1500);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to reactivate subscription');
     } finally {
@@ -157,9 +165,14 @@ const Subscription = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setSuccess('Subscription updated successfully!');
-      // Remove session_id from URL
-      navigate('/subscription?upgraded=true', { replace: true });
-      fetchSubscriptionData();
+      // Set flag for Dashboard to refresh subscription data
+      localStorage.setItem('subscription_updated', 'true');
+      // Remove session_id from URL and reload to update all components
+      setTimeout(() => {
+        navigate('/subscription?upgraded=true', { replace: true });
+        // Force reload to update Dashboard counter and all subscription data
+        window.location.reload();
+      }, 1500);
     } catch (error) {
       console.error('Failed to sync subscription:', error);
       setError('Failed to sync subscription. Please refresh the page.');
@@ -179,6 +192,20 @@ const Subscription = () => {
     } else {
       fetchSubscriptionData();
     }
+    
+    // Auto-refresh subscription data every 15 seconds to update scan usage counters
+    const refreshInterval = setInterval(() => {
+      console.log('Auto-refreshing subscription usage stats...');
+      const token = localStorage.getItem('token');
+      axios.get(`${API_URL}/subscriptions/current/`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      .then(res => setSubscription(res.data))
+      .catch(err => console.error('Failed to refresh subscription:', err));
+    }, 15000); // 15 seconds
+    
+    // Cleanup interval on unmount
+    return () => clearInterval(refreshInterval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
@@ -201,7 +228,7 @@ const Subscription = () => {
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Subscription Management</h1>
+          <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>Subscription Management</h1>
           <p className="text-gray-600 mt-2">Manage your plan and billing settings</p>
         </div>
 
@@ -424,13 +451,13 @@ const Subscription = () => {
                 </div>
               )}
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {plans
                   .filter(plan => currentPlan?.name === 'free' ? plan.name === 'pro' : true)
                   .map((plan) => (
                   <div
                     key={plan.id}
-                    className={`border-2 rounded-lg p-6 cursor-pointer transition ${
+                    className={`border-2 rounded-lg p-4 cursor-pointer transition ${
                       plan.id === subscription?.plan_id
                         ? 'border-primary bg-primary bg-opacity-5'
                         : 'border-gray-200 hover:border-primary'
@@ -442,12 +469,12 @@ const Subscription = () => {
                         Popular
                       </div>
                     )}
-                    <h4 className="text-xl font-bold text-gray-900 mb-2">{plan.display_name}</h4>
-                    <div className="text-3xl font-bold text-primary mb-4">
+                    <h4 className="text-lg font-bold text-gray-900 mb-1">{plan.display_name}</h4>
+                    <div className="text-2xl font-bold text-primary mb-3">
                       {plan.price === 0 ? 'Free' : `$${plan.price}`}
                       {plan.price > 0 && <span className="text-sm text-gray-500">/mo</span>}
                     </div>
-                    <ul className="space-y-2 mb-4">
+                    <ul className="space-y-1.5 mb-3 min-h-[120px]">
                       {plan.features?.slice(0, 5).map((feature, idx) => (
                         <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
                           <FiCheck className="text-green-500 flex-shrink-0 mt-0.5" size={16} />

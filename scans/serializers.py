@@ -16,6 +16,7 @@ class VulnerabilitySerializer(serializers.ModelSerializer):
 class ScanSerializer(serializers.ModelSerializer):
     """Serializer for Scan model"""
     user_email = serializers.EmailField(source='user.email', read_only=True)
+    scan_category = serializers.CharField(source='scan_category.name', read_only=True)
     enabled_detectors = serializers.ListField(
         child=serializers.CharField(),
         write_only=True,
@@ -25,7 +26,7 @@ class ScanSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Scan
-        fields = ['id', 'user', 'user_email', 'target', 'scan_type', 
+        fields = ['id', 'user', 'user_email', 'target', 'scan_type', 'scan_category',
                   'status', 'progress', 'current_step', 'severity_counts', 'vulnerabilities_found',
                   'enabled_detectors',
                   'started_at', 'completed_at', 'report_path', 'celery_task_id', 'created_at']
@@ -56,11 +57,12 @@ class ScanSerializer(serializers.ModelSerializer):
 class ScanDetailSerializer(serializers.ModelSerializer):
     """Detailed serializer for Scan model with full results"""
     user_email = serializers.EmailField(source='user.email', read_only=True)
+    scan_category = serializers.CharField(source='scan_category.name', read_only=True)
     vulnerabilities = VulnerabilitySerializer(many=True, read_only=True)
     
     class Meta:
         model = Scan
-        fields = ['id', 'user', 'user_email', 'target', 'scan_type', 'status',
+        fields = ['id', 'user', 'user_email', 'target', 'scan_type', 'scan_category', 'status',
                   'progress', 'current_step', 'severity_counts', 'vulnerabilities_found',
                   'vulnerabilities', 'raw_results',
                   'started_at', 'completed_at', 'report_path', 'celery_task_id', 

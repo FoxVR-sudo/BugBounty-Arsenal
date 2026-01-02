@@ -87,8 +87,8 @@ def get_current_subscription(request):
                 'features': plan_features,
                 'is_popular': subscription.plan.is_popular,
             },
-            # Check if user is enterprise customer
-            'is_enterprise': hasattr(request.user, 'enterprise_customer'),
+            # Check if user is enterprise customer (safe check to avoid DB errors)
+            'is_enterprise': subscription.plan.name == 'enterprise',
         }
         
         return Response(data)

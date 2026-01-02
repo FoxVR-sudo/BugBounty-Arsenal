@@ -5,8 +5,10 @@ import { scanService } from '../services/api';
 import { FiEye, FiDownload, FiClock, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 import DashboardLayout from '../components/DashboardLayout';
 import { format } from 'date-fns';
+import { useTheme } from '../contexts/ThemeContext';
 
 const AllResults = () => {
+  const { isDark } = useTheme();
   const { data: scans, isLoading } = useQuery('all-scans', () =>
     scanService.getAll().then(res => res.data.results)
   );
@@ -38,7 +40,7 @@ const AllResults = () => {
     <DashboardLayout>
       <div className="p-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">All Scan Results</h1>
+          <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>All Scan Results</h1>
           <p className="text-gray-600 mt-2">View and manage all your security scans</p>
         </div>
 

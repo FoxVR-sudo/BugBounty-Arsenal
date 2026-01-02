@@ -136,11 +136,13 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     # Enable format suffix patterns (default is True)
     'URL_FORMAT_OVERRIDE': 'format',  # Allow both .json and ?format=json
+    # Custom exception handler for better error messages
+    'EXCEPTION_HANDLER': 'config.exception_handlers.custom_exception_handler',
     # Rate limiting
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/hour',  # General anonymous rate limit
         'user': '1000/hour',  # Authenticated users
-        'login': '3/hour',  # Login attempts - 3 tries per hour
+        'login': '10/hour',  # Login attempts - 10 tries per hour (more reasonable)
     }
 }
 
