@@ -2,12 +2,19 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
+from subscriptions.models import Plan
 
 
 @require_http_methods(["GET"])
 def landing_page(request):
     """Landing page view - marketing page for unauthenticated users"""
-    return render(request, 'landing.html')
+    plans = Plan.objects.filter(is_active=True).order_by('order')
+    context = {
+        'free_plan': plans.filter(name='free').first(),
+        'pro_plan': plans.filter(name='pro').first(),
+        'enterprise_plan': plans.filter(name='enterprise').first(),
+    }
+    return render(request, 'landing.html', context)
 
 
 @require_http_methods(["GET"])
@@ -25,7 +32,13 @@ def signup_page(request):
 @require_http_methods(["GET"])
 def pricing_page(request):
     """Pricing page view - renders pricing plans"""
-    return render(request, 'pricing.html')
+    plans = Plan.objects.filter(is_active=True).order_by('order')
+    context = {
+        'free_plan': plans.filter(name='free').first(),
+        'pro_plan': plans.filter(name='pro').first(),
+        'enterprise_plan': plans.filter(name='enterprise').first(),
+    }
+    return render(request, 'pricing.html', context)
 
 
 @login_required

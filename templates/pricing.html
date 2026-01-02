@@ -13,16 +13,16 @@
     <div class="pricing-comparison">
         <div class="pricing-card">
             <div class="plan-header">
-                <h3>Free</h3>
+                <h3>{{ free_plan.display_name }}</h3>
                 <div class="plan-price">
-                    <span class="price">$0</span>
+                    <span class="price">${{ free_plan.price|floatformat:0 }}</span>
                     <span class="period">/month</span>
                 </div>
-                <p class="plan-description">Perfect for getting started</p>
+                <p class="plan-description">{{ free_plan.description }}</p>
             </div>
             
             <ul class="plan-features">
-                <li><span class="check">✓</span> 10 scans per day</li>
+                <li><span class="check">✓</span> {{ free_plan.scans_per_day }} scans per day</li>
                 <li><span class="check">✓</span> Basic vulnerability checks</li>
                 <li><span class="check">✓</span> XSS Detection</li>
                 <li><span class="check">✓</span> SQL Injection</li>
@@ -48,16 +48,16 @@
         <div class="pricing-card featured">
             <div class="featured-badge">Recommended</div>
             <div class="plan-header">
-                <h3>Pro</h3>
+                <h3>{{ pro_plan.display_name }}</h3>
                 <div class="plan-price">
-                    <span class="price">$29</span>
+                    <span class="price">${{ pro_plan.price|floatformat:0 }}</span>
                     <span class="period">/month</span>
                 </div>
-                <p class="plan-description">For serious bug bounty hunters</p>
+                <p class="plan-description">{{ pro_plan.description }}</p>
             </div>
             
             <ul class="plan-features">
-                <li><span class="check">✓</span> Unlimited scans</li>
+                <li><span class="check">✓</span> {{ pro_plan.scans_per_day }} scans/day, {{ pro_plan.scans_per_month }}/month</li>
                 <li><span class="check">✓</span> All vulnerability checks (30+)</li>
                 <li><span class="check">✓</span> XSS Detection (Advanced)</li>
                 <li><span class="check">✓</span> SQL Injection (Advanced)</li>

@@ -133,20 +133,20 @@
             <!-- Free Plan -->
             <div class="pricing-card">
                 <div class="plan-header">
-                    <h3>Free</h3>
+                    <h3>{{ free_plan.display_name }}</h3>
                     <div class="plan-price">
-                        <span class="price">$0</span>
+                        <span class="price">${{ free_plan.price|floatformat:0 }}</span>
                         <span class="period">/month</span>
                     </div>
-                    <p class="plan-description">Perfect for getting started</p>
+                    <p class="plan-description">{{ free_plan.description }}</p>
                 </div>
                 <ul class="plan-features">
-                    <li>✓ <strong>3 scans/day</strong>, 30/month</li>
+                    <li>✓ <strong>{{ free_plan.scans_per_day }} scans/day</strong>, {{ free_plan.scans_per_month }}/month</li>
                     <li>✓ <strong>Recon Scan</strong> - Subdomain discovery</li>
                     <li>✓ <strong>Web Scan</strong> - XSS, SQLi, CORS, CSRF</li>
                     <li>✓ 16 web security detectors</li>
                     <li>✓ Basic reports (JSON, HTML)</li>
-                    <li>✓ 7-day result retention</li>
+                    <li>✓ {{ free_plan.retention_days }}-day result retention</li>
                     <li>✗ API & Vuln scans</li>
                     <li>✗ Mobile security</li>
                     <li>✗ REST API access</li>
@@ -159,15 +159,15 @@
             <div class="pricing-card featured">
                 <div class="featured-badge">Most Popular</div>
                 <div class="plan-header">
-                    <h3>Pro</h3>
+                    <h3>{{ pro_plan.display_name }}</h3>
                     <div class="plan-price">
-                        <span class="price">$49</span>
+                        <span class="price">${{ pro_plan.price|floatformat:0 }}</span>
                         <span class="period">/month</span>
                     </div>
-                    <p class="plan-description">For professional researchers</p>
+                    <p class="plan-description">{{ pro_plan.description }}</p>
                 </div>
                 <ul class="plan-features">
-                    <li>✓ <strong>100 scans/day</strong>, 1000/month</li>
+                    <li>✓ <strong>{{ pro_plan.scans_per_day }} scans/day</strong>, {{ pro_plan.scans_per_month }}/month</li>
                     <li>✓ <strong>All 5 scan categories:</strong></li>
                     <li>&nbsp;&nbsp;&nbsp;• Recon + Web + API</li>
                     <li>&nbsp;&nbsp;&nbsp;• Vulnerability + Mobile</li>
@@ -176,7 +176,7 @@
                     <li>✓ Advanced SSRF with OOB</li>
                     <li>✓ REST API access</li>
                     <li>✓ PDF & detailed reports</li>
-                    <li>✓ 30-day retention</li>
+                    <li>✓ {{ pro_plan.retention_days }}-day retention</li>
                     <li>✓ Priority support</li>
                 </ul>
                 <a href="/signup/?plan=pro" class="btn-plan-featured">Start Pro Trial</a>
@@ -185,12 +185,12 @@
             <!-- Enterprise Plan -->
             <div class="pricing-card">
                 <div class="plan-header">
-                    <h3>Enterprise</h3>
+                    <h3>{{ enterprise_plan.display_name }}</h3>
                     <div class="plan-price">
-                        <span class="price">$99</span>
+                        <span class="price">${{ enterprise_plan.price|floatformat:0 }}</span>
                         <span class="period">/month</span>
                     </div>
-                    <p class="plan-description">For security teams</p>
+                    <p class="plan-description">{{ enterprise_plan.description }}</p>
                 </div>
                 <ul class="plan-features">
                     <li>✓ <strong>Unlimited scans</strong></li>
@@ -198,8 +198,8 @@
                     <li>&nbsp;&nbsp;&nbsp;• <strong>Custom Scan</strong> (40+ detectors)</li>
                     <li>✓ Dangerous tools (Nuclei, fuzzing)</li>
                     <li>✓ Brute force & parameter fuzzing</li>
-                    <li>✓ 20 concurrent scans</li>
-                    <li>✓ Team collaboration (50 members)</li>
+                    <li>✓ {{ enterprise_plan.concurrent_scans }} concurrent scans</li>
+                    <li>✓ Team collaboration ({{ enterprise_plan.max_team_members }} members)</li>
                     <li>✓ Unlimited integrations</li>
                     <li>✓ Company verification</li>
                     <li>✓ 90-day retention</li>
