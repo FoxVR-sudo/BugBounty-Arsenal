@@ -79,9 +79,77 @@
             
             <a href="/signup/?plan=pro" class="btn-plan-featured">Upgrade to Pro</a>
         </div>
+
+        <!-- Enterprise Plan -->
+        <div class="pricing-card">
+            <div class="plan-header">
+                <h3>{{ enterprise_plan.display_name }}</h3>
+                <div class="plan-price">
+                    <span class="price">${{ enterprise_plan.price|floatformat:0 }}</span>
+                    <span class="period">/month</span>
+                </div>
+                <p class="plan-description">{{ enterprise_plan.description }}</p>
+            </div>
+            
+            <ul class="plan-features">
+                <li><span class="check">✓</span> Unlimited scans</li>
+                <li><span class="check">✓</span> All 6 scan categories</li>
+                <li><span class="check">✓</span> 40+ security detectors</li>
+                <li><span class="check">✓</span> Dangerous tools (Nuclei, fuzzing)</li>
+                <li><span class="check">✓</span> Brute force & parameter testing</li>
+                <li><span class="check">✓</span> {{ enterprise_plan.concurrent_scans }} concurrent scans</li>
+                <li><span class="check">✓</span> Team collaboration ({{ enterprise_plan.max_team_members }} members)</li>
+                <li><span class="check">✓</span> Unlimited integrations</li>
+                <li><span class="check">✓</span> Company verification</li>
+                <li><span class="check">✓</span> Advanced reporting & analytics</li>
+                <li><span class="check">✓</span> Custom scan configurations</li>
+                <li><span class="check">✓</span> API rate limit: unlimited</li>
+                <li><span class="check">✓</span> Dedicated support & SLA</li>
+                <li><span class="check">✓</span> On-premise deployment option</li>
+            </ul>
+            
+            <a href="/signup/?plan=enterprise" class="btn-plan">Contact Sales</a>
+        </div>
     </div>
 
-    <div class="faq-section">
+    <!-- Payment Methods Section -->
+    <div class="payment-methods">
+        <h2>Secure Payment Methods</h2>
+        <p>We accept all major payment methods with enterprise-grade security</p>
+        <div class="payment-icons">
+            <span class="payment-icon">💳 Visa</span>
+            <span class="payment-icon">💳 Mastercard</span>
+            <span class="payment-icon">💳 Amex</span>
+            <span class="payment-icon">💰 PayPal</span>
+            <span class="payment-icon">₿ Crypto</span>
+            <span class="payment-icon">🏦 Bank Transfer</span>
+        </div>
+    </div>
+
+    <!-- Security Section -->
+    <div class="security-section">
+        <h2>🔒 Enterprise-Grade Security</h2>
+        <div class="security-features">
+            <div class="security-item">
+                <strong>PCI DSS Compliant</strong>
+                <p>All payment data is encrypted and processed securely</p>
+            </div>
+            <div class="security-item">
+                <strong>256-bit SSL Encryption</strong>
+                <p>Your data is protected with military-grade encryption</p>
+            </div>
+            <div class="security-item">
+                <strong>SOC 2 Type II</strong>
+                <p>Independently audited security and availability controls</p>
+            </div>
+            <div class="security-item">
+                <strong>GDPR Compliant</strong>
+                <p>Full compliance with EU data protection regulations</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAQ Section -->
         <h2>Frequently Asked Questions</h2>
         <div class="faq-grid">
             <div class="faq-item">
