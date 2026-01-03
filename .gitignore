@@ -398,3 +398,6 @@ tmp_dom_results/
 staticfiles/
 test_login.html
 *.db
+
+# Local Netlify folder
+.netlify

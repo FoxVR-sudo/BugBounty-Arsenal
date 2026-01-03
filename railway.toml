@@ -1,0 +1,9 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "daphne -b 0.0.0.0 -p $PORT config.asgi:application"
+healthcheckPath = "/api/health/"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"

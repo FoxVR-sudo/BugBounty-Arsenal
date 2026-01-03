@@ -4,7 +4,7 @@ Handles all email sending through SendGrid API
 """
 import os
 from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail, Email, To, Content
+from sendgrid.helpers.mail import Mail
 from django.conf import settings
 from django.template.loader import render_to_string
 from typing import List, Optional
@@ -60,14 +60,11 @@ class SendGridService:
         
         try:
             message = Mail(
-                from_email=Email(self.from_email, self.from_name),
-                to_emails=To(to_email, to_name),
+                from_email=(self.from_email, self.from_name),
+                to_emails=to_email,
                 subject=subject,
-                html_content=Content("text/html", html_content)
+                html_content=html_content
             )
-            
-            if text_content:
-                message.add_content(Content("text/plain", text_content))
             
             response = self.client.send(message)
             
@@ -79,7 +76,9 @@ class SendGridService:
                 return False
                 
         except Exception as e:
+            import traceback
             print(f'❌ Failed to send email: {str(e)}')
+            print(f'Full traceback: {traceback.format_exc()}')
             return False
     
     def send_verification_email(self, user_email: str, user_name: str, verification_url: str) -> bool:
@@ -132,7 +131,12 @@ class SendGridService:
                 </div>
                 <div class="footer">
                     <p>If you didn't create an account, please ignore this email.</p>
+                    <p style="margin-top: 20px;">
+                        <a href="{settings.FRONTEND_URL}/unsubscribe" style="color: #9ca3af; text-decoration: underline;">Unsubscribe</a> | 
+                        <a href="{settings.FRONTEND_URL}/contact" style="color: #9ca3af; text-decoration: underline;">Contact Support</a>
+                    </p>
                     <p>&copy; 2026 BugBounty Arsenal. All rights reserved.</p>
+                    <p style="font-size: 11px; color: #9ca3af;">This email was sent from an automated system. Please do not reply.</p>
                 </div>
             </div>
         </body>

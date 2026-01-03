@@ -45,8 +45,12 @@ services:
       - ENVIRONMENT=production
       - DATABASE_URL=sqlite:///./bugbounty_arsenal.db
       - SECRET_KEY=${SECRET_KEY:-django-insecure-2ooh6&ub7ohd-6j&#+4a#bd3^+h=l^mpenwml=alf0@3vzyo8q}
-      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
-      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+      - STRIPE_SECRET_KEY=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
+      - STRIPE_PUBLISHABLE_KEY=pk_live_51SlR8t5oSlrc0LTCfM3YCYRujbD9c2Ksbdonr9zTuZBFnIutYTosZy0EMW1wVUModMJ6pLCTnbYgjth9kWn9GdZ900jufDT8Ms
+      - STRIPE_WEBHOOK_SECRET=whsec_gVi21Oq9Yevyy3fjpEreauCqklycvw2A
+      - SENDGRID_API_KEY=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
+      - SENDGRID_FROM_EMAIL=foxvr81@gmail.com
+      - SENDGRID_FROM_NAME=BugBounty Arsenal
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - REDIS_HOST=redis
