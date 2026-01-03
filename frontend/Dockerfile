@@ -21,17 +21,16 @@ FROM node:18-alpine
 WORKDIR /app
 
 # Install serve
-RUN npm install -g serve
+RUN npm install -g serve serve-handler
 
 # Copy built files
 COPY --from=builder /app/build ./build
 
-# Copy start script
-COPY start.sh ./
-RUN chmod +x start.sh
+# Copy server script
+COPY server.js ./
 
 # Expose port
 EXPOSE 3000
 
 # Start production server
-ENTRYPOINT ["/bin/sh", "./start.sh"]
+CMD ["node", "server.js"]
