@@ -19,7 +19,8 @@ A comprehensive, automated security vulnerability scanner designed for professio
 [![Async](https://img.shields.io/badge/async-aiohttp-green.svg)](https://docs.aiohttp.org/)
 [![Status](https://img.shields.io/badge/status-active-success.svg)]()
 
-[![Detectors](https://img.shields.io/badge/detectors-22+-green.svg)]()
+[![Detectors](https://img.shields.io/badge/detectors-40+-green.svg)]()
+[![0Day](https://img.shields.io/badge/0--Day_Hunting-✓-critical.svg)]()
 [![IDOR](https://img.shields.io/badge/IDOR-✓-red.svg)]()
 [![SSRF](https://img.shields.io/badge/SSRF-✓-critical.svg)]()
 [![XSS](https://img.shields.io/badge/XSS-✓-orange.svg)]()
@@ -82,8 +83,35 @@ A comprehensive, automated security vulnerability scanner designed for professio
 
 ### Key Features
 
-- ✅ **23+ Active Security Detectors**
-  - **Advanced SSRF with Real Exploitation** 🔥🔥🔥🔥 NEW! ($5000-30000+)
+- ✅ **40+ Active Security Detectors Across 7 Categories**
+  
+  - **🔥 0-Day Hunting** ⭐ NEW! (Pro Plan - 6 detectors)
+    - **GitHub OSINT Scanner** 🔥🔥🔥🔥 CRITICAL ($5000-15000+)
+      - Finds leaked API keys, AWS credentials, passwords in public repos
+      - Searches .env files, config files, hardcoded secrets
+      - Real-time GitHub code search with rate limiting
+    - **Enhanced Parameter Fuzzer** 🔥🔥🔥🔥 CRITICAL ($4000-10000+)
+      - Tests 50+ hidden parameters (admin=true, debug=1, role=admin)
+      - Detects auth bypass, privilege escalation, debug mode exposure
+      - Smart response comparison and impact analysis
+    - **Backup File Hunter** 🔥🔥🔥 CRITICAL ($3000-10000+)
+      - Discovers exposed database backups (.sql, .dump, .bak)
+      - Finds source code archives and .git/.svn exposure
+      - 50+ backup file patterns tested
+    - **JavaScript File Analyzer** 🔥🔥 HIGH ($2000-7500+)
+      - Mines JS files for hidden API endpoints and credentials
+      - Detects debug flags, feature flags, internal URLs
+      - Pattern matching for secrets and config
+    - **Old Domain & Abandoned Systems Hunter** 🔥🔥 HIGH ($2000-7500+)
+      - Finds forgotten old domains (company-old.com, legacy-company.com)
+      - Discovers dev/staging environments with weak security
+      - Locates abandoned admin panels with default credentials
+    - **API Documentation Discovery** 🔥 HIGH ($1000-5000+)
+      - Finds exposed Swagger, OpenAPI, GraphQL documentation
+      - Discovers undocumented endpoints and API schemas
+      - 40+ documentation path patterns
+  
+  - **Advanced SSRF with Real Exploitation** 🔥🔥🔥🔥 ($5000-30000+)
     - AWS IAM credential extraction
     - GCP service account token access
     - Azure managed identity exploitation
@@ -110,7 +138,7 @@ A comprehensive, automated security vulnerability scanner designed for professio
   - Security Headers analysis
   - Secret exposure detection
   - Directory listing
-  - And more...
+  - And 18+ more detectors...
 
 - 📊 **Comprehensive Reporting**
   - Detailed HTML reports with evidence
