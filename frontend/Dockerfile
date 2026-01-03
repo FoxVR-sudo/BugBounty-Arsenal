@@ -26,8 +26,12 @@ RUN npm install -g serve
 # Copy built files
 COPY --from=builder /app/build ./build
 
+# Copy start script
+COPY start.sh ./
+RUN chmod +x start.sh
+
 # Expose port
 EXPOSE 3000
 
 # Start production server
-CMD serve -s build -p ${PORT:-3000}
+ENTRYPOINT ["./start.sh"]
