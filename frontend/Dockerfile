@@ -1,5 +1,5 @@
-# React frontend Dockerfile
-FROM node:18-alpine
+# React frontend Dockerfile - Production Build
+FROM node:18-alpine AS builder
 
 WORKDIR /app
 
@@ -12,8 +12,22 @@ RUN npm ci
 # Copy application code
 COPY . .
 
+# Build for production
+RUN npm run build
+
+# Production stage
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Install serve
+RUN npm install -g serve
+
+# Copy built files
+COPY --from=builder /app/build ./build
+
 # Expose port
 EXPOSE 3000
 
-# Start development server
-CMD ["npm", "start"]
+# Start production server
+CMD ["serve", "-s", "build", "-l", "3000"]
