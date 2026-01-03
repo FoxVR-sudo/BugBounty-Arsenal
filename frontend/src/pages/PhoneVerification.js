@@ -36,7 +36,7 @@ const PhoneVerification = () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.post(
-        'http://localhost:8001/api/users/verify-phone/send/',
+        process.env.REACT_APP_API_URL + '/users/verify-phone/send/',
         {},
         {
           headers: {
@@ -122,7 +122,7 @@ const PhoneVerification = () => {
     try {
       const token = localStorage.getItem('token');
       await axios.post(
-        'http://localhost:8001/api/users/verify-phone/confirm/',
+        process.env.REACT_APP_API_URL + '/users/verify-phone/confirm/',
         { code: fullCode },
         {
           headers: {

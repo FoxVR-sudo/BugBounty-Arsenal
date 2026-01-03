@@ -18,7 +18,7 @@ const Profile = () => {
 
   const { data: scansData } = useQuery('profileScans', async () => {
     const token = localStorage.getItem('token');
-    const response = await axios.get('http://localhost:8001/api/scans/', {
+    const response = await axios.get(process.env.REACT_APP_API_URL + '/scans/', {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     return response.data;

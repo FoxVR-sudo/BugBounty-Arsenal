@@ -75,7 +75,7 @@ const Dashboard = () => {
   const fetchUserInfo = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8001/api/auth/me/', {
+      const response = await axios.get(process.env.REACT_APP_API_URL + '/auth/me/', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       setUserInfo(response.data);
@@ -87,7 +87,7 @@ const Dashboard = () => {
   const fetchSubscription = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8001/api/subscriptions/current/', {
+      const response = await axios.get(process.env.REACT_APP_API_URL + '/subscriptions/current/', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       setSubscription(response.data);
@@ -99,7 +99,7 @@ const Dashboard = () => {
   const fetchCategoryStats = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8001/api/scan-categories/', {
+      const response = await axios.get(process.env.REACT_APP_API_URL + '/scan-categories/', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       setCategoryStats(response.data);

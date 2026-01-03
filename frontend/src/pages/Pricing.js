@@ -17,7 +17,7 @@ const Pricing = () => {
 
   const fetchPlans = async () => {
     try {
-      const response = await axios.get('http://localhost:8001/api/plans/');
+      const response = await axios.get(process.env.REACT_APP_API_URL + '/plans/');
       setPlans(response.data);
     } catch (err) {
       console.error('Failed to fetch plans:', err);
@@ -29,7 +29,7 @@ const Pricing = () => {
   const fetchCurrentSubscription = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8001/api/subscriptions/current/', {
+      const response = await axios.get(process.env.REACT_APP_API_URL + '/subscriptions/current/', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       setCurrentPlan(response.data.plan?.name || 'free');

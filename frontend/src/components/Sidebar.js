@@ -21,7 +21,7 @@ const Sidebar = () => {
   const fetchCategories = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8001/api/scan-categories/', {
+      const response = await axios.get(process.env.REACT_APP_API_URL + '/scan-categories/', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -42,7 +42,7 @@ const Sidebar = () => {
   const fetchUserPlan = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8001/api/auth/me/', {
+      const response = await axios.get(process.env.REACT_APP_API_URL + '/auth/me/', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       setUserPlan(response.data.current_plan?.toLowerCase() || 'free');

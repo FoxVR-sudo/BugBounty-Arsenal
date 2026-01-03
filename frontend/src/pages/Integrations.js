@@ -143,7 +143,7 @@ const Integrations = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8001/api/integrations/', {
+      const response = await axios.get(process.env.REACT_APP_API_URL + '/integrations/', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       setIntegrations(response.data.results || response.data);
@@ -211,7 +211,7 @@ const Integrations = () => {
       if (selectedIntegration.existing) {
         // Update existing
         await axios.put(
-          `http://localhost:8001/api/integrations/${selectedIntegration.id}/`,
+          `${process.env.REACT_APP_API_URL}/integrations/${selectedIntegration.id}/`,
           payload,
           { headers: { 'Authorization': `Bearer ${token}` } }
         );
@@ -219,7 +219,7 @@ const Integrations = () => {
       } else {
         // Create new
         await axios.post(
-          'http://localhost:8001/api/integrations/',
+          process.env.REACT_APP_API_URL + '/integrations/',
           payload,
           { headers: { 'Authorization': `Bearer ${token}` } }
         );
@@ -240,7 +240,7 @@ const Integrations = () => {
     try {
       const token = localStorage.getItem('token');
       await axios.post(
-        `http://localhost:8001/api/integrations/${selectedIntegration.id}/test/`,
+        `${process.env.REACT_APP_API_URL}/integrations/${selectedIntegration.id}/test/`,
         {},
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
@@ -254,7 +254,7 @@ const Integrations = () => {
     try {
       const token = localStorage.getItem('token');
       await axios.patch(
-        `http://localhost:8001/api/integrations/${integrationId}/`,
+        `${process.env.REACT_APP_API_URL}/integrations/${integrationId}/`,
         { enabled: !enabled },
         { headers: { 'Authorization': `Bearer ${token}` } }
       );

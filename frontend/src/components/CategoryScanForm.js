@@ -29,7 +29,7 @@ const CategoryScanForm = ({ onScanCreated }) => {
   const fetchUserPlan = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8001/api/subscriptions/', {
+      const response = await axios.get(process.env.REACT_APP_API_URL + '/subscriptions/', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.data.results && response.data.results[0]) {
@@ -44,7 +44,7 @@ const CategoryScanForm = ({ onScanCreated }) => {
     setLoadingCategories(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8001/api/scan-categories/', {
+      const response = await axios.get(process.env.REACT_APP_API_URL + '/scan-categories/', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       setCategories(response.data);
@@ -59,7 +59,7 @@ const CategoryScanForm = ({ onScanCreated }) => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(
-        `http://localhost:8001/api/scan-categories/${categoryId}/detectors/`,
+        `${process.env.REACT_APP_API_URL}/scan-categories/${categoryId}/detectors/`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -117,7 +117,7 @@ const CategoryScanForm = ({ onScanCreated }) => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.post(
-        'http://localhost:8001/api/scans/start-category-scan/',
+        process.env.REACT_APP_API_URL + '/scans/start-category-scan/',
         {
           target: target,
           category: selectedCategory.id,

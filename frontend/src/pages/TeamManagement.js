@@ -35,7 +35,7 @@ const TeamManagement = () => {
       const token = localStorage.getItem('token');
       
       // Fetch user's team
-      const teamResponse = await axios.get('http://localhost:8001/api/teams/', {
+      const teamResponse = await axios.get(process.env.REACT_APP_API_URL + '/teams/', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -45,14 +45,14 @@ const TeamManagement = () => {
         
         // Fetch team members
         const membersResponse = await axios.get(
-          `http://localhost:8001/api/teams/${userTeam.id}/members/`,
+          `${process.env.REACT_APP_API_URL}/teams/${userTeam.id}/members/`,
           { headers: { 'Authorization': `Bearer ${token}` } }
         );
         setMembers(membersResponse.data);
         
         // Fetch pending invitations
         const invitationsResponse = await axios.get(
-          `http://localhost:8001/api/teams/${userTeam.id}/invitations/`,
+          `${process.env.REACT_APP_API_URL}/teams/${userTeam.id}/invitations/`,
           { headers: { 'Authorization': `Bearer ${token}` } }
         );
         setInvitations(invitationsResponse.data);
@@ -72,7 +72,7 @@ const TeamManagement = () => {
     try {
       const token = localStorage.getItem('token');
       await axios.post(
-        'http://localhost:8001/api/teams/',
+        process.env.REACT_APP_API_URL + '/teams/',
         { name: teamName },
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
@@ -94,7 +94,7 @@ const TeamManagement = () => {
     try {
       const token = localStorage.getItem('token');
       await axios.post(
-        `http://localhost:8001/api/teams/${team.id}/invite/`,
+        `${process.env.REACT_APP_API_URL}/teams/${team.id}/invite/`,
         { email: inviteEmail, role: inviteRole },
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
@@ -115,7 +115,7 @@ const TeamManagement = () => {
     try {
       const token = localStorage.getItem('token');
       await axios.delete(
-        `http://localhost:8001/api/teams/${team.id}/members/${memberId}/`,
+        `${process.env.REACT_APP_API_URL}/teams/${team.id}/members/${memberId}/`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       

@@ -16,6 +16,9 @@ import Register from './pages/Register';
 import RegisterEnterprise from './pages/RegisterEnterprise';
 import PhoneVerification from './pages/PhoneVerification';
 import PaymentSuccess from './pages/PaymentSuccess';
+import VerifyEmail from './pages/VerifyEmail';
+import ResetPassword from './pages/ResetPassword';
+import ForgotPassword from './pages/ForgotPassword';
 import TeamManagement from './pages/TeamManagement';
 import Integrations from './pages/Integrations';
 import Terms from './pages/Terms';
@@ -53,6 +56,9 @@ function App() {
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/register-enterprise" element={<RegisterEnterprise />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/verify-email/:uid/:token" element={<VerifyEmail />} />
+                <Route path="/reset-password/:uid/:token" element={<ResetPassword />} />
                 <Route path="/payment-success" element={<PaymentSuccess />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<Privacy />} />

@@ -10,7 +10,7 @@ const LandingPage = () => {
   useEffect(() => {
     const fetchPlans = async () => {
       try {
-        const response = await axios.get('http://localhost:8001/api/plans/');
+        const response = await axios.get(process.env.REACT_APP_API_URL + '/plans/');
         setPlans(response.data);
       } catch (error) {
         console.error('Failed to fetch plans:', error);

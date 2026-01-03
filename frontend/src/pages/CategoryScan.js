@@ -45,7 +45,7 @@ const CategoryScan = () => {
       const token = localStorage.getItem('token');
       
       // Fetch all categories
-      const categoriesResponse = await axios.get('http://localhost:8001/api/scan-categories/', {
+      const categoriesResponse = await axios.get(process.env.REACT_APP_API_URL + '/scan-categories/', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -60,7 +60,7 @@ const CategoryScan = () => {
       
       // Fetch detectors for this category
       const detectorsResponse = await axios.get(
-        `http://localhost:8001/api/scan-categories/${foundCategory.id}/detectors/`,
+        `${process.env.REACT_APP_API_URL}/scan-categories/${foundCategory.id}/detectors/`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       
@@ -79,7 +79,7 @@ const CategoryScan = () => {
   const fetchSubscription = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8001/api/subscriptions/current/', {
+      const response = await axios.get(process.env.REACT_APP_API_URL + '/subscriptions/current/', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       setSubscription(response.data);
@@ -90,7 +90,7 @@ const CategoryScan = () => {
 
   const fetchPlans = async () => {
     try {
-      const response = await axios.get('http://localhost:8001/api/plans/');
+      const response = await axios.get(process.env.REACT_APP_API_URL + '/plans/');
       setPlans(response.data);
     } catch (err) {
       console.error('Failed to fetch plans:', err);
@@ -156,7 +156,7 @@ const CategoryScan = () => {
         .map(d => d.name);
       
       const response = await axios.post(
-        'http://localhost:8001/api/scans/start-category-scan/',
+        process.env.REACT_APP_API_URL + '/scans/start-category-scan/',
         {
           category: category.id,
           target: target,
@@ -190,7 +190,7 @@ const CategoryScan = () => {
     const interval = setInterval(async () => {
       try {
         const response = await axios.get(
-          `http://localhost:8001/api/scans/${scanId}/`,
+          `${process.env.REACT_APP_API_URL}/scans/${scanId}/`,
           { headers: { 'Authorization': `Bearer ${token}` } }
         );
         
@@ -220,7 +220,7 @@ const CategoryScan = () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(
-        `http://localhost:8001/api/scans/${scanId}/vulnerabilities/`,
+        `${process.env.REACT_APP_API_URL}/scans/${scanId}/vulnerabilities/`,
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       
