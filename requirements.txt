@@ -45,6 +45,9 @@ whitenoise==6.9.0
 stripe==11.3.0
 twilio==9.5.0
 
+# Email service
+sendgrid==6.11.0
+
 # Report generation
 weasyprint==60.1
 reportlab==4.0.7

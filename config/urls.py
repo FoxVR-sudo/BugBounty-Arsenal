@@ -31,6 +31,10 @@ from drf_spectacular.views import (
 
 from users.views import UserViewSet
 from users.auth_views import login_view, signup_view, signup_enterprise_view, token_refresh_view
+from users.email_views import (
+    request_email_verification, verify_email,
+    request_password_reset, reset_password
+)
 from users.landing_views import (
     landing_page, dashboard_page, login_page, signup_page, pricing_page,
     docs_page, api_reference_page, about_page, blog_page, careers_page,
@@ -107,6 +111,12 @@ urlpatterns = [
     path('api/auth/signup-enterprise/', signup_enterprise_view, name='auth-signup-enterprise'),
     path('api/auth/refresh/', token_refresh_view, name='auth-refresh'),
     path('api/auth/me/', get_current_user, name='current-user'),
+    
+    # Email verification & password reset
+    path('api/auth/request-verification/', request_email_verification, name='request-verification'),
+    path('api/auth/verify-email/', verify_email, name='verify-email'),
+    path('api/auth/request-reset/', request_password_reset, name='request-password-reset'),
+    path('api/auth/reset-password/', reset_password, name='reset-password'),
     
     # NEW v3.0: Phone & Company Verification endpoints
     path('api/users/verify-phone/send/', send_phone_verification, name='send-phone-verification'),

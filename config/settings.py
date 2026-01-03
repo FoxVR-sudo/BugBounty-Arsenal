@@ -297,6 +297,27 @@ STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', 'whsec_...')  # Add w
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
 
 # ===========================
+# SENDGRID EMAIL SETTINGS
+# ===========================
+# Get your API key from: https://app.sendgrid.com/settings/api_keys
+SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY', '')  # Add your SendGrid API key
+SENDGRID_FROM_EMAIL = os.getenv('SENDGRID_FROM_EMAIL', 'noreply@bugbounty-arsenal.com')
+SENDGRID_FROM_NAME = os.getenv('SENDGRID_FROM_NAME', 'BugBounty Arsenal')
+
+# Django email backend (fallback to console if SendGrid not configured)
+if SENDGRID_API_KEY:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp.sendgrid.net'
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = 'apikey'  # This is always 'apikey' for SendGrid
+    EMAIL_HOST_PASSWORD = SENDGRID_API_KEY
+    DEFAULT_FROM_EMAIL = SENDGRID_FROM_EMAIL
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    DEFAULT_FROM_EMAIL = 'noreply@bugbounty-arsenal.com'
+
+# ===========================
 # TWILIO SMS VERIFICATION
 # ===========================
 # Cost: ~$0.01 per SMS
