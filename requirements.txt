@@ -21,11 +21,11 @@ bs4
 Flask==3.0.3
 
 # Django and REST Framework
-Django==6.0
+Django==5.1.4
 djangorestframework==3.16.1
 djangorestframework-simplejwt==5.5.1
 django-cors-headers==4.9.0
-django-filter==25.2
+django-filter==24.3
 drf-spectacular==0.29.0
 
 # Celery and Redis
