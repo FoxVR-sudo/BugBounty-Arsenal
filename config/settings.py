@@ -13,12 +13,23 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 import os
 from datetime import timedelta
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv(os.path.join(Path(__file__).resolve().parent.parent, '.env'))
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-2ooh6&ub7ohd-6j&#+4a#bd3^+h=l^mpenwml=alf0@3vzyo8q'
-DEBUG = True
-ALLOWED_HOSTS = ['*']
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-2ooh6&ub7ohd-6j&#+4a#bd3^+h=l^mpenwml=alf0@3vzyo8q')
+DEBUG = os.getenv('DEBUG', 'True') == 'True'
+
+# ALLOWED_HOSTS
+ALLOWED_HOSTS_STR = os.getenv('ALLOWED_HOSTS', '*')
+ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_STR.split(',') if host.strip()]
+
+# CSRF_TRUSTED_ORIGINS
+CSRF_TRUSTED_ORIGINS_STR = os.getenv('CSRF_TRUSTED_ORIGINS', '')
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in CSRF_TRUSTED_ORIGINS_STR.split(',') if origin.strip()]
 
 INSTALLED_APPS = [
     'daphne',
