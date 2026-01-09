@@ -1,5 +1,7 @@
 # cPanel Deployment Guide
 
+✅ **Auto-deploy активен!** Всеки push към master автоматично deploy-ва на сървъра.
+
 ## 🚀 Автоматичен Deploy с GitHub Actions
 
 ### 1. Настройка на GitHub Secrets
