@@ -1,0 +1,51 @@
+name: Deploy to cPanel
+
+on:
+  push:
+    branches:
+      - master  # или main, в зависимост от името на главния бранч
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Deploy to cPanel via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.CPANEL_HOST }}
+          username: ${{ secrets.CPANEL_USER }}
+          password: ${{ secrets.CPANEL_PASSWORD }}
+          port: ${{ secrets.CPANEL_SSH_PORT }}
+          script: |
+            cd /home/bugbount/app
+            
+            # Backup current version
+            timestamp=$(date +%Y%m%d_%H%M%S)
+            echo "Creating backup: backup_$timestamp"
+            
+            # Pull latest code
+            git fetch origin
+            git reset --hard origin/master
+            
+            # Activate virtualenv
+            source /home/bugbount/virtualenv/app-py39/bin/activate
+            
+            # Install dependencies
+            pip install -r requirements.txt --quiet
+            
+            # Collect static files
+            python manage.py collectstatic --noinput --clear
+            
+            # Run migrations
+            python manage.py migrate --noinput
+            
+            # Restart gunicorn
+            pkill -f "gunicorn config.wsgi" || true
+            sleep 2
+            /home/bugbount/app/start_gunicorn.sh
+            
+            echo "✅ Deployment completed successfully at $(date)"

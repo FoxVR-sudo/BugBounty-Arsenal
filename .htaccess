@@ -1,0 +1,3 @@
+RewriteEngine On
+RewriteCond %{REQUEST_URI} !^/bugbounty-arsenal\.com/
+RewriteRule ^(.*)$ /bugbounty-arsenal.com/$1 [L,QSA]

@@ -15,9 +15,8 @@ def populate_data(apps, schema_editor):
             name='free',
             display_name='Free',
             price=0,
-            stripe_price_id=getattr(settings, 'STRIPE_PRICE_FREE', ''),
-            daily_scan_limit=5,
-            monthly_scan_limit=50,
+            scans_per_day=5,
+            scans_per_month=50,
             concurrent_scans=1,
             storage_limit_mb=100,
             retention_days=7,
@@ -33,9 +32,8 @@ def populate_data(apps, schema_editor):
             name='pro',
             display_name='Pro',
             price=19,
-            stripe_price_id=getattr(settings, 'STRIPE_PRICE_PRO', ''),
-            daily_scan_limit=50,
-            monthly_scan_limit=1000,
+            scans_per_day=50,
+            scans_per_month=1000,
             concurrent_scans=5,
             storage_limit_mb=1000,
             retention_days=30,
@@ -51,9 +49,8 @@ def populate_data(apps, schema_editor):
             name='enterprise',
             display_name='Enterprise',
             price=99,
-            stripe_price_id=getattr(settings, 'STRIPE_PRICE_ENTERPRISE', ''),
-            daily_scan_limit=999999,
-            monthly_scan_limit=999999,
+            scans_per_day=-1,
+            scans_per_month=-1,
             concurrent_scans=20,
             storage_limit_mb=10000,
             retention_days=365,
@@ -62,8 +59,7 @@ def populate_data(apps, schema_editor):
             max_team_members=50,
             allow_integrations=True,
             max_integrations=999,
-            allow_dangerous_tools=True,
-            is_enterprise_only=True
+            allow_dangerous_tools=True
         )
     
     # Create ScanCategories (only if they don't exist)
