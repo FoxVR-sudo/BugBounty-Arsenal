@@ -124,7 +124,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('scans', '0006_scancategory_scan_selected_detectors_and_more'),
-        ('subscriptions', '0001_initial'),  # Make sure subscriptions app is migrated first
+        ('subscriptions', '0006_remove_plan_allowed_scan_types_remove_plan_limits_and_more'),  # Wait for new Plan fields
     ]
 
     operations = [
