@@ -17,9 +17,9 @@ jobs:
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.CPANEL_HOST }}
-          username: ${{ secrets.CPANEL_USER }}
+          username: ${{ secrets.CPANEL_USERNAME }}
           password: ${{ secrets.CPANEL_PASSWORD }}
-          port: ${{ secrets.CPANEL_SSH_PORT }}
+          port: ${{ secrets.CPANEL_PORT }}
           script: |
             cd /home/bugbount/app
             

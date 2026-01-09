@@ -10,9 +10,9 @@
 
 ```
 CPANEL_HOST=79.98.104.6
-CPANEL_USER=bugbount
+CPANEL_USERNAME=bugbount
 CPANEL_PASSWORD=((Lc5KVhW01kt3
-CPANEL_SSH_PORT=12545
+CPANEL_PORT=12545
 ```
 
 ### 2. Активиране на Git на сървъра
