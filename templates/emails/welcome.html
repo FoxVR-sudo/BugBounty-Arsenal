@@ -1,0 +1,43 @@
+{% extends "emails/base.html" %}
+
+{% block content %}
+<h1>Welcome to BugBounty Arsenal! 🎉</h1>
+
+<p>Hi <strong>{{ user_name }}</strong>,</p>
+
+<p>Thank you for joining BugBounty Arsenal! We're excited to have you on board.</p>
+
+<p>Your account has been created successfully, and you're ready to start scanning for vulnerabilities.</p>
+
+<div class="success-box">
+    <p><strong>✓ Account Created</strong></p>
+    <p>Email: {{ user_email }}</p>
+    <p>Plan: <strong>{{ plan_name }}</strong></p>
+</div>
+
+<p style="text-align: center;">
+    <a href="{{ dashboard_url }}" class="button">Go to Dashboard →</a>
+</p>
+
+<h2 style="font-size: 18px; margin-top: 32px;">🚀 Quick Start Guide</h2>
+
+<div class="info-box">
+    <p><strong>1. Explore Scan Categories</strong><br>
+    Browse our 10+ vulnerability detection categories including OWASP Top 10, API Security, and more.</p>
+    
+    <p><strong>2. Run Your First Scan</strong><br>
+    Enter a target URL and select the categories you want to test.</p>
+    
+    <p><strong>3. Review Results</strong><br>
+    Get detailed vulnerability reports with severity ratings and remediation steps.</p>
+</div>
+
+<p>Need help getting started? Check out our <a href="{{ docs_url }}" style="color: #667eea;">documentation</a> or contact our support team.</p>
+
+<p>Happy hunting! 🎯</p>
+
+<p style="margin-top: 32px;">
+    Best regards,<br>
+    <strong>The BugBounty Arsenal Team</strong>
+</p>
+{% endblock %}

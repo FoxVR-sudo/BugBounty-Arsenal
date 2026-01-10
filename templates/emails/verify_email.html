@@ -1,0 +1,34 @@
+{% extends "emails/base.html" %}
+
+{% block content %}
+<h1>Verify Your Email Address 📧</h1>
+
+<p>Hi <strong>{{ user_name }}</strong>,</p>
+
+<p>Thank you for signing up for BugBounty Arsenal! To complete your registration and start scanning, please verify your email address.</p>
+
+<p style="text-align: center;">
+    <a href="{{ verification_url }}" class="button">Verify Email Address →</a>
+</p>
+
+<div class="info-box">
+    <p><strong>Verification Code:</strong></p>
+    <p style="font-size: 24px; font-weight: bold; color: #667eea; letter-spacing: 4px; text-align: center; margin: 16px 0;">
+        {{ verification_code }}
+    </p>
+    <p style="font-size: 13px; color: #777; text-align: center;">
+        This code will expire in {{ expiry_hours }} hours
+    </p>
+</div>
+
+<p style="font-size: 14px; color: #777;">
+    Alternatively, you can copy and paste this link into your browser:<br>
+    <a href="{{ verification_url }}" style="color: #667eea; word-break: break-all;">{{ verification_url }}</a>
+</p>
+
+<div class="divider"></div>
+
+<p style="font-size: 13px; color: #999;">
+    If you didn't create an account with BugBounty Arsenal, you can safely ignore this email.
+</p>
+{% endblock %}
