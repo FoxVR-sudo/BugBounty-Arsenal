@@ -99,6 +99,54 @@ REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_live_51SlR8t5oSlrc0LTCfM3YCYRujbD9c2Ksbdonr9
 - LiteSpeed reverse proxy
 - Static files via public_html/
 
+## Gunicorn (Django Backend)
+
+**Location**: `/home/bugbount/app/`  
+**Python Environment**: `/home/bugbount/virtualenv/app/3.11/`  
+**Port**: 8000 (localhost only)
+
+### Start/Restart Gunicorn
+
+```bash
+ssh -p 12545 bugbount@79.98.104.6
+cd /home/bugbount/app
+./start_gunicorn.sh
+```
+
+Or manually:
+```bash
+cd /home/bugbount/app
+source /home/bugbount/virtualenv/app/3.11/bin/activate
+gunicorn config.wsgi:application \
+    --bind 127.0.0.1:8000 \
+    --workers 3 \
+    --daemon \
+    --access-logfile logs/gunicorn-access.log \
+    --error-logfile logs/gunicorn-error.log \
+    --pid gunicorn.pid
+```
+
+### Check Status
+
+```bash
+ps aux | grep gunicorn | grep -v grep
+```
+
+Should show 1 master + 3 worker processes.
+
+### Stop Gunicorn
+
+```bash
+pkill -f "gunicorn config.wsgi"
+```
+
+### View Logs
+
+```bash
+tail -f /home/bugbount/app/logs/gunicorn-error.log
+tail -f /home/bugbount/app/logs/gunicorn-access.log
+```
+
 ## Web Server Configuration
 
 ### LiteSpeed + Django Proxy Setup
