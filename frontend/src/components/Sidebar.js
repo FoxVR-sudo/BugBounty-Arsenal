@@ -7,12 +7,16 @@ import {
 } from 'react-icons/fi';
 import { useTheme } from '../contexts/ThemeContext';
 
-const Sidebar = () => {
+const Sidebar = ({ onNavigate }) => {
   const location = useLocation();
   const [categories, setCategories] = useState([]);
   const [userPlan, setUserPlan] = useState('free');
   const [subscription, setSubscription] = useState(null);
   const { theme, toggleTheme, isDark } = useTheme();
+
+  const handleNavClick = () => {
+    if (onNavigate) onNavigate();
+  };
 
   useEffect(() => {
     fetchCategories();
@@ -58,19 +62,22 @@ const Sidebar = () => {
       isDark ? 'bg-gray-900 text-white' : 'bg-white text-gray-900 border-r border-gray-200'
     }`}>
       {/* Logo */}
-      <div className={`p-6 ${
+      <div className={`p-4 lg:p-6 ${
         isDark ? 'border-b border-gray-800' : 'border-b border-gray-200'
       }`}>
-        <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>BugBounty Arsenal</h1>
+        <h1 className={`text-xl lg:text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+          BugBounty Arsenal
+        </h1>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4">
         {/* Main Navigation */}
-        <div className="px-4 mb-6">
+        <div className="px-3 lg:px-4 mb-6">
           <Link
             to="/dashboard"
-            className={`block px-4 py-3 rounded-lg transition font-medium ${
+            onClick={handleNavClick}
+            className={`block px-3 lg:px-4 py-2.5 lg:py-3 rounded-lg transition font-medium text-sm lg:text-base ${
               isActive('/dashboard')
                 ? 'bg-primary text-white'
                 : isDark
@@ -83,12 +90,12 @@ const Sidebar = () => {
         </div>
 
         {/* V3.0: Detector Categories with Icons */}
-        <div className="px-4 mb-6">
+        <div className="px-3 lg:px-4 mb-6">
           <div className="flex items-center justify-between mb-2">
             <h3 className={`text-xs font-semibold uppercase tracking-wider ${
               isDark ? 'text-gray-500' : 'text-gray-400'
             }`}>
-              Detector Categories
+              Detectors
             </h3>
             {subscription && (
               <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
@@ -104,7 +111,8 @@ const Sidebar = () => {
                 <Link
                   key={category.key}
                   to={isLocked ? '/subscription' : `/scan/${category.key}`}
-                  className={`flex items-center justify-between px-3 py-2.5 rounded-lg transition font-medium ${
+                  onClick={handleNavClick}
+                  className={`flex items-center justify-between px-2 lg:px-3 py-2 rounded-lg transition font-medium text-xs lg:text-sm ${
                     isActive(`/scan/${category.key}`)
                       ? 'bg-primary text-white'
                       : isLocked
@@ -117,15 +125,15 @@ const Sidebar = () => {
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-lg">{category.icon}</span>
-                    <span className="text-sm">{category.name}</span>
+                    <span className="text-base lg:text-lg">{category.icon}</span>
+                    <span className="hidden sm:inline">{category.name}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     {isLocked && (
-                      <FiLock className="w-3.5 h-3.5" />
+                      <FiLock className="w-3 h-3 lg:w-3.5 lg:h-3.5" />
                     )}
                     {!isLocked && category.required_plan !== 'free' && (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-600 text-white uppercase font-semibold">
+                      <span className="hidden lg:inline text-xs px-1.5 py-0.5 rounded bg-yellow-600 text-white uppercase font-semibold">
                         {category.required_plan === 'enterprise' ? 'ENT' : 'PRO'}
                       </span>
                     )}
@@ -137,17 +145,18 @@ const Sidebar = () => {
           
           {/* Upgrade prompt for locked categories */}
           {userPlan === 'free' && categories.some(c => !c.is_allowed) && (
-            <div className={`mt-3 p-3 rounded-lg ${
+            <div className={`mt-3 p-2 lg:p-3 rounded-lg ${
               isDark ? 'bg-gradient-to-r from-purple-900/30 to-blue-900/30 border border-purple-700/50' : 'bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200'
             }`}>
               <p className={`text-xs mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                Unlock {categories.filter(c => !c.is_allowed).length} more categories
+                Unlock {categories.filter(c => !c.is_allowed).length} more
               </p>
               <Link
                 to="/subscription"
-                className="block w-full text-center px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs font-semibold rounded-lg hover:from-purple-700 hover:to-blue-700 transition"
+                onClick={handleNavClick}
+                className="block w-full text-center px-2 lg:px-3 py-1.5 lg:py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs font-semibold rounded-lg hover:from-purple-700 hover:to-blue-700 transition"
               >
-                Upgrade to Pro
+                Upgrade
               </Link>
             </div>
           )}
