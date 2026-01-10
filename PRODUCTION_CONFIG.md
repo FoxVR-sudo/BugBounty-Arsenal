@@ -172,6 +172,24 @@ A cron job monitors Gunicorn **every minute** and auto-restarts if stopped:
 
 This ensures **maximum 1 minute downtime** if Gunicorn crashes or is killed by system processes.
 
+## Important Notes
+
+### Asynchronous Scanning (Celery)
+
+⚠️ **Celery is currently disabled** on production due to lack of Redis support on shared hosting.
+
+**Impact on scans:**
+- Scans execute synchronously (blocking HTTP request)
+- Users must wait for scan completion
+- Long scans may timeout (120s limit)
+
+**Workarounds:**
+- Scan timeout set to 120s (2 minutes max)
+- Frontend shows loading indicator
+- Users should scan smaller targets
+
+**Future improvement:** Install Redis or use alternative message broker for async task execution.
+
 ## Web Server Configuration
 
 ### LiteSpeed + Django Proxy Setup
