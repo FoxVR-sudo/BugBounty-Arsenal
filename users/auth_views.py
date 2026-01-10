@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.throttling import AnonRateThrottle
 from django.contrib.auth import authenticate, login as django_login
+from django.views.decorators.csrf import csrf_exempt
 from drf_spectacular.utils import extend_schema, OpenApiExample
 from .serializers import UserCreateSerializer, UserSerializer
 import logging
@@ -71,6 +72,7 @@ class LoginRateThrottle(AnonRateThrottle):
         )
     ]
 )
+@csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
 @throttle_classes([LoginRateThrottle])
@@ -155,6 +157,7 @@ def login_view(request):
         )
     ]
 )
+@csrf_exempt
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def signup_view(request):
