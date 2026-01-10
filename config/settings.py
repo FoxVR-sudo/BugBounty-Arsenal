@@ -167,6 +167,12 @@ SIMPLE_JWT = {
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
+# CSRF settings for API
+CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript to read CSRF cookie
+CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SECURE = not DEBUG  # Only use secure cookies in production
+CSRF_USE_SESSIONS = False
+
 SPECTACULAR_SETTINGS = {
     'TITLE': 'BugBounty Arsenal API',
     'DESCRIPTION': 'Comprehensive Bug Bounty Security Scanner with automated vulnerability detection',
