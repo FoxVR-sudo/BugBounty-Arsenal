@@ -1,6 +1,6 @@
 #!/bin/bash
 # Monitor and auto-restart Gunicorn if stopped
-# Add to crontab: */5 * * * * /home/bugbount/app/monitor_gunicorn.sh >> /home/bugbount/app/logs/monitor.log 2>&1
+# Add to crontab: * * * * * /home/bugbount/app/monitor_gunicorn.sh >> /home/bugbount/app/logs/monitor.log 2>&1
 
 LOG_FILE="/home/bugbount/app/logs/monitor.log"
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')

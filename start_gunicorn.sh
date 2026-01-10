@@ -11,10 +11,16 @@ pkill -f "gunicorn config.wsgi"
 # Wait for processes to stop
 sleep 2
 
-# Start Gunicorn with 3 workers
+# Start Gunicorn with optimized settings
 gunicorn config.wsgi:application \
     --bind 127.0.0.1:8000 \
     --workers 3 \
+    --worker-class sync \
+    --timeout 120 \
+    --graceful-timeout 30 \
+    --keep-alive 5 \
+    --max-requests 1000 \
+    --max-requests-jitter 100 \
     --daemon \
     --access-logfile logs/gunicorn-access.log \
     --error-logfile logs/gunicorn-error.log \
