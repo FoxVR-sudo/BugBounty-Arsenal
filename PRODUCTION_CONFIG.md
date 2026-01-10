@@ -99,6 +99,38 @@ REACT_APP_STRIPE_PUBLISHABLE_KEY=pk_live_51SlR8t5oSlrc0LTCfM3YCYRujbD9c2Ksbdonr9
 - LiteSpeed reverse proxy
 - Static files via public_html/
 
+## Web Server Configuration
+
+### LiteSpeed + Django Proxy Setup
+
+The production environment uses LiteSpeed Web Server with an `.htaccess` file to proxy API requests to the Django backend (Gunicorn on port 8000).
+
+**Location**: `/home/bugbount/public_html/.htaccess`
+
+**Configuration**:
+```apache
+# Enable rewrite engine
+RewriteEngine On
+
+# Proxy API requests to Django backend (Gunicorn on port 8000)
+RewriteCond %{REQUEST_URI} ^/api/ [OR]
+RewriteCond %{REQUEST_URI} ^/admin/
+RewriteRule ^(.*)$ http://127.0.0.1:8000/$1 [P,L]
+
+# All other requests serve from React build (SPA)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [L]
+```
+
+This configuration ensures:
+- All `/api/*` requests are proxied to Django (Gunicorn on port 8000)
+- All `/admin/*` requests are proxied to Django Admin
+- Static files are served directly by LiteSpeed
+- React SPA routing works correctly (all non-file requests go to index.html)
+
+**Deployment**: The `.htaccess` file is automatically deployed when pushing to the repository.
+
 ## Testing Endpoints
 
 ```bash
