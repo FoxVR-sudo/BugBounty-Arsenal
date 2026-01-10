@@ -120,11 +120,24 @@ source /home/bugbount/virtualenv/app/3.11/bin/activate
 gunicorn config.wsgi:application \
     --bind 127.0.0.1:8000 \
     --workers 3 \
+    --worker-class sync \
+    --timeout 120 \
+    --graceful-timeout 30 \
+    --keep-alive 5 \
+    --max-requests 1000 \
+    --max-requests-jitter 100 \
     --daemon \
     --access-logfile logs/gunicorn-access.log \
     --error-logfile logs/gunicorn-error.log \
     --pid gunicorn.pid
 ```
+
+**Settings explained**:
+- `--timeout 120` - 2 minutes for long-running requests
+- `--graceful-timeout 30` - 30s for graceful worker shutdown
+- `--keep-alive 5` - Keep connections alive for 5s
+- `--max-requests 1000` - Recycle workers after 1000 requests (prevents memory leaks)
+- `--max-requests-jitter 100` - Random jitter to avoid all workers restarting at once
 
 ### Check Status
 
@@ -150,19 +163,14 @@ tail -f /home/bugbount/app/logs/monitor.log  # Auto-restart monitoring
 
 ### Auto-Restart Monitoring
 
-A cron job monitors Gunicorn every 5 minutes and auto-restarts if stopped:
+A cron job monitors Gunicorn **every minute** and auto-restarts if stopped:
 
 **Crontab entry**:
 ```bash
-*/5 * * * * /home/bugbount/app/monitor_gunicorn.sh >> /home/bugbount/app/logs/monitor.log 2>&1
+* * * * * /home/bugbount/app/monitor_gunicorn.sh >> /home/bugbount/app/logs/monitor.log 2>&1
 ```
 
-**Check monitoring logs**:
-```bash
-tail -f /home/bugbount/app/logs/monitor.log
-```
-
-This ensures maximum uptime even if Gunicorn crashes or is killed by system processes.
+This ensures **maximum 1 minute downtime** if Gunicorn crashes or is killed by system processes.
 
 ## Web Server Configuration
 
