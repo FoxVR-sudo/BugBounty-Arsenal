@@ -46,7 +46,6 @@ INSTALLED_APPS = [
     'channels',
     'corsheaders',
     'django_celery_results',  # Celery result backend
-    'kombu.transport.django',  # Celery message broker
     'users',
     'scans',
     'subscriptions',
