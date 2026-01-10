@@ -4,7 +4,7 @@ API Views for Scan Categories and Category-based Scanning (v3.0)
 from rest_framework import viewsets, status
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.shortcuts import get_object_or_404
 
 from scans.category_models import ScanCategory, DetectorConfig
@@ -23,18 +23,18 @@ class ScanCategoryViewSet(viewsets.ReadOnlyModelViewSet):
     - GET /api/scan-categories/{id}/detectors/ - Get detectors for category
     """
     queryset = ScanCategory.objects.filter(is_active=True)
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]  # Public access to view categories
     
     def get_queryset(self):
         """Filter categories by user's subscription plan"""
-        user = self.request.user
-        
         # Get user's plan
-        try:
-            subscription = Subscription.objects.get(user=user)
-            user_plan = subscription.plan.name
-        except Subscription.DoesNotExist:
-            user_plan = 'free'
+        user_plan = 'free'
+        if self.request.user.is_authenticated:
+            try:
+                subscription = Subscription.objects.get(user=self.request.user)
+                user_plan = subscription.plan.name
+            except Subscription.DoesNotExist:
+                user_plan = 'free'
         
         # Filter categories by plan access
         queryset = ScanCategory.objects.filter(is_active=True)
@@ -53,12 +53,13 @@ class ScanCategoryViewSet(viewsets.ReadOnlyModelViewSet):
         
         # Get user's plan
         user_plan = 'free'
-        try:
-            subscription = Subscription.objects.filter(user=request.user, status='active').first()
-            if subscription:
-                user_plan = subscription.plan.name
-        except:
-            pass
+        if request.user.is_authenticated:
+            try:
+                subscription = Subscription.objects.filter(user=request.user, status='active').first()
+                if subscription:
+                    user_plan = subscription.plan.name
+            except:
+                pass
         
         data = []
         for category in all_categories:
