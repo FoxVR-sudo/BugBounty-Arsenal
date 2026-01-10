@@ -145,7 +145,24 @@ pkill -f "gunicorn config.wsgi"
 ```bash
 tail -f /home/bugbount/app/logs/gunicorn-error.log
 tail -f /home/bugbount/app/logs/gunicorn-access.log
+tail -f /home/bugbount/app/logs/monitor.log  # Auto-restart monitoring
 ```
+
+### Auto-Restart Monitoring
+
+A cron job monitors Gunicorn every 5 minutes and auto-restarts if stopped:
+
+**Crontab entry**:
+```bash
+*/5 * * * * /home/bugbount/app/monitor_gunicorn.sh >> /home/bugbount/app/logs/monitor.log 2>&1
+```
+
+**Check monitoring logs**:
+```bash
+tail -f /home/bugbount/app/logs/monitor.log
+```
+
+This ensures maximum uptime even if Gunicorn crashes or is killed by system processes.
 
 ## Web Server Configuration
 
