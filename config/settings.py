@@ -45,6 +45,8 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'channels',
     'corsheaders',
+    'django_celery_results',  # Celery result backend
+    'kombu.transport.django',  # Celery message broker
     'users',
     'scans',
     'subscriptions',
@@ -201,12 +203,17 @@ SPECTACULAR_SETTINGS = {
 _redis_host = os.getenv('REDIS_HOST', 'localhost')
 _redis_port = os.getenv('REDIS_PORT', '6379')
 
-CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', f'redis://{_redis_host}:{_redis_port}/0')
-CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', f'redis://{_redis_host}:{_redis_port}/0')
+# Use Django database backend for Celery if Redis is not available
+# This is production-ready for shared hosting without Redis
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'django://')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'django-db')
+CELERY_CACHE_BACKEND = 'django-cache'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
+CELERY_TASK_ALWAYS_EAGER = False  # Run tasks asynchronously
+CELERY_TASK_EAGER_PROPAGATES = False
 
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/dashboard/'
