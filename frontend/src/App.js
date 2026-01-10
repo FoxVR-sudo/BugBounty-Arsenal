@@ -6,6 +6,7 @@ import LandingPage from './pages/LandingPage';
 import Dashboard from './pages/Dashboard';
 import ScanDetails from './pages/ScanDetails';
 import CategoryScan from './pages/CategoryScan';
+import DetectorCategoryScan from './pages/DetectorCategoryScan';
 import AllResults from './pages/AllResults';
 import Analytics from './pages/Analytics';
 import Profile from './pages/Profile';
@@ -85,7 +86,7 @@ function App() {
             path="/scan/:categoryId"
             element={
               <PrivateRoute>
-                <CategoryScan />
+                <DetectorCategoryScan />
               </PrivateRoute>
             }
           />

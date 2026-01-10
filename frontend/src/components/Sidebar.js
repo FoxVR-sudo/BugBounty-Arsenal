@@ -11,43 +11,38 @@ const Sidebar = () => {
   const location = useLocation();
   const [categories, setCategories] = useState([]);
   const [userPlan, setUserPlan] = useState('free');
+  const [subscription, setSubscription] = useState(null);
   const { theme, toggleTheme, isDark } = useTheme();
 
   useEffect(() => {
     fetchCategories();
-    fetchUserPlan();
+    fetchSubscription();
   }, []);
 
   const fetchCategories = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(process.env.REACT_APP_API_URL + '/scan-categories/', {
+      // Use NEW detector-categories API with plan-based access
+      const response = await axios.get(process.env.REACT_APP_API_URL + '/detector-categories/', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
-      // Sort categories by plan level: free -> pro -> enterprise
-      const planOrder = { 'free': 0, 'pro': 1, 'enterprise': 2 };
-      const sorted = response.data.sort((a, b) => {
-        const aLevel = planOrder[a.required_plan] || 0;
-        const bLevel = planOrder[b.required_plan] || 0;
-        return aLevel - bLevel;
-      });
-      
-      setCategories(sorted);
+      setUserPlan(response.data.current_plan || 'free');
+      setCategories(response.data.categories || []);
     } catch (err) {
       console.error('Failed to fetch categories:', err);
     }
   };
 
-  const fetchUserPlan = async () => {
+  const fetchSubscription = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(process.env.REACT_APP_API_URL + '/auth/me/', {
+      const response = await axios.get(process.env.REACT_APP_API_URL + '/subscriptions/current/', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
-      setUserPlan(response.data.current_plan?.toLowerCase() || 'free');
+      setSubscription(response.data);
     } catch (err) {
-      console.error('Failed to fetch user plan:', err);
+      console.error('Failed to fetch subscription:', err);
     }
   };
 
@@ -87,41 +82,50 @@ const Sidebar = () => {
           </Link>
         </div>
 
-        {/* V3.0: Category-based Scanners */}
+        {/* V3.0: Detector Categories with Icons */}
         <div className="px-4 mb-6">
-          <h3 className={`text-xs font-semibold uppercase tracking-wider mb-2 ${
-            isDark ? 'text-gray-500' : 'text-gray-400'
-          }`}>
-            Scan Categories
-          </h3>
+          <div className="flex items-center justify-between mb-2">
+            <h3 className={`text-xs font-semibold uppercase tracking-wider ${
+              isDark ? 'text-gray-500' : 'text-gray-400'
+            }`}>
+              Detector Categories
+            </h3>
+            {subscription && (
+              <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                {subscription.scans_used_today || 0}/{subscription.plan.scans_per_day === -1 ? '∞' : subscription.plan.scans_per_day}
+              </span>
+            )}
+          </div>
           <div className="space-y-1">
             {categories.map((category) => {
-              const hasAccess = category.has_access;
-              const isLocked = !hasAccess;
+              const isLocked = !category.is_allowed;
               
               return (
                 <Link
-                  key={category.id}
-                  to={`/scan/${category.name}`}
-                  className={`flex items-center justify-between px-4 py-2.5 rounded-lg transition font-medium ${
-                    isActive(`/scan/${category.name}`)
+                  key={category.key}
+                  to={isLocked ? '/subscription' : `/scan/${category.key}`}
+                  className={`flex items-center justify-between px-3 py-2.5 rounded-lg transition font-medium ${
+                    isActive(`/scan/${category.key}`)
                       ? 'bg-primary text-white'
                       : isLocked
                       ? isDark
-                        ? 'text-gray-500 hover:bg-gray-800 cursor-pointer'
-                        : 'text-gray-400 hover:bg-gray-100 cursor-pointer'
+                        ? 'text-gray-500 hover:bg-gray-800'
+                        : 'text-gray-400 hover:bg-gray-100'
                       : isDark
                       ? 'text-gray-300 hover:bg-gray-800 hover:text-white'
                       : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                   }`}
                 >
-                  <span className="text-sm">{category.display_name}</span>
                   <div className="flex items-center gap-2">
+                    <span className="text-lg">{category.icon}</span>
+                    <span className="text-sm">{category.name}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
                     {isLocked && (
-                      <span className="text-xs px-2 py-1 rounded bg-gray-700 text-gray-400 uppercase font-semibold">Locked</span>
+                      <FiLock className="w-3.5 h-3.5" />
                     )}
                     {!isLocked && category.required_plan !== 'free' && (
-                      <span className="text-xs px-2 py-1 rounded bg-yellow-600 text-white uppercase font-semibold">
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-yellow-600 text-white uppercase font-semibold">
                         {category.required_plan === 'enterprise' ? 'ENT' : 'PRO'}
                       </span>
                     )}
@@ -130,6 +134,23 @@ const Sidebar = () => {
               );
             })}
           </div>
+          
+          {/* Upgrade prompt for locked categories */}
+          {userPlan === 'free' && categories.some(c => !c.is_allowed) && (
+            <div className={`mt-3 p-3 rounded-lg ${
+              isDark ? 'bg-gradient-to-r from-purple-900/30 to-blue-900/30 border border-purple-700/50' : 'bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200'
+            }`}>
+              <p className={`text-xs mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                Unlock {categories.filter(c => !c.is_allowed).length} more categories
+              </p>
+              <Link
+                to="/subscription"
+                className="block w-full text-center px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs font-semibold rounded-lg hover:from-purple-700 hover:to-blue-700 transition"
+              >
+                Upgrade to Pro
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Results & Analytics */}
