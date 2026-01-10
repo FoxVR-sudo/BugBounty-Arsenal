@@ -39,9 +39,46 @@ class ScanViewSet(viewsets.ModelViewSet):
         return Scan.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        """Create scan and start async execution"""
+        """Create scan and start async execution with plan validation"""
+        from subscriptions.models import Subscription
+        from detectors.detector_categories import is_detector_allowed_for_plan, get_allowed_detectors_for_plan
+        
+        # Check if user can start a scan (daily/monthly limits)
+        try:
+            subscription = Subscription.objects.get(user=self.request.user)
+            can_scan, message = subscription.can_start_scan()
+            
+            if not can_scan:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied(detail=message)
+        except Subscription.DoesNotExist:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied(detail="No active subscription found. Please subscribe to a plan.")
+        
+        # Get requested detectors
+        requested_detectors = self.request.data.get('enabled_detectors', [])
+        
+        # Validate detector permissions
+        if requested_detectors:
+            plan_name = subscription.plan.name
+            unauthorized_detectors = []
+            
+            for detector in requested_detectors:
+                if not is_detector_allowed_for_plan(detector, plan_name):
+                    unauthorized_detectors.append(detector)
+            
+            if unauthorized_detectors:
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied(
+                    detail=f"Your {plan_name} plan does not allow these detectors: {', '.join(unauthorized_detectors)}. "
+                           f"Upgrade your plan to access them."
+                )
+        
         # Save the scan instance
         scan = serializer.save(user=self.request.user)
+        
+        # Increment scan usage AFTER successful validation
+        subscription.increment_scan_usage()
         
         # Get scan configuration from request data
         scan_config = {
@@ -52,7 +89,7 @@ class ScanViewSet(viewsets.ModelViewSet):
             'bypass_cloudflare': self.request.data.get('bypass_cloudflare', False),
             'enable_forbidden_probe': self.request.data.get('enable_forbidden_probe', False),
             'scan_mode': self.request.data.get('scan_mode', 'normal'),
-            'enabled_detectors': self.request.data.get('enabled_detectors', []),
+            'enabled_detectors': requested_detectors,
         }
         
         # Start async scan

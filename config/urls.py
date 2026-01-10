@@ -57,6 +57,7 @@ from scans.export_views import export_pdf_view, export_json_view, export_csv_vie
 from scans.category_views import (
     ScanCategoryViewSet, start_category_scan, get_detector_statistics
 )
+from detectors.views import DetectorCategoryViewSet
 from subscriptions.views import PlanViewSet, SubscriptionViewSet
 from subscriptions.billing_views import (
     create_checkout_session, billing_portal, buy_extra_scans, change_tier
@@ -71,6 +72,7 @@ router = routers.DefaultRouter()
 router.register(r'users', UserViewSet, basename='user')
 router.register(r'scans', ScanViewSet, basename='scan')
 router.register(r'scan-categories', ScanCategoryViewSet, basename='scan-category')
+router.register(r'detector-categories', DetectorCategoryViewSet, basename='detector-category')
 router.register(r'audit-logs', AuditLogViewSet, basename='auditlog')
 router.register(r'api-keys', ApiKeyViewSet, basename='apikey')
 # router.register(r'plans', PlanViewSet, basename='plan')  # Using custom endpoint instead
