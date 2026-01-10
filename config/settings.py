@@ -45,7 +45,6 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'channels',
     'corsheaders',
-    'django_celery_results',  # Celery result backend
     'users',
     'scans',
     'subscriptions',
@@ -199,20 +198,22 @@ SPECTACULAR_SETTINGS = {
     'REDOC_DIST': 'SIDECAR',
 }
 
-_redis_host = os.getenv('REDIS_HOST', 'localhost')
-_redis_port = os.getenv('REDIS_PORT', '6379')
+# Jump.bg cPanel Redis configuration
+_redis_host = os.getenv('REDIS_HOST', '127.0.1.204')
+_redis_port = os.getenv('REDIS_PORT', '39383')
 
-# Use Django database backend for Celery if Redis is not available
-# This is production-ready for shared hosting without Redis
-CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'django://')
-CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'django-db')
-CELERY_CACHE_BACKEND = 'django-cache'
+# Celery with Redis backend
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', f'redis://{_redis_host}:{_redis_port}/0')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', f'redis://{_redis_host}:{_redis_port}/0')
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'UTC'
-CELERY_TASK_ALWAYS_EAGER = False  # Run tasks asynchronously
-CELERY_TASK_EAGER_PROPAGATES = False
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 3600  # 1 hour max
+CELERY_TASK_SOFT_TIME_LIMIT = 3500  # 58 minutes soft limit
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1  # One task at a time per worker
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 100  # Recycle worker after 100 tasks
 
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/dashboard/'
@@ -222,7 +223,7 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            'hosts': [(os.getenv('REDIS_HOST', 'localhost'), int(os.getenv('REDIS_PORT', _redis_port)))],
+            'hosts': [(_redis_host, int(_redis_port))],
         },
     },
 }
